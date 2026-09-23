@@ -87,3 +87,15 @@ Format:
 - **Decision:** Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4 with CSS-variable tokens, shadcn/ui (new-york style), next-intl with `localePrefix: 'always'` and Arabic as default locale, `next-themes` for dark mode (class strategy, system default), `@supabase/ssr` for cookie-based sessions, Zod-validated environment in `src/lib/env.ts`. Request interception lives in `src/proxy.ts` (Next 16 name for middleware).
 - **Alternatives rejected:** hand-rolled theme switching (flash of wrong theme without `next-themes`' pre-hydration script).
 - **Consequences:** `next-themes` is the one dependency beyond the declared stack; reason recorded here.
+
+## 2026-09-23 — Phase 1 implementation notes
+- **Locale detection off.** `/` always redirects to `/ar`; `Accept-Language` is ignored. Many Sudanese phones run an English UI, so detection would send most visitors to `/en`, contradicting Arabic-first. Users switch explicitly.
+- **Minimal client i18n payload.** `NextIntlClientProvider` receives only the `Errors` namespace (needed by the client error boundary). Other client components get translated strings as props from Server Components.
+- **Font.** IBM Plex Sans Arabic (covers Arabic + Latin), weights 400/700 only, self-hosted at build time by `next/font` (≈95 KB for 4 files). Users never contact Google.
+- **Session refresh in the proxy only when an auth cookie exists**, with a 4 s timeout and failures swallowed: anonymous traffic never touches Supabase, and a paused free-tier project cannot block public pages. Server-side Supabase clients use a 10 s fetch timeout for the same reason.
+- **Service-role import guard.** ESLint `no-restricted-imports` blocks `@/lib/supabase/admin` everywhere except an explicit allowlist in `eslint.config.mjs`.
+- **RTL guard.** `npm run lint` fails on physical-direction Tailwind utilities (`ml-*`, `left-*`, `text-left`, `border-r`, …) and on translation key drift between `messages/ar.json` and `messages/en.json`. Custom scripts, no dependencies.
+- **shadcn/ui set up by hand.** The session's network policy blocks `ui.shadcn.com`, so `components.json`, `cn()`, theme tokens and `Button` were written following shadcn's Tailwind v4 layout. The CLI (`npx shadcn add …`) works normally on a machine with open network access.
+- **Brand contrast.** White on `#005CFF` ≈ 5.3:1 (AA). White on `#FF7A00` ≈ 2.6:1 fails AA, so the orange `highlight` token uses dark text (≈ 7.6:1).
+- **Dependencies added beyond the declared stack, with reasons:** `next-themes` (flash-free theme switching), `server-only` (compile-time guard for secret modules), `class-variance-authority`/`clsx`/`tailwind-merge`/`radix-ui`/`lucide-react`/`tw-animate-css` (shadcn/ui's own requirements), `prettier` + `prettier-plugin-tailwindcss` (consistent formatting and class order), `supabase` CLI as a dev dependency (migrations and local stack from Phase 2). React Hook Form is deferred to Phase 3, when the first form exists.
+- **Deferred:** nonce-based Content-Security-Policy (Phase 10, once Turnstile/third-party scripts are known). Baseline security headers are set now.

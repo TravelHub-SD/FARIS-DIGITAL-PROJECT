@@ -16,6 +16,8 @@ Work in supervised phases. Do not attempt to build the whole app in one pass.
 - Vercel + GitHub
 - WhatsApp Cloud API (Meta direct)
 
+Next.js here is v16: APIs differ from older versions (e.g. `proxy.ts` replaces middleware). Check `AGENTS.md` and the bundled docs in `node_modules/next/dist/docs/` before writing Next-specific code.
+
 No extra dependencies without a stated reason. Prefer simple, maintainable code over abstraction layers. This is an MVP, not an enterprise banking system: no microservices, event buses, CQRS.
 
 ## Brand

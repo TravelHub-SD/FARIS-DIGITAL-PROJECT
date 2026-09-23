@@ -18,11 +18,11 @@ Output: `docs/architecture.md`
 - [x] Wait for my approval before Phase 1 (approved 2026-09-23 with amendments, see `docs/decisions.md`)
 
 ## Phase 1 — Foundation
-- [ ] Next.js + TypeScript + Tailwind + shadcn/ui
-- [ ] next-intl, `/ar` and `/en`, dir switching, logical CSS properties
-- [ ] Dark mode, base layout, brand tokens (`#005CFF`, `#FF7A00`)
-- [ ] Supabase project wiring, env configuration, `.env.example`
-- [ ] Folder structure, lint/typecheck/build scripts
+- [x] Next.js + TypeScript + Tailwind + shadcn/ui
+- [x] next-intl, `/ar` and `/en`, dir switching, logical CSS properties
+- [x] Dark mode, base layout, brand tokens (`#005CFF`, `#FF7A00`)
+- [x] Supabase project wiring, env configuration, `.env.example`
+- [x] Folder structure, lint/typecheck/build scripts
 
 ## Phase 2 — Database & security
 - [ ] Schema migrations, indexes, constraints, enums
