@@ -1,6 +1,11 @@
 # Phase 0 — Architecture Review
 
-Status: **proposal, awaiting approval.** Nothing here is final until Hassan approves it. Approved items get recorded in `docs/decisions.md`.
+Status: **approved 2026-09-23 with amendments.** Where this document and `docs/decisions.md` disagree, `decisions.md` wins. Amendments in short:
+- Currency: USD pricing base + admin-set rate, SDG charge, immutable snapshot (option B).
+- Admin 2FA **deferred** (accepted risk); `is_admin()` keeps a single assurance-level check point for later.
+- ID files deleted after approval **or** rejection.
+- Development on free tiers only: no automatic backups, the database may be paused/cold.
+- WhatsApp interface + dev driver in Phase 3.
 Inputs: `CLAUDE.md`, `docs/spec.md`, `docs/roadmap.md`, `docs/decisions.md` (2026-09-23).
 
 ---

@@ -15,7 +15,7 @@ Output: `docs/architecture.md`
 - [x] Recommended default for each open decision in spec §12
 - [x] Folder structure
 - [x] Implementation order
-- [ ] Wait for my approval before Phase 1
+- [x] Wait for my approval before Phase 1 (approved 2026-09-23 with amendments, see `docs/decisions.md`)
 
 ## Phase 1 — Foundation
 - [ ] Next.js + TypeScript + Tailwind + shadcn/ui
@@ -31,8 +31,13 @@ Output: `docs/architecture.md`
 - [ ] Authorization helpers, permission checks
 - [ ] Audit log tables and write path
 - [ ] Tests: customer isolation, admin boundaries
+- [ ] **Blocking acceptance tests** (show failing before fix, passing after):
+  - [ ] Public `auth.signUp` closed: no account without a verified OTP
+  - [ ] Customer cannot modify `kyc_status`, any price column, or any order state via direct PostgREST
+  - [ ] Customer cannot read another customer's orders, receipts, invoices or KYC records via direct PostgREST
 
 ## Phase 3 — Auth & KYC
+- [ ] WhatsApp service interface + dev driver (moved from Phase 7)
 - [ ] Phone registration + password, OTP architecture (hashed, expiry, attempts, rate limits)
 - [ ] Login, configurable OTP policy
 - [ ] Password recovery
@@ -63,7 +68,7 @@ Output: `docs/architecture.md`
 - [ ] Audit log viewer
 
 ## Phase 7 — WhatsApp
-- [ ] Service abstraction + dev driver
+- [ ] Meta Cloud API driver (interface + dev driver already landed in Phase 3)
 - [ ] OTP, order status, KYC result templates
 - [ ] Webhook, `message_logs`, delivery status
 - [ ] Retries, failure handling, admin alerts
@@ -84,5 +89,6 @@ Output: `docs/architecture.md`
 - [ ] Security review: RLS, authorization, file access, server-side validation
 - [ ] Full test run, mobile testing, RTL and LTR testing
 - [ ] SEO and performance validation
-- [ ] Production environment, backups, deployment checklist
+- [ ] Production environment, deployment checklist, placeholder-replacement check
+- [ ] Manual backup procedure (DB dump + storage export) documented in the handover guide
 - [ ] User guide (Arabic) for the client, source handover via GitHub + archive
