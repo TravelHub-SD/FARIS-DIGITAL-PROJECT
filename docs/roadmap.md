@@ -25,16 +25,16 @@ Output: `docs/architecture.md`
 - [x] Folder structure, lint/typecheck/build scripts
 
 ## Phase 2 — Database & security
-- [ ] Schema migrations, indexes, constraints, enums
-- [ ] RLS policies on every table
-- [ ] Storage buckets + policies (private KYC bucket)
-- [ ] Authorization helpers, permission checks
-- [ ] Audit log tables and write path
-- [ ] Tests: customer isolation, admin boundaries
-- [ ] **Blocking acceptance tests** (show failing before fix, passing after):
-  - [ ] Public `auth.signUp` closed: no account without a verified OTP
-  - [ ] Customer cannot modify `kyc_status`, any price column, or any order state via direct PostgREST
-  - [ ] Customer cannot read another customer's orders, receipts, invoices or KYC records via direct PostgREST
+- [x] Schema migrations, indexes, constraints, enums
+- [x] RLS policies on every table
+- [x] Storage buckets + policies (private KYC bucket)
+- [x] Authorization helpers, permission checks
+- [x] Audit log tables and write path
+- [x] Tests: customer isolation, admin boundaries
+- [x] **Blocking acceptance tests** (show failing before fix, passing after):
+  - [x] Public `auth.signUp` closed: no account without a verified OTP
+  - [x] Customer cannot modify `kyc_status`, any price column, or any order state via direct PostgREST
+  - [x] Customer cannot read another customer's orders, receipts, invoices or KYC records via direct PostgREST
 
 ## Phase 3 — Auth & KYC
 - [ ] WhatsApp service interface + dev driver (moved from Phase 7)
@@ -81,6 +81,7 @@ Output: `docs/architecture.md`
 
 ## Phase 9 — UX, SEO, performance
 - [ ] Final responsive pass, accessibility, empty/loading/error states
+- [ ] Known issue (found in Phase 2 browser run): background segment prefetch `/en?_rsc=…` (`Next-Router-Segment-Prefetch: /$d$locale`) returns 404 because `next build` does not emit `en.segments/$d$locale.segment.rsc` (the `ar` one exists; deterministic across clean builds; Next 16.3 vary-params segment sharing). Navigation itself returns 200. Reproduce with a minimal app; fix or report upstream
 - [ ] Sitemap, robots, canonical, hreflang, Open Graph, structured data
 - [ ] Image optimization, pagination, query review
 - [ ] Dark mode polish, RTL/LTR review
@@ -90,5 +91,6 @@ Output: `docs/architecture.md`
 - [ ] Full test run, mobile testing, RTL and LTR testing
 - [ ] SEO and performance validation
 - [ ] Production environment, deployment checklist, placeholder-replacement check
+- [ ] Hosted Supabase: sign-ups disabled (`supabase config push` / dashboard), verified by running acceptance test 1 against the hosted project
 - [ ] Manual backup procedure (DB dump + storage export) documented in the handover guide
 - [ ] User guide (Arabic) for the client, source handover via GitHub + archive

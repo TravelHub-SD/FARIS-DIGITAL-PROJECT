@@ -28,6 +28,18 @@ npm run dev                     # http://localhost:3000 → redirects to /ar
 | `npm run build`                   | Production build                                                                          |
 | `npm run check`                   | Everything above, as CI would run it                                                      |
 
+## Tests
+
+Require Docker and the local Supabase stack (`npx supabase start`; if `public.ecr.aws` is blocked, prefix with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`).
+
+| Script                     | What it does                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run test:integration` | Resets the local DB, then runs Vitest over HTTP with the anon key: acceptance tests 1–3, admin boundaries, audit append-only                   |
+| `npm run test:db`          | pgTAP (`supabase/tests`): order/invoice snapshot, KYC threshold, transitions, duplicate receipts, gapless invoice numbers, audit, RLS coverage |
+| `npm test`                 | Both                                                                                                                                           |
+
+Tests never run against a hosted project (the harness refuses any API URL that is not `127.0.0.1`).
+
 ## Conventions
 
 - Locales: `/ar` (default, RTL) and `/en`. UI strings live in `messages/*.json`; both files must have the same keys.

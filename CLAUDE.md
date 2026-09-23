@@ -44,6 +44,14 @@ No extra dependencies without a stated reason. Prefer simple, maintainable code 
 - Tests for anything touching money, permissions, order state, or file access
 - Short summary of what changed and what I should review manually
 
+## Verification is the agent's job (standing rule, 2026-09-23)
+Hassan reviews the output, not the codebase. In every phase:
+- Run `npm run check` yourself and paste the real output, not a summary.
+- Run the browser tests and the database/API tests yourself and paste the results.
+- For any guard, policy or test that can be proven by planting a violation, plant it and show both the failure and the pass after the fix/revert.
+- Never report something as working unless you executed it and pasted the output.
+- If something cannot be verified in the current environment, say so explicitly instead of implying it passed.
+
 ## Testing focus
 Do not chase coverage. Test the paths where a bug costs money or leaks data:
 pricing and order creation, price tampering attempts, KYC enforcement, order state transitions, admin permission boundaries, customer data isolation (RLS), OTP verification and rate limits, KYC document access, duplicate transfer receipts.
