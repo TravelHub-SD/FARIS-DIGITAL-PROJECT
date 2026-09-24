@@ -74,7 +74,10 @@ export type SearchParams = {
 // project). Static pages then build with empty catalog sections and fill in
 // on their first revalidation. At runtime errors propagate, so ISR keeps
 // serving the last good page instead of caching an empty one.
-async function buildSafe<T>(fallback: T, run: () => Promise<T>): Promise<T> {
+export async function buildSafe<T>(
+  fallback: T,
+  run: () => Promise<T>,
+): Promise<T> {
   try {
     return await run();
   } catch (error) {
@@ -86,7 +89,7 @@ async function buildSafe<T>(fallback: T, run: () => Promise<T>): Promise<T> {
   }
 }
 
-function orThrow<T>(res: {
+export function orThrow<T>(res: {
   data: T | null;
   error: { message: string } | null;
 }): T {

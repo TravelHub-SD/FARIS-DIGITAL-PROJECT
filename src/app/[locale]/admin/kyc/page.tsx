@@ -21,8 +21,8 @@ export default async function KycQueuePage({
   const locale = (await params).locale as Locale;
   setRequestLocale(locale);
   await requireAdmin(locale, "kyc");
-  const [t, tKyc, format, rows] = await Promise.all([
-    getTranslations("Admin"),
+  const t = await getTranslations("Admin");
+  const [tKyc, format, rows] = await Promise.all([
     getTranslations("Kyc"),
     getFormatter(),
     listPendingKyc(),

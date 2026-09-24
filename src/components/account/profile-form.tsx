@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { profileSchema } from "@/lib/validation/auth";
 import { updateProfile } from "@/server/account/actions";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function ProfileForm({
   fullName,
@@ -25,6 +26,7 @@ export function ProfileForm({
   const tAuth = useTranslations("Auth");
   const [status, setStatus] = useState<"idle" | "saved" | "failed">("idle");
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated();
   const form = useForm<
     z.input<typeof profileSchema>,
     unknown,
@@ -36,6 +38,7 @@ export function ProfileForm({
 
   return (
     <form
+      method="post"
       className="grid gap-4"
       noValidate
       onSubmit={form.handleSubmit((v) =>
@@ -60,7 +63,11 @@ export function ProfileForm({
       </div>
       {status === "saved" && <Alert tone="success">{t("saved")}</Alert>}
       {status === "failed" && <Alert tone="error">{t("saveFailed")}</Alert>}
-      <Button type="submit" disabled={pending} className="justify-self-start">
+      <Button
+        type="submit"
+        disabled={pending || !hydrated}
+        className="justify-self-start"
+      >
         {t("save")}
       </Button>
     </form>

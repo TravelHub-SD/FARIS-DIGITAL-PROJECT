@@ -17,15 +17,16 @@ select set_eq(
   $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('anon', p.oid, 'execute') $$,
-  array['search_products', 'price_sdg', 'price_sdg_totals'],
-  'anon can execute exactly the public catalog functions (both SECURITY INVOKER)');
+  array['search_products', 'price_sdg', 'price_sdg_totals', 'product_comments'],
+  'anon can execute exactly the public catalog functions (product_comments is definer: visible comments, first names only)');
 
 select set_eq(
   $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute') $$,
   array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted',
-        'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt'],
+        'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt',
+        'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
@@ -57,7 +58,8 @@ select is_empty(
       where p.pronamespace = 'private'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute')
         and p.proname not in ('is_admin', 'is_owner', 'has_permission',
-                              'admin_assurance_ok', 'normalize_ar', 'valid_field_definitions') $$,
+                              'admin_assurance_ok', 'normalize_ar', 'valid_field_definitions',
+                              'can_write_public_asset') $$,
   'only the authorization helpers in private are executable by authenticated');
 
 select * from finish();

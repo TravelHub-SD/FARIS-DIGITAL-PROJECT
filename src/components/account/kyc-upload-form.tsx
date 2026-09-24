@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { KycErrorKey } from "@/i18n/keys";
 import { submitKyc } from "@/server/kyc/actions";
+import { useHydrated } from "@/lib/use-hydrated";
 
 import { prepareImage } from "./prepare-image";
 
@@ -21,9 +22,11 @@ export function KycUploadForm() {
     null,
   );
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated();
 
   return (
     <form
+      method="post"
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault();
@@ -77,7 +80,11 @@ export function KycUploadForm() {
             : t("errors.server_error")}
         </Alert>
       )}
-      <Button type="submit" disabled={pending} className="justify-self-start">
+      <Button
+        type="submit"
+        disabled={pending || !hydrated}
+        className="justify-self-start"
+      >
         {t("submit")}
       </Button>
     </form>

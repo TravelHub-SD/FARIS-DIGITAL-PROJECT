@@ -61,12 +61,14 @@ Output: `docs/architecture.md`
 - Note: receipt review exists as a DB function (`review_receipt`); its admin screen is part of the Phase 6 orders UI.
 
 ## Phase 6 — Admin dashboard
-- [ ] Orders: list, filters, search, detail, receipt view, status changes, internal notes
-- [ ] Products, categories, variants, prices, required fields (call `revalidatePath` for affected catalog pages; validate definitions with `fieldDefinitionsSchema`)
-- [ ] Customers and KYC queue
-- [ ] Comments moderation, FAQs, site settings
-- [ ] Admins and granular permissions
-- [ ] Audit log viewer
+- [x] Orders: list, filters, search, detail, receipt view, status changes, internal notes
+- [x] Products, categories, variants, prices, required fields (call `revalidatePath` for affected catalog pages; validate definitions with `fieldDefinitionsSchema`)
+- [x] Customers and KYC queue
+- [x] Comments moderation, FAQs, site settings
+- [x] Admins and granular permissions
+- [x] Audit log viewer
+- [x] Also: product image upload (validated, re-encoded WebP), customer comments on product pages, home banner + FAQs + footer contacts from Settings, abuse limits as settings
+- [x] Fixed: forms could submit natively (GET, values in URL) before hydration — found in Phase 6, affected Phase 3 auth forms
 
 ## Phase 7 — WhatsApp
 - [ ] Meta Cloud API driver (interface + dev driver already landed in Phase 3)
@@ -87,10 +89,13 @@ Output: `docs/architecture.md`
 - [ ] Sitemap, robots, canonical, hreflang, Open Graph, structured data
 - [ ] Image optimization, pagination, query review
 - [ ] Client JS on auth pages: login is 312 KB gzip, mostly Zod + React Hook Form (public catalog pages are 184–186 KB). Move shared schemas to `zod/mini` or server-only validation
-- [ ] Product images: upload (Phase 6) + `next/image` with the Supabase storage host in `remotePatterns`
+- [x] ~~Product images via `next/image`~~ — superseded in Phase 6: images are re-encoded to fixed-size WebP at upload and served directly (decisions.md 2026-09-27)
 - [ ] Dark mode polish, RTL/LTR review
 
 ## Phase 10 — QA & deployment
+- [ ] Bootstrap the owner account (one SQL insert after the client registers; decisions.md 2026-09-27)
+- [ ] Confirm `pg_graphql` is disabled on the hosted project (migration drops it)
+- [ ] Revisit admin 2FA (deferred): the dashboard is now live with password-only admin sign-in
 - [ ] Security review: RLS, authorization, file access, server-side validation
 - [ ] Full test run, mobile testing, RTL and LTR testing
 - [ ] SEO and performance validation

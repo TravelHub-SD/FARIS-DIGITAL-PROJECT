@@ -244,3 +244,33 @@ Format:
 - **Audit:** order creation (`orders.insert`, actor = customer) and receipt submission (`payment_receipts.insert`) are now audited in addition to updates. Fulfillment data stays out of the log.
 - **Sensitive fields:** fields defined with `"sensitive": true` are removed from `fulfillment_data` when the order reaches a terminal status (completed/cancelled), inside the orders BEFORE UPDATE trigger; the order page shows "removed after the order was closed".
 - **Customer pages:** `/account/orders` and `/account/orders/{reference}` read with the customer's session and also filter on `user_id` (RLS alone would show staff every order). Another customer's reference is the same 404 as a non-existent one.
+
+## 2026-09-27 — Phase 6: abuse limits are settings (approved by Hassan)
+- `security_settings` gains `order_rate_limit_per_hour` (10), `receipts_per_order_limit` (5) and `comment_rate_limit_per_hour` (5). `create_order()`, `submit_receipt()` and the comments trigger read them at the moment of the request. Edited in *Settings → Limits* by `settings` staff; every change is in the audit log.
+- Placed in `security_settings`, not the public `app_settings`, so the thresholds are not readable by visitors (tested).
+
+## 2026-09-27 — Phase 6: how the dashboard enforces permissions
+- **Three layers, each sufficient on its own for data access:** (1) every admin page calls `requireAdmin(locale, permission)` / `requireOwner(locale)` and answers 404 otherwise; (2) every admin Server Action's first statement is `actionAdmin(permission)` / `actionOwner()`; (3) the action writes with the admin's own session, so RLS and the definer functions check the permission again. A static test fails the build if a page or action misses its guard or if admin code imports the service-role client.
+- Demonstrated by: a 21-operation × 9-role matrix against the database; a 404 matrix for 14 admin URLs × 9 roles; replaying the exact Server Action requests captured from the owner's browser with the cookies of an anonymous visitor, a customer and lower staff (all `not_allowed`, no state change); a stale tab whose permission was revoked. With the action's guard deliberately removed, the replayed request is still refused by the database.
+- `admins` / audit log remain owner-only. The database stamps `admins.created_by` and `admin_permissions.granted_by` (never taken from the client) and refuses to make an unverified or blocked account an admin.
+- **Blocking customers** goes through `set_customer_blocked()` (`customers` permission): never oneself, never the owner, and only the owner may block another admin. A blocked customer can still sign in and see their orders, but cannot order or comment.
+- **Comment moderators** see authors' names through `admin_comments()` (definer, `comments` permission) instead of being granted read access to `profiles` (phones).
+- **GraphQL** (`pg_graphql`) is dropped by migration: the app does not use it and hosted projects enable it by default. The notes test re-enables it temporarily to show RLS still holds there. To verify on the hosted project in Phase 10.
+
+## 2026-09-27 — Phase 6: customer comments (spec §2) built with moderation
+- Moderation needs comments to moderate, and none could be written yet, so the product page gained a comments section: verified, unblocked customers post (post-moderation: visible at once, staff hide or delete). The database stamps the author, applies the hourly limit, and records the moderator (`hidden_by`) itself.
+- Public pages read comments through `product_comments()` (definer): only visible comments of visible products, author's **first name only**, no ids or phones. Plain text rendered escaped; no links are turned into anchors.
+
+## 2026-09-27 — Phase 6: public images
+- Product, banner and logo images go through the same inspect step as KYC (extension + MIME + real format must agree, pixel and size limits), then are re-encoded server-side to WebP at fixed sizes: product 1000 px + 400 px thumbnail, banner 1600 px, logo 512 px (transparency kept). Minimum dimensions and an aspect-ratio range per kind; SVG and GIF refused. Nothing from the original file (EXIF, appended data) survives.
+- Served straight from the public bucket with a plain `<img>` at the right size. **Replaces the Phase 9 plan of `next/image`**: the images are already optimized, and Vercel's image optimizer has a monthly quota on free plans.
+- Written with the admin's session; storage policy `can_write_public_asset()` confines `products` staff to `products/` and `categories/`, `settings` staff to `site/`.
+- Catalog, price, banner, FAQ and contact edits call `revalidatePath("/", "layout")`: every static page is refreshed at once. Edits are rare; tracking which pages show what is not worth it.
+
+## 2026-09-27 — Phase 6: bug found in Phase 3 forms — values in the URL before hydration
+- **Found:** every form that submits through JavaScript (`onSubmit`) was a plain `<form>` in the server HTML. Clicked before React hydrated (slow connection, script still loading), the browser submitted it natively as **GET**, putting its values in the URL. Demonstrated with JavaScript disabled on the login form: the URL became `/ar/login?phone=…&password=…` and the dev server's access log recorded the password (CLAUDE.md rule 9).
+- **Fix:** all such forms (login, register, reset, complete account, profile, KYC, receipt, order, comment, every admin form) are `method="post"` and keep their submit button disabled until hydration (`useHydrated()`); pressing Enter does nothing. A permanent E2E test loads 10 pages with JavaScript off and checks every form; planting the old login form makes it fail. Server-action forms that work without JavaScript (sign out) are real POSTs and stay enabled. The product order form is disabled as a whole until hydration: its option and quantity are controlled inputs that hydration would reset (found by the Phase 5 E2E test on a cold dev server: quantity 3 silently became 1).
+- **Also:** the product order form now submits through `onSubmit` like the rest (Phase 5), and Zod's `z.uuid()` (strict RFC variant bits) is replaced by `z.guid()` for ids the database checks anyway: the seed ids failed it.
+
+## 2026-09-27 — Owner account bootstrap (for Phase 10)
+- There is no UI to create the first owner, by design. After the client registers normally (phone + OTP), the developer runs one statement in the Supabase SQL editor: `insert into public.admins (user_id, is_owner) values ('<their user id>', true);` The single-owner index and the owner protections apply from then on. Added to the Phase 10 checklist.

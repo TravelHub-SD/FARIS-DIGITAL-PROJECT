@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
 import { otpCodeSchema, phoneSchema } from "@/lib/validation/auth";
 import { completePhoneLink, requestPhoneLinkOtp } from "@/server/auth/actions";
+import { useHydrated } from "@/lib/use-hydrated";
 
 import {
   type ActionFailure,
@@ -29,6 +30,7 @@ export function CompleteAccountForm() {
   const [phone, setPhone] = useState<string | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated();
   const cooldown = useCountdown();
   const first = useForm<
     z.input<typeof phoneForm>,
@@ -60,6 +62,7 @@ export function CompleteAccountForm() {
 
   return phone ? (
     <form
+      method="post"
       className="grid gap-4"
       noValidate
       onSubmit={second.handleSubmit((v) =>
@@ -83,7 +86,7 @@ export function CompleteAccountForm() {
         {...second.register("code")}
       />
       {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || !hydrated}>
         {t("complete.submit")}
       </Button>
       <Button
@@ -100,6 +103,7 @@ export function CompleteAccountForm() {
     </form>
   ) : (
     <form
+      method="post"
       className="grid gap-4"
       noValidate
       onSubmit={first.handleSubmit((v) => sendCode(v.phone))}
@@ -123,7 +127,7 @@ export function CompleteAccountForm() {
           )}
         </Alert>
       )}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || !hydrated}>
         {t("sendCode")}
       </Button>
     </form>

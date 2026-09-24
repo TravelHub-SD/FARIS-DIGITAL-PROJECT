@@ -31,7 +31,10 @@ export async function ProductCard({
         href={`/p/${product.slug}`}
         className="group flex h-full flex-col gap-3 rounded-xl border bg-card p-3 transition-colors hover:border-primary/50"
       >
-        <ProductVisual name={name?.text ?? product.slug} />
+        <ProductVisual
+          name={name?.text ?? product.slug}
+          imagePath={product.image_path}
+        />
         <div className="grid gap-1">
           <L10n
             value={name}

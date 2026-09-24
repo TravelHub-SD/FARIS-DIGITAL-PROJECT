@@ -43,11 +43,17 @@ export type SanitizedImage = {
   height: number;
 };
 
-export async function sanitizeImage(input: {
-  name: string;
-  type: string;
-  bytes: Buffer;
-}): Promise<SanitizedImage | { ok: false; error: ImageRejection }> {
+type ImageInput = { name: string; type: string; bytes: Buffer };
+
+/**
+ * Checks shared by every upload: size, extension, declared MIME type, and the
+ * real format read from the bytes (all three must agree).
+ */
+async function inspect(
+  input: ImageInput,
+): Promise<
+  { ok: true; meta: Metadata } | { ok: false; error: ImageRejection }
+> {
   if (input.bytes.length === 0) return { ok: false, error: "empty" };
   if (input.bytes.length > IMAGE_MAX_BYTES)
     return { ok: false, error: "too_large" };
@@ -85,6 +91,15 @@ export async function sanitizeImage(input: {
   if ((actual.width ?? 0) * (actual.height ?? 0) > MAX_INPUT_PIXELS) {
     return { ok: false, error: "too_many_pixels" };
   }
+  return { ok: true, meta: actual };
+}
+
+/** Private documents (KYC, receipts): re-encoded JPEG, readable size. */
+export async function sanitizeImage(
+  input: ImageInput,
+): Promise<SanitizedImage | { ok: false; error: ImageRejection }> {
+  const checked = await inspect(input);
+  if (!checked.ok) return checked;
 
   let out: { data: Buffer; info: OutputInfo };
   try {
@@ -112,4 +127,96 @@ export async function sanitizeImage(input: {
     width: out.info.width,
     height: out.info.height,
   };
+}
+
+// Public images (catalog, banner, logo): served to every visitor on weak
+// connections, so they are re-encoded to WebP at fixed sizes. Transparency is
+// kept (logos). Dimensions are checked on the ORIGINAL (after orientation):
+// an upscaled thumbnail would look broken on the site.
+export type PublicImageProfile = {
+  minWidth: number;
+  minHeight: number;
+  /** width / height must fall inside this range */
+  aspect: [number, number];
+  /** Output sizes, largest first; each fits inside a box of this edge. */
+  sizes: { name: string; box: number; quality: number }[];
+};
+
+export const PUBLIC_IMAGE_PROFILES = {
+  product: {
+    minWidth: 300,
+    minHeight: 300,
+    aspect: [1 / 3, 3],
+    sizes: [
+      { name: "full", box: 1000, quality: 80 },
+      { name: "thumb", box: 400, quality: 75 },
+    ],
+  },
+  banner: {
+    minWidth: 800,
+    minHeight: 200,
+    aspect: [1.5, 6],
+    sizes: [{ name: "full", box: 1600, quality: 80 }],
+  },
+  logo: {
+    minWidth: 64,
+    minHeight: 64,
+    aspect: [1 / 2, 6],
+    sizes: [{ name: "full", box: 512, quality: 90 }],
+  },
+} satisfies Record<string, PublicImageProfile>;
+
+export type PublicImageRejection = ImageRejection | "bad_dimensions";
+
+export type ProcessedPublicImage = {
+  ok: true;
+  width: number;
+  height: number;
+  outputs: { name: string; webp: Buffer; width: number; height: number }[];
+};
+
+export async function processPublicImage(
+  input: ImageInput,
+  profile: PublicImageProfile,
+): Promise<ProcessedPublicImage | { ok: false; error: PublicImageRejection }> {
+  const checked = await inspect(input);
+  if (!checked.ok) return checked;
+  // EXIF orientations 5–8 swap width and height.
+  const swap = (checked.meta.orientation ?? 1) >= 5;
+  const width = (swap ? checked.meta.height : checked.meta.width) ?? 0;
+  const height = (swap ? checked.meta.width : checked.meta.height) ?? 0;
+  if (width < profile.minWidth || height < profile.minHeight) {
+    return { ok: false, error: "too_small" };
+  }
+  const ratio = width / height;
+  if (ratio < profile.aspect[0] || ratio > profile.aspect[1]) {
+    return { ok: false, error: "bad_dimensions" };
+  }
+
+  const outputs: ProcessedPublicImage["outputs"] = [];
+  try {
+    for (const size of profile.sizes) {
+      const out = await sharp(input.bytes, {
+        limitInputPixels: MAX_INPUT_PIXELS,
+      })
+        .rotate()
+        .resize({
+          width: size.box,
+          height: size.box,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: size.quality }) // no metadata unless asked
+        .toBuffer({ resolveWithObject: true });
+      outputs.push({
+        name: size.name,
+        webp: out.data,
+        width: out.info.width,
+        height: out.info.height,
+      });
+    }
+  } catch {
+    return { ok: false, error: "not_an_image" };
+  }
+  return { ok: true, width, height, outputs };
 }

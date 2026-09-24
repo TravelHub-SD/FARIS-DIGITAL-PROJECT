@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { Breadcrumbs } from "@/components/catalog/breadcrumbs";
+import { CommentForm } from "@/components/catalog/comment-form";
 import { L10n } from "@/components/catalog/l10n";
 import {
   type FormVariant,
@@ -11,10 +12,11 @@ import {
 import { ProductVisual } from "@/components/catalog/product-visual";
 import type { Locale } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/env";
-import { formatSdg } from "@/lib/format";
+import { formatDateTime, formatSdg } from "@/lib/format";
 import { localized } from "@/lib/localized";
 import { alternates, jsonLd, metaDescription, ogLocale } from "@/lib/seo";
 import { getProduct } from "@/server/catalog/queries";
+import { listProductComments } from "@/server/catalog/site";
 import type { PlaceOrderError } from "@/server/orders/actions";
 
 const REASONS = [
@@ -71,6 +73,7 @@ export default async function ProductPage({ params }: Props) {
   const product = await getProduct(slug);
   if (!product) notFound();
   const t = await getTranslations("Catalog");
+  const comments = await listProductComments(product.id);
 
   const name = localized(product.name_ar, product.name_en, locale);
   const description = localized(
@@ -180,6 +183,9 @@ export default async function ProductPage({ params }: Props) {
         <div className="grid content-start gap-4">
           <ProductVisual
             name={name?.text ?? product.slug}
+            imagePath={product.image_path}
+            size="full"
+            priority
             className="max-h-72 md:max-h-80"
           />
           <L10n
@@ -225,6 +231,64 @@ export default async function ProductPage({ params }: Props) {
           <p className="text-xs text-muted-foreground">{t("priceNote")}</p>
         </div>
       </div>
+      <section
+        aria-labelledby="comments"
+        className="grid gap-4 border-t pt-8"
+        data-testid="comments"
+      >
+        <h2 id="comments" className="text-xl font-bold">
+          {t("comments.title")}{" "}
+          <span className="text-sm font-normal text-muted-foreground">
+            ({t("comments.count", { count: comments.length })})
+          </span>
+        </h2>
+        {comments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("comments.empty")}</p>
+        ) : (
+          <ul className="grid gap-3" data-testid="comment-list">
+            {comments.map((c) => (
+              <li
+                key={c.id}
+                className="grid gap-1 rounded-lg border bg-card p-3"
+              >
+                <span className="text-sm">
+                  <span className="font-medium">
+                    {c.author ?? t("comments.customer")}
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    · {formatDateTime(c.created_at, locale)}
+                  </span>
+                </span>
+                <p className="text-sm whitespace-pre-wrap" dir="auto">
+                  {c.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="max-w-xl">
+          <CommentForm
+            productId={product.id}
+            slug={product.slug}
+            loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
+            strings={{
+              label: t("comments.label"),
+              placeholder: t("comments.placeholder"),
+              submit: t("comments.submit"),
+              posted: t("comments.posted"),
+              signIn: t("comments.signIn"),
+              errors: {
+                sign_in: t("comments.errors.sign_in"),
+                incomplete_account: t("comments.errors.incomplete_account"),
+                not_allowed: t("comments.errors.not_allowed"),
+                rate_limited: t("comments.errors.rate_limited"),
+                invalid_input: t("comments.errors.invalid_input"),
+                server_error: t("comments.errors.server_error"),
+              },
+            }}
+          />
+        </div>
+      </section>
     </div>
   );
 }

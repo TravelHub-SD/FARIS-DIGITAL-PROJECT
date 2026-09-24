@@ -91,6 +91,39 @@ export async function createUser(
   };
 }
 
+/**
+ * The single owner (unique index: one owner per database). Reused across test
+ * files: if it already exists, its password is reset with the admin API and
+ * a fresh session is opened.
+ */
+export async function ownerUser(): Promise<TestUser> {
+  const sb = service();
+  const { data: existing } = await sb
+    .from("admins")
+    .select("user_id")
+    .eq("is_owner", true)
+    .maybeSingle();
+  if (!existing)
+    return createUser({ admin: { owner: true }, name: "Test Owner" });
+
+  const password = randomBytes(12).toString("hex");
+  const { data, error } = await sb.auth.admin.updateUserById(existing.user_id, {
+    password,
+  });
+  if (error) throw new Error(`owner password: ${error.message}`);
+  const phone = `+${data.user.phone}`;
+  const client = createClient(url(), anonKey(), noSession);
+  const signIn = await client.auth.signInWithPassword({ phone, password });
+  if (signIn.error) throw new Error(`owner signIn: ${signIn.error.message}`);
+  return {
+    id: existing.user_id,
+    phone,
+    password,
+    client,
+    accessToken: signIn.data.session!.access_token,
+  };
+}
+
 export const VARIANT_CHEAP = "00000000-0000-4000-c000-000000000001"; // 1.10 USD (seed)
 /** Valid fulfillment data for VARIANT_CHEAP (seed: required digits player_id, 5–20). */
 export const CHEAP_FIELDS = { player_id: "123456" };

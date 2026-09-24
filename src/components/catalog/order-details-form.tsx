@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/styles";
 import type { Locale } from "@/i18n/routing";
 import { formatSdg } from "@/lib/format";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { FieldType } from "@/lib/fulfillment";
 import type { LocalizedText } from "@/lib/localized";
 import { placeOrder, type PlaceOrderState } from "@/server/orders/actions";
@@ -124,6 +125,7 @@ export function OrderDetailsForm({
   // One key per order attempt: a double submit or a retry after a timeout
   // returns the same order instead of creating a second one.
   const idempotencyKey = useRef<string | null>(null);
+  const hydrated = useHydrated();
   const variant = variants.find((v) => v.id === selected) ?? variants[0];
   const maxQuantity = variant.totals?.length ?? 1;
   const changed =
@@ -142,6 +144,7 @@ export function OrderDetailsForm({
 
   return (
     <form
+      method="post"
       // onSubmit rather than a form action: React resets uncontrolled fields
       // after a form action, which would wipe what the customer typed when the
       // server answers "price changed" or with a field error.
@@ -155,188 +158,196 @@ export function OrderDetailsForm({
       className="grid gap-6"
       data-testid="order-details-form"
     >
-      <input type="hidden" name="locale" value={locale} />
-      <input
-        type="hidden"
-        name="expectedTotalSdg"
-        value={expectedTotal ?? ""}
-      />
-      <fieldset className="grid gap-2">
-        <legend className="mb-2 font-bold">{strings.chooseOption}</legend>
-        {variants.map((v) => (
-          <label
-            key={v.id}
-            className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-          >
-            <span className="flex items-center gap-3">
-              <input
-                type="radio"
-                name="variantId"
-                value={v.id}
-                checked={v.id === selected}
-                onChange={() => {
-                  setSelected(v.id);
-                  setQuantity(1);
-                }}
-                className="size-4 accent-primary"
-              />
-              <Text value={v.name} />
-            </span>
-            <span className="text-sm font-medium" dir="auto">
-              {v.price ?? strings.priceUnavailable}
-            </span>
-          </label>
-        ))}
-      </fieldset>
-
-      {maxQuantity > 1 ? (
-        <div className="grid gap-2">
-          <label htmlFor="quantity" className={labelClasses}>
-            {strings.quantity}
-          </label>
-          <select
-            id="quantity"
-            name="quantity"
-            value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
-            className={`${selectClasses} max-w-24`}
-          >
-            {Array.from({ length: maxQuantity }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {i + 1}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        <input type="hidden" name="quantity" value="1" />
-      )}
-
-      {variant.fields.length > 0 && (
-        <fieldset className="grid gap-4" key={variant.id}>
-          <legend className="mb-2 font-bold">{strings.details}</legend>
-          {variant.fields.map((f) => {
-            const id = `f-${f.key}`;
-            const error = errors[f.key];
-            const common = {
-              id,
-              name: `f.${f.key}`,
-              required: f.required,
-              "aria-invalid": !!error,
-              "aria-describedby": `${id}-help`,
-            };
-            return (
-              <div key={f.key} className="grid gap-2">
-                <label htmlFor={id} className={labelClasses}>
-                  <Text value={f.label} />{" "}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    ({f.required ? strings.required : strings.optional})
-                  </span>
-                </label>
-                {f.type === "select" ? (
-                  <select {...common} defaultValue="" className={selectClasses}>
-                    <option value="" disabled>
-                      {strings.select}
-                    </option>
-                    {f.options?.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label?.text ?? o.value}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    {...common}
-                    className={inputClasses}
-                    type={
-                      f.type === "email"
-                        ? "email"
-                        : f.type === "phone"
-                          ? "tel"
-                          : "text"
-                    }
-                    inputMode={
-                      f.type === "digits"
-                        ? "numeric"
-                        : f.type === "phone"
-                          ? "tel"
-                          : undefined
-                    }
-                    dir={f.type === "text" ? undefined : "ltr"}
-                    minLength={f.minLength}
-                    maxLength={f.maxLength}
-                    autoComplete="off"
-                  />
-                )}
-                <p
-                  id={`${id}-help`}
-                  className="text-sm text-destructive"
-                  data-field-error={f.key}
-                >
-                  {error
-                    ? (strings.errors[error] ?? strings.errors.type)
-                    : null}
-                </p>
-              </div>
-            );
-          })}
+      {/* Disabled until hydrated: controlled fields (option, quantity) would
+          be reset by hydration, and the form cannot submit without JS. */}
+      <fieldset disabled={!hydrated} className="contents">
+        <input type="hidden" name="locale" value={locale} />
+        <input
+          type="hidden"
+          name="expectedTotalSdg"
+          value={expectedTotal ?? ""}
+        />
+        <fieldset className="grid gap-2">
+          <legend className="mb-2 font-bold">{strings.chooseOption}</legend>
+          {variants.map((v) => (
+            <label
+              key={v.id}
+              className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+            >
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="variantId"
+                  value={v.id}
+                  checked={v.id === selected}
+                  onChange={() => {
+                    setSelected(v.id);
+                    setQuantity(1);
+                  }}
+                  className="size-4 accent-primary"
+                />
+                <Text value={v.name} />
+              </span>
+              <span className="text-sm font-medium" dir="auto">
+                {v.price ?? strings.priceUnavailable}
+              </span>
+            </label>
+          ))}
         </fieldset>
-      )}
 
-      {state.status === "invalid" && state.errors._form && (
-        <Alert tone="error">{strings.errors[state.errors._form]}</Alert>
-      )}
-      {unexpected && <Alert tone="error">{strings.errors.unknown}</Alert>}
-      {changed !== null && (
-        <Alert tone="warning" data-testid="price-changed">
-          {strings.priceChanged.replace(
-            "{price}",
-            formatSdg(changed, locale) ?? "",
-          )}
-        </Alert>
-      )}
-      {reason && (
-        <Alert tone="error" data-testid="order-error" data-reason={reason}>
-          {strings.reasons[reason] ?? strings.reasons.server_error}{" "}
-          {reason === "sign_in" && (
-            <a href={loginHref} className="font-medium underline">
-              {strings.signInAction}
-            </a>
-          )}
-          {reason === "kyc_required" && (
-            <a
-              href={`/${locale}/account/kyc`}
-              className="font-medium underline"
+        {maxQuantity > 1 ? (
+          <div className="grid gap-2">
+            <label htmlFor="quantity" className={labelClasses}>
+              {strings.quantity}
+            </label>
+            <select
+              id="quantity"
+              name="quantity"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              className={`${selectClasses} max-w-24`}
             >
-              {strings.kycAction}
-            </a>
-          )}
-          {reason === "incomplete_account" && (
-            <a
-              href={`/${locale}/complete-account`}
-              className="font-medium underline"
-            >
-              {strings.completeAction}
-            </a>
-          )}
-        </Alert>
-      )}
+              {Array.from({ length: maxQuantity }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <input type="hidden" name="quantity" value="1" />
+        )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-        <p className="font-bold" dir="auto" data-testid="order-total">
-          {strings.total}:{" "}
-          {expectedTotal === null
-            ? strings.priceUnavailable
-            : formatSdg(expectedTotal, locale)}
-        </p>
-        <button
-          type="submit"
-          disabled={pending || expectedTotal === null}
-          className={buttonVariants()}
-        >
-          {strings.placeOrder}
-        </button>
-      </div>
+        {variant.fields.length > 0 && (
+          <fieldset className="grid gap-4" key={variant.id}>
+            <legend className="mb-2 font-bold">{strings.details}</legend>
+            {variant.fields.map((f) => {
+              const id = `f-${f.key}`;
+              const error = errors[f.key];
+              const common = {
+                id,
+                name: `f.${f.key}`,
+                required: f.required,
+                "aria-invalid": !!error,
+                "aria-describedby": `${id}-help`,
+              };
+              return (
+                <div key={f.key} className="grid gap-2">
+                  <label htmlFor={id} className={labelClasses}>
+                    <Text value={f.label} />{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({f.required ? strings.required : strings.optional})
+                    </span>
+                  </label>
+                  {f.type === "select" ? (
+                    <select
+                      {...common}
+                      defaultValue=""
+                      className={selectClasses}
+                    >
+                      <option value="" disabled>
+                        {strings.select}
+                      </option>
+                      {f.options?.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label?.text ?? o.value}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      {...common}
+                      className={inputClasses}
+                      type={
+                        f.type === "email"
+                          ? "email"
+                          : f.type === "phone"
+                            ? "tel"
+                            : "text"
+                      }
+                      inputMode={
+                        f.type === "digits"
+                          ? "numeric"
+                          : f.type === "phone"
+                            ? "tel"
+                            : undefined
+                      }
+                      dir={f.type === "text" ? undefined : "ltr"}
+                      minLength={f.minLength}
+                      maxLength={f.maxLength}
+                      autoComplete="off"
+                    />
+                  )}
+                  <p
+                    id={`${id}-help`}
+                    className="text-sm text-destructive"
+                    data-field-error={f.key}
+                  >
+                    {error
+                      ? (strings.errors[error] ?? strings.errors.type)
+                      : null}
+                  </p>
+                </div>
+              );
+            })}
+          </fieldset>
+        )}
+
+        {state.status === "invalid" && state.errors._form && (
+          <Alert tone="error">{strings.errors[state.errors._form]}</Alert>
+        )}
+        {unexpected && <Alert tone="error">{strings.errors.unknown}</Alert>}
+        {changed !== null && (
+          <Alert tone="warning" data-testid="price-changed">
+            {strings.priceChanged.replace(
+              "{price}",
+              formatSdg(changed, locale) ?? "",
+            )}
+          </Alert>
+        )}
+        {reason && (
+          <Alert tone="error" data-testid="order-error" data-reason={reason}>
+            {strings.reasons[reason] ?? strings.reasons.server_error}{" "}
+            {reason === "sign_in" && (
+              <a href={loginHref} className="font-medium underline">
+                {strings.signInAction}
+              </a>
+            )}
+            {reason === "kyc_required" && (
+              <a
+                href={`/${locale}/account/kyc`}
+                className="font-medium underline"
+              >
+                {strings.kycAction}
+              </a>
+            )}
+            {reason === "incomplete_account" && (
+              <a
+                href={`/${locale}/complete-account`}
+                className="font-medium underline"
+              >
+                {strings.completeAction}
+              </a>
+            )}
+          </Alert>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <p className="font-bold" dir="auto" data-testid="order-total">
+            {strings.total}:{" "}
+            {expectedTotal === null
+              ? strings.priceUnavailable
+              : formatSdg(expectedTotal, locale)}
+          </p>
+          <button
+            type="submit"
+            disabled={pending || !hydrated || expectedTotal === null}
+            className={buttonVariants()}
+          >
+            {strings.placeOrder}
+          </button>
+        </div>
+      </fieldset>
     </form>
   );
 }

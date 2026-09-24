@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { OrderErrorKey } from "@/i18n/keys";
 import { submitReceipt } from "@/server/orders/actions";
 
@@ -32,9 +33,11 @@ export function ReceiptForm({
     null,
   );
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated();
 
   return (
     <form
+      method="post"
       className="grid gap-4"
       data-testid="receipt-form"
       onSubmit={(event) => {
@@ -111,7 +114,11 @@ export function ReceiptForm({
             : t("errors.server_error")}
         </Alert>
       )}
-      <Button type="submit" disabled={pending} className="justify-self-start">
+      <Button
+        type="submit"
+        disabled={pending || !hydrated}
+        className="justify-self-start"
+      >
         {t("submit")}
       </Button>
     </form>

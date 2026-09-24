@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { phoneSchema } from "@/lib/validation/auth";
 import { login } from "@/server/auth/actions";
+import { useHydrated } from "@/lib/use-hydrated";
 
 import { type ActionFailure, Field, useErrorText } from "./form-bits";
 
@@ -24,6 +25,7 @@ export function LoginForm({ next }: { next?: string }) {
   const errorText = useErrorText();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated();
   const form = useForm<
     z.input<typeof loginForm>,
     unknown,
@@ -34,6 +36,7 @@ export function LoginForm({ next }: { next?: string }) {
 
   return (
     <form
+      method="post"
       className="grid gap-4"
       noValidate
       onSubmit={form.handleSubmit((v) =>
@@ -64,7 +67,7 @@ export function LoginForm({ next }: { next?: string }) {
         {...form.register("password")}
       />
       {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || !hydrated}>
         {t("login.submit")}
       </Button>
     </form>

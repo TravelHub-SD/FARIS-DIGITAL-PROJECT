@@ -5,6 +5,7 @@ import {
   createKycSubmission,
   createOrder,
   createUser,
+  ownerUser,
   service,
   type TestUser,
   VARIANT_CHEAP,
@@ -20,7 +21,7 @@ let order: Row;
 beforeAll(async () => {
   // Needs a fresh database (the owner is unique and cannot be deleted):
   // `npm run test:integration` runs `supabase db reset` first.
-  owner = await createUser({ admin: { owner: true } });
+  owner = await ownerUser();
   ordersAdmin = await createUser({ admin: { permissions: ["orders"] } });
   customer = await createUser();
   order = await createOrder(customer.id);

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
+import { useHydrated } from "@/lib/use-hydrated";
 import {
   fullNameSchema,
   otpCodeSchema,
@@ -41,6 +42,7 @@ export function RegisterForm() {
   const [phone, setPhone] = useState<string | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
+  const hydrated = useHydrated();
   const cooldown = useCountdown();
 
   const first = useForm<
@@ -74,6 +76,7 @@ export function RegisterForm() {
   if (!phone) {
     return (
       <form
+        method="post"
         className="grid gap-4"
         noValidate
         onSubmit={first.handleSubmit((v) => sendCode(v.phone))}
@@ -90,7 +93,7 @@ export function RegisterForm() {
           {...first.register("phone")}
         />
         {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || !hydrated}>
           {t("sendCode")}
         </Button>
       </form>
@@ -99,6 +102,7 @@ export function RegisterForm() {
 
   return (
     <form
+      method="post"
       className="grid gap-4"
       noValidate
       onSubmit={second.handleSubmit((v) =>
@@ -138,7 +142,7 @@ export function RegisterForm() {
         {...second.register("password")}
       />
       {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || !hydrated}>
         {t("register.submit")}
       </Button>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">

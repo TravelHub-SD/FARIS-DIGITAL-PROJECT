@@ -100,11 +100,28 @@ export const getAdminPermissions = cache(
   },
 );
 
+export const getIsOwner = cache(async (userId: string): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("admins")
+    .select("is_owner, is_active")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data?.is_active && !!data.is_owner;
+});
+
 /** Non-admins get a 404: the admin area does not reveal that it exists. */
 export async function requireAdmin(locale: Locale, permission?: AppPermission) {
   const user = await requireCompleteUser(locale);
   const permissions = await getAdminPermissions(user.id);
   if (!permissions || (permission && !permissions.has(permission))) notFound();
+  return { user, permissions };
+}
+
+/** Owner-only areas (admins, audit log): 404 for every other admin. */
+export async function requireOwner(locale: Locale) {
+  const { user, permissions } = await requireAdmin(locale);
+  if (!(await getIsOwner(user.id))) notFound();
   return { user, permissions };
 }
 
@@ -122,6 +139,12 @@ export async function actionAdmin(
   if (!user) return null;
   const permissions = await getAdminPermissions(user.id);
   return permissions?.has(permission) ? user : null;
+}
+
+export async function actionOwner(): Promise<SessionUser | null> {
+  const user = await actionCompleteUser();
+  if (!user) return null;
+  return (await getIsOwner(user.id)) ? user : null;
 }
 
 /** Only same-site paths under the current locale; blocks open redirects. */

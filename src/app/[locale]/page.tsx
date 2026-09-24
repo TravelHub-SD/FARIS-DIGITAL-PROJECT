@@ -1,10 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { CategoryGrid } from "@/components/catalog/category-grid";
+import { FaqSection, PromoBanner } from "@/components/catalog/home-extras";
 import { ProductCard, ProductGrid } from "@/components/catalog/product-card";
 import { SearchForm } from "@/components/catalog/search-form";
 import type { Locale } from "@/i18n/routing";
 import { listCategories, searchProducts } from "@/server/catalog/queries";
+import { getSiteSettings, listPublishedFaqs } from "@/server/catalog/site";
 
 // Static, regenerated at most every 5 minutes (ISR). If the database is cold
 // during regeneration, the last good page keeps being served.
@@ -14,15 +16,18 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   // Validated by the locale layout, which 404s unknown locales.
   setRequestLocale(locale as Locale);
-  const [t, tc, categories, popular] = await Promise.all([
-    getTranslations("Home"),
-    getTranslations("Catalog"),
+  const t = await getTranslations("Home");
+  const tc = await getTranslations("Catalog");
+  const [categories, popular, settings, faqs] = await Promise.all([
     listCategories(),
     searchProducts({ sort: "popular", limit: 8 }),
+    getSiteSettings(),
+    listPublishedFaqs(),
   ]);
 
   return (
     <>
+      <PromoBanner settings={settings} locale={locale as Locale} />
       <section className="relative overflow-hidden border-b">
         <div
           aria-hidden
@@ -62,6 +67,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             </ProductGrid>
           </section>
         )}
+        <FaqSection faqs={faqs} locale={locale as Locale} />
       </div>
     </>
   );

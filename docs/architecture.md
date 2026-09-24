@@ -401,3 +401,10 @@ Same as the roadmap, with three adjustments:
 11. **Phase 10, QA & deploy.** Include a manual pass through the RLS matrix using PostgREST directly with a customer JWT.
 
 **On approval I will:** record decisions 1–7 plus the architecture principles in `docs/decisions.md`, and apply any changes you request here before Phase 1.
+
+## Admin dashboard (as built, Phase 6)
+- `/[locale]/admin/*`, one section per permission: Orders (`orders`), Products (`products`), Customers (`customers`), Identity checks (`kyc`), Comments (`comments`), FAQs + Settings (`settings`), Admins + Audit log (owner only). Non-admins and admins without the permission get 404.
+- Server code: `src/server/admin/*` — `*-queries.ts` (reads, admin session), `orders.ts`, `catalog.ts`, `people.ts`, `settings.ts` (Server Actions; first line is the permission check; `ActionResult` = `{ok}` or `{ok:false,error}`). Public images via `public-images.ts` (admin session, path-confined storage policy).
+- UI: `ActionForm` (client) posts any form to its action through `onSubmit`, keeps typed values on errors, shows the localized result and refreshes the page on success. It is disabled until hydration.
+- Database additions: `admin_orders()` (orders search, invoker + permission check), `admin_comments()`, `set_customer_blocked()`, `product_comments()` (public), limits in `security_settings`, `can_write_public_asset()`.
+
