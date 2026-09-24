@@ -1,19 +1,25 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
-import { Link, usePathname } from "@/i18n/navigation";
+import { buttonVariants } from "@/components/ui/button-variants";
 
-export function LocaleSwitcher({ label }: { label: string }) {
-  const locale = useLocale();
-  const pathname = usePathname();
-  const target = locale === "ar" ? "en" : "ar";
-
+// Swaps the /ar|/en prefix of the current path. Uses Next's own navigation
+// hooks (already in the runtime) instead of next-intl's client runtime, so
+// public pages ship no translation/formatting library.
+export function LocaleSwitcher({
+  label,
+  target,
+}: {
+  label: string;
+  target: "ar" | "en";
+}) {
+  const pathname = usePathname() ?? "/";
+  const href = pathname.replace(/^\/(ar|en)(?=\/|$)/, `/${target}`);
   return (
     <Link
-      href={pathname}
-      locale={target}
+      href={href === pathname ? `/${target}` : href}
       hrefLang={target}
       lang={target}
       className={buttonVariants({ variant: "ghost", size: "sm" })}

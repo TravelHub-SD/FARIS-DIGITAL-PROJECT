@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  CHEAP_FIELDS,
   customerClaims,
   service,
   signJwt,
@@ -56,6 +57,7 @@ describe("Incomplete (Google, phone-unverified) accounts are unusable", () => {
       variant_id: VARIANT_CHEAP,
       quantity: 1,
       idempotency_key: randomUUID(),
+      fulfillment_data: CHEAP_FIELDS,
     });
     expect(res.error?.message).toMatch(/PHONE_NOT_VERIFIED/);
   });
@@ -97,6 +99,7 @@ describe("Incomplete (Google, phone-unverified) accounts are unusable", () => {
       variant_id: VARIANT_CHEAP,
       quantity: 1,
       idempotency_key: randomUUID(),
+      fulfillment_data: CHEAP_FIELDS,
     });
     expect(order.error).toBeNull();
   });

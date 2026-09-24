@@ -2,7 +2,7 @@
 
 // Last-resort boundary when the locale layout itself fails. It can't rely on
 // next-intl or the theme, so it is plain bilingual HTML.
-export default function GlobalError({ reset }: { reset: () => void }) {
+export default function GlobalError({ retry }: { retry: () => void }) {
   return (
     <html lang="ar" dir="rtl">
       <body
@@ -20,7 +20,7 @@ export default function GlobalError({ reset }: { reset: () => void }) {
           <p lang="en" dir="ltr">
             Temporarily unavailable
           </p>
-          <button type="button" onClick={() => reset()}>
+          <button type="button" onClick={() => retry()}>
             إعادة المحاولة / Try again
           </button>
         </main>

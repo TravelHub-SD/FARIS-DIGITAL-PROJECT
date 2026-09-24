@@ -19,37 +19,37 @@ update app_settings set usd_sdg_rate = 2600, kyc_threshold_usd = 100 where id;
 
 -- KYC threshold (USD, decisions.md): 120 USD variant, customer not verified.
 select throws_ok(
-  $$ insert into orders (user_id, variant_id, quantity, idempotency_key)
-     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000002', 1, gen_random_uuid()) $$,
+  $$ insert into orders (user_id, variant_id, quantity, idempotency_key, fulfillment_data)
+     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000002', 1, gen_random_uuid(), '{"account_email":"a@b.co"}') $$,
   'P0001', 'KYC_REQUIRED', 'order >= threshold refused while KYC is not verified');
 
 update profiles set kyc_status = 'verified' where id = '10000000-0000-4000-8000-000000000011';
 select lives_ok(
-  $$ insert into orders (user_id, variant_id, quantity, idempotency_key)
-     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000002', 1, gen_random_uuid()) $$,
+  $$ insert into orders (user_id, variant_id, quantity, idempotency_key, fulfillment_data)
+     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000002', 1, gen_random_uuid(), '{"account_email":"a@b.co"}') $$,
   'same order accepted once KYC is verified');
 update profiles set kyc_status = 'none' where id = '10000000-0000-4000-8000-000000000011';
 
 select lives_ok(
-  $$ insert into orders (id, user_id, variant_id, quantity, idempotency_key)
+  $$ insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
      values ('20000000-0000-4000-8000-000000000011', '10000000-0000-4000-8000-000000000011',
-             '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid()) $$,
+             '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}') $$,
   'order below threshold does not need KYC');
 
 select throws_ok(
-  $$ insert into orders (user_id, variant_id, quantity, idempotency_key)
-     values ('10000000-0000-4000-8000-000000000012', '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid()) $$,
+  $$ insert into orders (user_id, variant_id, quantity, idempotency_key, fulfillment_data)
+     values ('10000000-0000-4000-8000-000000000012', '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}') $$,
   'P0001', 'PHONE_NOT_VERIFIED', 'customer without a verified phone cannot order');
 
 select throws_ok(
-  $$ insert into orders (user_id, variant_id, quantity, idempotency_key)
-     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000001', 9, gen_random_uuid()) $$,
+  $$ insert into orders (user_id, variant_id, quantity, idempotency_key, fulfillment_data)
+     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000001', 9, gen_random_uuid(), '{"player_id":"123456"}') $$,
   'P0001', 'INVALID_QUANTITY', 'quantity above the variant max is refused');
 
 update product_variants set is_active = false where id = '00000000-0000-4000-c000-000000000001';
 select throws_ok(
-  $$ insert into orders (user_id, variant_id, quantity, idempotency_key)
-     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid()) $$,
+  $$ insert into orders (user_id, variant_id, quantity, idempotency_key, fulfillment_data)
+     values ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}') $$,
   'P0001', 'VARIANT_UNAVAILABLE', 'inactive variant cannot be ordered');
 update product_variants set is_active = true where id = '00000000-0000-4000-c000-000000000001';
 
@@ -66,9 +66,9 @@ insert into payment_receipts (order_id, bank_account_id, transaction_ref, storag
 select '20000000-0000-4000-8000-000000000011', id, 'ab-12 345', 'r1.jpg', repeat('b', 64)
   from bank_accounts order by sort_order limit 1;
 
-insert into orders (id, user_id, variant_id, quantity, idempotency_key)
+insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
 values ('20000000-0000-4000-8000-000000000013', '10000000-0000-4000-8000-000000000011',
-        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid());
+        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}');
 
 select throws_ok(
   $$ insert into payment_receipts (order_id, bank_account_id, transaction_ref, storage_path, file_sha256)

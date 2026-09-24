@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { notFound } from "next/navigation";
-import { hasLocale, NextIntlClientProvider } from "next-intl";
-import {
-  getMessages,
-  getTranslations,
-  setRequestLocale,
-} from "next-intl/server";
+import { hasLocale } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -55,7 +51,6 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  const messages = await getMessages();
 
   return (
     <html
@@ -71,14 +66,12 @@ export default async function LocaleLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* Only the Errors namespace ships to the browser (for error.tsx).
-              Other client components get strings as props from Server
-              Components, keeping translation JSON out of the client bundle. */}
-          <NextIntlClientProvider messages={{ Errors: messages.Errors }}>
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-          </NextIntlClientProvider>
+          {/* No NextIntlClientProvider here: public pages ship no client i18n
+              runtime (links are server-rendered by @/components/link). Pages
+              with client forms add their own via ClientMessages. */}
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
         </ThemeProvider>
       </body>
     </html>

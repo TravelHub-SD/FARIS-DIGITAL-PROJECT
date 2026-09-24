@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({

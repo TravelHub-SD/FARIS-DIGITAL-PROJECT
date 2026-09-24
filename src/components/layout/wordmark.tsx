@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
 
 // Text wordmark until the client delivers the logo (docs/decisions.md:
 // client-side blockers). Swap the inner markup for the asset, keep the API.

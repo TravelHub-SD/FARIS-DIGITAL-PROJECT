@@ -11,7 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link, redirect } from "@/i18n/navigation";
+import { Link } from "@/components/link";
+import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getSessionUser } from "@/server/auth/session";
 

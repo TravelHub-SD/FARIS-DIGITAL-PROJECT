@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/browser";
 
 /**
  * Google sign-in (or linking, for a signed-in phone account). Rendered only
@@ -24,6 +23,9 @@ export function GoogleButton({
 
   async function start() {
     setFailed(false);
+    // Loaded on click: supabase-js (≈68 KB gzip) stays out of the page's
+    // initial JavaScript, which matters on weak connections.
+    const { createClient } = await import("@/lib/supabase/browser");
     const supabase = createClient();
     const redirectTo = `${window.location.origin}/auth/callback?locale=${locale}`;
     const { error } =

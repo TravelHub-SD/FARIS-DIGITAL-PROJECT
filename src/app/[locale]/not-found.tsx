@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
 
 export default async function NotFound() {
   const t = await getTranslations("Errors");

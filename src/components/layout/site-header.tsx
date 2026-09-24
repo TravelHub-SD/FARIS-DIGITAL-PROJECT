@@ -1,7 +1,8 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
+import { SearchIcon } from "@/components/search-icon";
 
 import { LocaleSwitcher } from "./locale-switcher";
 import { ThemeToggle } from "./theme-toggle";
@@ -16,12 +17,22 @@ export async function SiteHeader() {
         <Wordmark />
         <nav className="flex items-center gap-1" aria-label={t("language")}>
           <Link
+            href="/search"
+            className={buttonVariants({ variant: "ghost", size: "icon" })}
+            aria-label={t("search")}
+          >
+            <SearchIcon />
+          </Link>
+          <Link
             href="/account"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             {t("account")}
           </Link>
-          <LocaleSwitcher label={t("switchTo")} />
+          <LocaleSwitcher
+            label={t("switchTo")}
+            target={(await getLocale()) === "ar" ? "en" : "ar"}
+          />
           <ThemeToggle label={t("theme")} />
         </nav>
       </div>

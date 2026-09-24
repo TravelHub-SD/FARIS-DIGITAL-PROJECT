@@ -18,10 +18,10 @@ update product_variants set price_usd = 1.10 where id = '00000000-0000-4000-c000
 
 -- 1. Caller-supplied money values are ignored; the DB derives them.
 insert into orders (id, user_id, variant_id, quantity, idempotency_key,
-                    unit_price_usd, total_usd, usd_sdg_rate, total_sdg, status, kyc_required, reference)
+                    unit_price_usd, total_usd, usd_sdg_rate, total_sdg, status, kyc_required, reference, fulfillment_data)
 values ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
         '00000000-0000-4000-c000-000000000001', 3, gen_random_uuid(),
-        0.01, 0.03, 1, 1, 'completed', false, 'FD-0000000');
+        0.01, 0.03, 1, 1, 'completed', false, 'FD-0000000', '{"player_id":"123456"}');
 
 select is((select unit_price_usd from orders where id = '20000000-0000-4000-8000-000000000001'),
           1.10::numeric, 'tampered unit price replaced by the catalog price');
@@ -39,9 +39,9 @@ select ok((select reference ~ '^FD-[0-9]{7}$' and reference <> 'FD-0000000'
 
 -- Rounding rule: always up to whole SDG.
 update app_settings set usd_sdg_rate = 2600.3333 where id;
-insert into orders (id, user_id, variant_id, quantity, idempotency_key)
+insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
 values ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid());
+        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}');
 select is((select total_sdg from orders where id = '20000000-0000-4000-8000-000000000002'),
           2861::numeric, 'SDG rounded up: ceil(1.10 x 2600.3333 = 2860.37) = 2861');
 
@@ -55,9 +55,9 @@ select results_eq(
   $$ values (1.10::numeric, 3.30::numeric, 2600::numeric, 8580::numeric) $$,
   'existing order unchanged after price 1.10→5.00 and rate 2600→3000');
 
-insert into orders (id, user_id, variant_id, quantity, idempotency_key)
+insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
 values ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid());
+        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}');
 select results_eq(
   $$ select unit_price_usd, usd_sdg_rate, total_sdg from orders
       where id = '20000000-0000-4000-8000-000000000003' $$,

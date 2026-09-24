@@ -7,7 +7,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { KycDocTypeKey } from "@/i18n/keys";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
 import { formatPhone } from "@/lib/phone";
 import { requireAdmin } from "@/server/auth/session";

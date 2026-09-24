@@ -6,7 +6,7 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
 import { formatPhone } from "@/lib/phone";
 import { signOut } from "@/server/auth/actions";

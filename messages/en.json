@@ -14,7 +14,8 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
-    "account": "My account"
+    "account": "My account",
+    "search": "Search"
   },
   "Home": {
     "title": "Digital products and services, simple and secure",
@@ -186,5 +187,58 @@
     "reason": "Rejection reason (sent to the customer)",
     "done": "Review saved.",
     "back": "Back to queue"
+  },
+  "Catalog": {
+    "categories": "Categories",
+    "popular": "Most ordered",
+    "allCategories": "All categories",
+    "viewAll": "View all",
+    "from": "From {price}",
+    "priceUnavailable": "Price not available yet",
+    "inCategory": "In {category}",
+    "noProducts": "No products here yet.",
+    "home": "Home",
+    "productCount": "{count, plural, =0 {No products} one {# product} other {# products}}",
+    "searchPlaceholder": "Search games, Starlink, airtime…",
+    "searchLabel": "Search the catalog",
+    "searchSubmit": "Search",
+    "searchTitle": "Search",
+    "resultsFor": "Results for “{query}”",
+    "noResults": "No products match your search.",
+    "filters": "Filters",
+    "category": "Category",
+    "anyCategory": "All categories",
+    "minPrice": "Min price (SDG)",
+    "maxPrice": "Max price (SDG)",
+    "sort": "Sort by",
+    "sorts": {
+      "popular": "Most ordered",
+      "price_asc": "Price: low to high",
+      "price_desc": "Price: high to low",
+      "newest": "Newest"
+    },
+    "apply": "Apply",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}",
+    "chooseOption": "Choose an option",
+    "details": "Details needed to fulfil your order",
+    "continue": "Continue",
+    "detailsValid": "Details look good.",
+    "orderingSoon": "Placing orders and paying by bank transfer is enabled in the next step of this build.",
+    "summary": "You chose {variant} — {price}",
+    "required": "Required",
+    "optional": "Optional",
+    "select": "Select…",
+    "priceNote": "Prices are shown in Sudanese pounds at today's rate; the amount to pay is fixed when you place the order.",
+    "errors": {
+      "missing": "This field is required.",
+      "unknown": "Unexpected field.",
+      "type": "Invalid value.",
+      "length": "Wrong length.",
+      "format": "Invalid format.",
+      "option": "Choose one of the options.",
+      "unavailable": "This option is no longer available."
+    }
   }
 }

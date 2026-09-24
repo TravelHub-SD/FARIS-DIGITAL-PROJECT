@@ -188,3 +188,33 @@ Format:
 
 ## 2026-09-24 — Phase 3 dependencies
 - `sharp` (image validation + re-encoding; already used by Next, now explicit), `react-hook-form` + `@hookform/resolvers` (declared stack), `@playwright/test` (dev: end-to-end tests required by the verification rule; browsers not downloaded in CI sandboxes, `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can point to a local Chromium).
+
+## 2026-09-24 — KYC file access stays reviewer-only (confirmed)
+- **Decision (Hassan):** only admins with the `kyc` permission (and the Owner) can read identity documents. The customer who uploaded a document cannot read it back.
+- **Why:** the customer already has their own copy; an extra read path on identity documents is attack surface with no real benefit.
+- **Alternatives rejected:** a storage policy letting customers read their own pending document.
+- **Consequence:** the customer UI shows only the KYC status and rejection reason, never the image. Tested in `tests/integration/kyc.test.ts` ("the customer who uploaded it: cannot download or sign the file").
+
+## 2026-09-25 — Phase 4: fulfillment fields
+- **Types:** `text`, `digits`, `phone`, `email`, `select`. No admin-supplied regex: a pattern typed in the dashboard would run against user input on the server (ReDoS). `digits` covers player IDs with leading zeros; `select` covers servers/regions. Optional `sensitive` flag reserved for Phase 5 masking/purge.
+- **Definitions** (`product_variants.required_fields`) are validated twice with the same rules: Zod (`src/lib/fulfillment.ts`, admin forms in Phase 6) and a CHECK constraint (`private.valid_field_definitions`), so a malformed definition cannot be saved by any path.
+- **Submitted data** is normalised and validated in TypeScript (trim, Arabic-Indic → ASCII digits, Sudanese phone → E.164, empty optionals dropped) and re-validated strictly in the **order trigger** (`private.fulfillment_errors`): missing, unknown key, non-string type, length, format, select option. The TS and SQL validators are tested for identical verdicts on the same inputs.
+- **Product page (Phase 4 scope):** the details form posts to the `checkOrderDetails` Server Action, which re-reads the variant as `anon` (a forged hidden-variant id is "unavailable") and validates server-side. On success it says the details are valid and that placing the order comes next; Phase 5 turns that step into order creation. No fake order is created.
+
+## 2026-09-25 — Phase 4: public catalog rendering
+- Public pages read through a cookie-less **anon** client (`src/lib/supabase/public.ts`): RLS decides visibility, and admins browsing the storefront see exactly what customers see. A product is shown only if it, its category and at least one variant are visible; otherwise 404.
+- `search_products()` and `price_sdg()` are `SECURITY INVOKER` and executable by anon — the only anon-callable functions (coverage test updated). All SDG prices are computed in SQL with the order trigger's formula (`ceil(usd × rate)`); a test proves the displayed price equals the charged amount.
+- **Rendering:** home, category and product pages are static with `revalidate = 300` (ISR; category/product built on first visit via `generateStaticParams() → []`). Search is dynamic and `noindex`. Build output and `x-nextjs-cache: MISS → HIT` verified. Accepted: a displayed price can lag a rate change by up to 5 minutes; the order snapshot uses the live rate (Phase 5 shows the exact amount before confirming). Phase 6 admin edits will call `revalidatePath`.
+- **Cold database:** cached pages keep serving while the database is down; uncached pages show the "temporarily unavailable" boundary, and **Retry now recovers** (switched from `reset()` to Next 16.3's `retry()`, which re-fetches; `reset()` never recovered from a server error — Phase 1 bug found by this test). During `next build`, catalog sections degrade to empty if the database is unreachable (CI / paused project) and fill in on the first revalidation.
+- **SEO:** per-page title/description with language fallback, canonical + hreflang (ar, en, x-default), Open Graph, JSON-LD `Product` (AggregateOffer in SDG) + `BreadcrumbList` (escaped against `</script>`), `sitemap.xml` built from anon-visible rows only, `robots.txt` excluding account/admin/auth/search.
+- **Language fallback:** paired `_ar/_en` columns; the requested language wins, otherwise the other language is shown with its own `lang`/`dir`, so Arabic inside an English page (and vice versa) shapes and aligns correctly.
+- **Images:** a brand placeholder tile for now; real product images (upload + `next/image` with the storage host) arrive with the Phase 6 admin upload.
+
+## 2026-09-25 — Phase 4: client JavaScript budget on public pages
+- Measured with `next build` + `next start` on `/ar/p/pubg-uc`: **210.8 KB → 185.9 KB gzip** (home 208.7 → 183.9 KB). What remains is ~160 KB React/Next runtime (fixed cost of the App Router), `next-themes`, router/link helpers and the 2 KB order-details form.
+- Removed from every public page: next-intl's client runtime (12 KB; server components now use `@/components/link`, a server-side locale-prefixing `next/link`; client components that need next-intl keep it under their own `ClientMessages` provider), `lucide-react` (its icons are `"use client"` in v1.47 — verified in `dist/esm/Icon.mjs` — so even a server-rendered icon ships JS; replaced by inline SVG), and `tailwind-merge`/Radix `Slot` (public client components use plain class strings from `src/components/ui/styles.ts` and `button-variants.ts`).
+- Variant choice, search, filters and pagination work without client JS (links and GET forms).
+- Auth pages: Google button now loads supabase-js on click (login page 379 → 312 KB). The remaining weight is Zod + React Hook Form in the client forms — logged for Phase 9 (move shared schemas to `zod/mini` or validate on the server only).
+
+## 2026-09-25 — Phase 4: grants for generated columns and CHECK functions
+- Found by the fixtures: `service_role` could not insert a product (`permission denied for function normalize_ar`) because functions in generated columns and CHECK constraints are evaluated with the writing role's privileges, and `service_role` had no USAGE on `private`. Migration `20260925100100_catalog_grants.sql` grants USAGE + EXECUTE on the two pure functions only (`normalize_ar`, `valid_field_definitions`). The seed never hit this because it runs as `postgres`.

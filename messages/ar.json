@@ -14,7 +14,8 @@
     "themeLight": "فاتح",
     "themeDark": "داكن",
     "themeSystem": "حسب الجهاز",
-    "account": "حسابي"
+    "account": "حسابي",
+    "search": "بحث"
   },
   "Home": {
     "title": "منتجات وخدمات رقمية، بسهولة وأمان",
@@ -186,5 +187,58 @@
     "reason": "سبب الرفض (يُرسل للعميل)",
     "done": "تم حفظ المراجعة.",
     "back": "العودة للطابور"
+  },
+  "Catalog": {
+    "categories": "الأقسام",
+    "popular": "الأكثر طلباً",
+    "allCategories": "كل الأقسام",
+    "viewAll": "عرض الكل",
+    "from": "ابتداءً من {price}",
+    "priceUnavailable": "السعر غير متاح حالياً",
+    "inCategory": "في {category}",
+    "noProducts": "لا توجد منتجات هنا بعد.",
+    "home": "الرئيسية",
+    "productCount": "{count, plural, =0 {لا توجد منتجات} one {منتج واحد} two {منتجان} few {# منتجات} many {# منتجاً} other {# منتج}}",
+    "searchPlaceholder": "ابحث عن الألعاب، ستارلينك، الرصيد…",
+    "searchLabel": "البحث في المتجر",
+    "searchSubmit": "بحث",
+    "searchTitle": "البحث",
+    "resultsFor": "نتائج البحث عن «{query}»",
+    "noResults": "لا توجد منتجات مطابقة لبحثك.",
+    "filters": "التصفية",
+    "category": "القسم",
+    "anyCategory": "كل الأقسام",
+    "minPrice": "أقل سعر (جنيه)",
+    "maxPrice": "أعلى سعر (جنيه)",
+    "sort": "الترتيب",
+    "sorts": {
+      "popular": "الأكثر طلباً",
+      "price_asc": "السعر: من الأقل",
+      "price_desc": "السعر: من الأعلى",
+      "newest": "الأحدث"
+    },
+    "apply": "تطبيق",
+    "previous": "السابق",
+    "next": "التالي",
+    "page": "صفحة {page} من {pages}",
+    "chooseOption": "اختر الباقة",
+    "details": "البيانات المطلوبة لتنفيذ طلبك",
+    "continue": "متابعة",
+    "detailsValid": "البيانات صحيحة.",
+    "orderingSoon": "تفعيل إرسال الطلب والدفع بالتحويل البنكي يأتي في الخطوة التالية من هذا الإصدار.",
+    "summary": "اخترت {variant} — {price}",
+    "required": "مطلوب",
+    "optional": "اختياري",
+    "select": "اختر…",
+    "priceNote": "الأسعار بالجنيه السوداني حسب سعر اليوم، ويُثبَّت المبلغ المطلوب عند إرسال الطلب.",
+    "errors": {
+      "missing": "هذا الحقل مطلوب.",
+      "unknown": "حقل غير متوقع.",
+      "type": "قيمة غير صالحة.",
+      "length": "الطول غير صحيح.",
+      "format": "الصيغة غير صحيحة.",
+      "option": "اختر أحد الخيارات.",
+      "unavailable": "هذا الخيار لم يعد متاحاً."
+    }
   }
 }

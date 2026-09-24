@@ -92,6 +92,8 @@ export async function createUser(
 }
 
 export const VARIANT_CHEAP = "00000000-0000-4000-c000-000000000001"; // 1.10 USD (seed)
+/** Valid fulfillment data for VARIANT_CHEAP (seed: required digits player_id, 5–20). */
+export const CHEAP_FIELDS = { player_id: "123456" };
 
 /** Inserts an order through the service role (stand-in for create_order, Phase 5). */
 export async function createOrder(userId: string, variantId = VARIANT_CHEAP) {
@@ -102,6 +104,7 @@ export async function createOrder(userId: string, variantId = VARIANT_CHEAP) {
       variant_id: variantId,
       quantity: 1,
       idempotency_key: randomUUID(),
+      fulfillment_data: variantId === VARIANT_CHEAP ? CHEAP_FIELDS : {},
     })
     .select()
     .single();

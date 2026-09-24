@@ -13,17 +13,19 @@ select is_empty(
         and not c.relrowsecurity $$,
   'every table in public and private has RLS enabled');
 
-select is_empty(
-  $$ select p.proname from pg_proc p
+select set_eq(
+  $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('anon', p.oid, 'execute') $$,
-  'no public function is executable by anon');
+  array['search_products', 'price_sdg'],
+  'anon can execute exactly the public catalog functions (both SECURITY INVOKER)');
 
 select set_eq(
   $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute') $$,
-  array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted'],
+  array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted',
+        'search_products', 'price_sdg'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
@@ -55,7 +57,7 @@ select is_empty(
       where p.pronamespace = 'private'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute')
         and p.proname not in ('is_admin', 'is_owner', 'has_permission',
-                              'admin_assurance_ok', 'normalize_ar') $$,
+                              'admin_assurance_ok', 'normalize_ar', 'valid_field_definitions') $$,
   'only the authorization helpers in private are executable by authenticated');
 
 select * from finish();

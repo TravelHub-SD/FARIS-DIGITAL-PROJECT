@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { ClientMessages } from "@/components/layout/client-messages";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
 import { requireAdmin } from "@/server/auth/session";
 

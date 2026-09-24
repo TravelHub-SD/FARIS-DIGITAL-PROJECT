@@ -47,13 +47,13 @@ Output: `docs/architecture.md`
 - [x] Tests: OTP abuse, KYC authorization, document access
 
 ## Phase 4 — Catalog
-- [ ] Categories, products, variants, bilingual fields, visibility
-- [ ] Configurable required fulfillment fields per variant (dynamic rendering + server validation)
-- [ ] Product/category pages, search, filtering
-- [ ] SEO basics for public pages
+- [x] Categories, products, variants, bilingual fields, visibility
+- [x] Configurable required fulfillment fields per variant (dynamic rendering + server validation)
+- [x] Product/category pages, search, filtering
+- [x] SEO basics for public pages
 
 ## Phase 5 — Orders & payments
-- [ ] Order creation with server-side pricing and price snapshot
+- [ ] Order creation with server-side pricing and price snapshot (turn the Phase 4 `checkOrderDetails` step into order creation; purge `sensitive` fields at terminal status)
 - [ ] KYC threshold enforcement on the server
 - [ ] Bank transfer details, receipt upload, transaction number + duplicate detection (if approved)
 - [ ] Reference numbers, order statuses and transitions with audit entries
@@ -61,7 +61,7 @@ Output: `docs/architecture.md`
 
 ## Phase 6 — Admin dashboard
 - [ ] Orders: list, filters, search, detail, receipt view, status changes, internal notes
-- [ ] Products, categories, variants, prices, required fields
+- [ ] Products, categories, variants, prices, required fields (call `revalidatePath` for affected catalog pages; validate definitions with `fieldDefinitionsSchema`)
 - [ ] Customers and KYC queue
 - [ ] Comments moderation, FAQs, site settings
 - [ ] Admins and granular permissions
@@ -85,6 +85,8 @@ Output: `docs/architecture.md`
 - [ ] Known issue (found in Phase 2 browser run): background segment prefetch `/en?_rsc=…` (`Next-Router-Segment-Prefetch: /$d$locale`) returns 404 because `next build` does not emit `en.segments/$d$locale.segment.rsc` (the `ar` one exists; deterministic across clean builds; Next 16.3 vary-params segment sharing). Navigation itself returns 200. Reproduce with a minimal app; fix or report upstream
 - [ ] Sitemap, robots, canonical, hreflang, Open Graph, structured data
 - [ ] Image optimization, pagination, query review
+- [ ] Client JS on auth pages: login is 312 KB gzip, mostly Zod + React Hook Form (public catalog pages are 184–186 KB). Move shared schemas to `zod/mini` or server-only validation
+- [ ] Product images: upload (Phase 6) + `next/image` with the Supabase storage host in `remotePatterns`
 - [ ] Dark mode polish, RTL/LTR review
 
 ## Phase 10 — QA & deployment
