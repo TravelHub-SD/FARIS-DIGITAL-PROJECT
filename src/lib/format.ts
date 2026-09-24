@@ -26,3 +26,15 @@ export function formatUsd(
     minimumFractionDigits: 2,
   }).format(Number(amount));
 }
+
+/** Date and time in Khartoum, Latin digits (same reason as prices). */
+export function formatDateTime(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SD-u-nu-latn" : "en-GB",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Africa/Khartoum",
+    },
+  ).format(new Date(iso));
+}

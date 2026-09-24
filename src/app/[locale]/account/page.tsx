@@ -55,6 +55,18 @@ export default async function AccountPage({
       </Card>
 
       <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <span className="font-bold">{t("orders")}</span>
+          <Link
+            href="/account/orders"
+            className={buttonVariants({ size: "sm", variant: "outline" })}
+          >
+            {t("ordersAction")}
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>{t("kycStatus")}</CardTitle>
         </CardHeader>

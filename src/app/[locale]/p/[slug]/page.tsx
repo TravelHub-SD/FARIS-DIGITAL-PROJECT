@@ -15,6 +15,21 @@ import { formatSdg } from "@/lib/format";
 import { localized } from "@/lib/localized";
 import { alternates, jsonLd, metaDescription, ogLocale } from "@/lib/seo";
 import { getProduct } from "@/server/catalog/queries";
+import type { PlaceOrderError } from "@/server/orders/actions";
+
+const REASONS = [
+  "sign_in",
+  "incomplete_account",
+  "kyc_required",
+  "phone_not_verified",
+  "customer_blocked",
+  "variant_unavailable",
+  "invalid_quantity",
+  "fulfillment_invalid",
+  "rate_limited",
+  "invalid_input",
+  "server_error",
+] as const satisfies readonly PlaceOrderError[];
 
 // Static per product, rendered on first visit and regenerated every 5 min.
 export const revalidate = 300;
@@ -73,6 +88,7 @@ export default async function ProductPage({ params }: Props) {
     id: v.id,
     name: localized(v.name_ar, v.name_en, locale),
     price: formatSdg(v.price_sdg, locale),
+    totals: v.totals_sdg,
     fields: v.fields.map((f) => ({
       key: f.key,
       type: f.type,
@@ -175,12 +191,19 @@ export default async function ProductPage({ params }: Props) {
         <div className="grid content-start gap-6">
           <OrderDetailsForm
             variants={variants}
+            locale={locale}
+            loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
             strings={{
               chooseOption: t("chooseOption"),
               details: t("details"),
-              continue: t("continue"),
-              detailsValid: t("detailsValid"),
-              orderingSoon: t("orderingSoon"),
+              placeOrder: t("placeOrder"),
+              quantity: t("quantity"),
+              total: t("total"),
+              // Filled in on the client with the formatted new total.
+              priceChanged: t("priceChanged", { price: "{price}" }),
+              signInAction: t("signInAction"),
+              kycAction: t("kycAction"),
+              completeAction: t("completeAction"),
               required: t("required"),
               optional: t("optional"),
               select: t("select"),
@@ -194,6 +217,9 @@ export default async function ProductPage({ params }: Props) {
                 option: t("errors.option"),
                 unavailable: t("errors.unavailable"),
               },
+              reasons: Object.fromEntries(
+                REASONS.map((r) => [r, t(`reasons.${r}`)]),
+              ),
             }}
           />
           <p className="text-xs text-muted-foreground">{t("priceNote")}</p>

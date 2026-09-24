@@ -249,21 +249,20 @@ Every definer function re-checks the caller (`auth.uid()`, `has_permission`) int
    - Updates the submission and `profiles.kyc_status`. Audit via trigger.
    - After commit: WhatsApp `kyc_result`. Retention purge per G3 (DB first, then storage delete; a nightly job retries orphaned deletes).
 
-### 3. Order creation
-1. The client form is rendered from `variant.required_fields`, with a Zod schema built from the same definition (shared).
-2. `createOrder(variantId, quantity, fields, idempotencyKey)` server action: auth, rich Zod validation, then RPC.
+### 3. Order creation (as built, Phase 5)
+1. The product page (static, ISR) renders the variant's fields and the database's totals per quantity (`price_sdg_totals`).
+2. `placeOrder` server action: validate fields against the anon-visible variant (same rules as SQL), require a complete account, then RPC with the customer's session. Sends the total shown as `expected_total_sdg` (consent, not input) plus a client idempotency key.
 3. `create_order()` (definer, one transaction):
-   - `auth.uid()` must exist, not be blocked, and have a verified phone.
-   - Variant, product and category must all be active and not archived.
-   - `quantity ≤ max_quantity`.
-   - **Re-validate fields in SQL:** all required keys present, no unknown keys, strings ≤ 200 chars, `select` values in options. This covers direct RPC calls.
-   - **Price read from the row** (and rate from `app_settings` if option B). The client never sends a price.
-   - `total ≥ kyc_threshold_amount and kyc_status <> 'verified'` → raise `KYC_REQUIRED`.
-   - Generate the reference (G7) with a retry on unique violation.
-   - Insert the snapshot. Duplicate `idempotency_key` → return the existing order (double-tap / flaky network safe).
-4. Order page shows the active bank accounts and a receipt upload.
-   - Receipt pipeline is the same as KYC (re-encode, hash) plus a **mandatory transaction number and chosen bank account**.
-   - Duplicate `transaction_ref_norm` for that bank → rejected immediately. Same image hash on another order → accepted but **flagged** in the admin UI.
+   - `auth.uid()` required; same idempotency key → the existing order.
+   - Quantity 1–10; 10 orders/hour per customer.
+   - Live total from the DB; if it differs from the expected total → `price_changed` with the current total, nothing created.
+   - Insert: the BEFORE INSERT trigger checks visibility, blocked/phone-verified, `quantity ≤ max_quantity`, fulfillment fields, derives the snapshot, enforces KYC (`total_usd ≥ kyc_threshold_usd` and not verified → `KYC_REQUIRED`) and generates the reference.
+   - Snapshot total ≠ expected → rolled back as `price_changed` (rate changed mid-flight).
+   - Audited (`orders.insert`, actor = customer).
+4. Order page (`/account/orders/{reference}`, own orders only) shows the active bank accounts and a receipt upload.
+   - `submitReceipt`: re-encode (EXIF stripped), service-role upload with `sha256` in object metadata, then `submit_receipt()` with the customer's session: own order in `new`, one pending receipt, active bank, transaction number format, path in the customer's folder, hash read from storage.
+   - Duplicate `transaction_ref_norm` for that bank, or the same file hash, among non-rejected receipts → refused (friendly check + unique indexes).
+   - `review_receipt()` (`orders` permission, not own order): accept → order moves to `processing`; reject needs a reason.
 
 ### 4. Status change
 1. Admin (`orders`, aal2) → `changeOrderStatus(orderId, to, customerNote?)` → `change_order_status()`:

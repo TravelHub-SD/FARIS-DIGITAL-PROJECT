@@ -53,11 +53,12 @@ Output: `docs/architecture.md`
 - [x] SEO basics for public pages
 
 ## Phase 5 — Orders & payments
-- [ ] Order creation with server-side pricing and price snapshot (turn the Phase 4 `checkOrderDetails` step into order creation; purge `sensitive` fields at terminal status)
-- [ ] KYC threshold enforcement on the server
-- [ ] Bank transfer details, receipt upload, transaction number + duplicate detection (if approved)
-- [ ] Reference numbers, order statuses and transitions with audit entries
-- [ ] Tests: price tampering, KYC restriction, invalid transitions
+- [x] Order creation with server-side pricing and price snapshot (turn the Phase 4 `checkOrderDetails` step into order creation; purge `sensitive` fields at terminal status)
+- [x] KYC threshold enforcement on the server
+- [x] Bank transfer details, receipt upload, transaction number + duplicate detection (if approved)
+- [x] Reference numbers, order statuses and transitions with audit entries
+- [x] Tests: price tampering, KYC restriction, invalid transitions
+- Note: receipt review exists as a DB function (`review_receipt`); its admin screen is part of the Phase 6 orders UI.
 
 ## Phase 6 — Admin dashboard
 - [ ] Orders: list, filters, search, detail, receipt view, status changes, internal notes

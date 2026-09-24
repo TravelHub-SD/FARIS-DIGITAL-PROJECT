@@ -41,6 +41,8 @@ export type Variant = {
   name_en: string | null;
   price_usd: number;
   price_sdg: number | null;
+  /** SDG total for quantity 1..max_quantity, computed by the database. */
+  totals_sdg: number[] | null;
   max_quantity: number;
   fields: FieldDefinition[];
 };
@@ -142,7 +144,7 @@ export const getProduct = cache(
       .select(
         `id, slug, name_ar, name_en, description_ar, description_en, image_path, updated_at,
        category:categories!inner(id, slug, name_ar, name_en, description_ar, description_en),
-       variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, max_quantity, required_fields, sort_order)`,
+       variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, price_sdg_totals, max_quantity, required_fields, sort_order)`,
       )
       .eq("slug", slug)
       .order("sort_order", { referencedTable: "variants" })
@@ -152,7 +154,10 @@ export const getProduct = cache(
     const row = orThrow(res) as unknown as
       | (Omit<ProductDetail, "variants" | "category"> & {
           category: Category | null;
-          variants: (Omit<Variant, "fields"> & { required_fields: unknown })[];
+          variants: (Omit<Variant, "fields" | "totals_sdg"> & {
+            required_fields: unknown;
+            price_sdg_totals: (number | string)[] | null;
+          })[];
         })
       | null;
     if (!row || !row.category || row.variants.length === 0) return null;
@@ -169,6 +174,7 @@ export const getProduct = cache(
         name_en: v.name_en,
         price_usd: Number(v.price_usd),
         price_sdg: v.price_sdg === null ? null : Number(v.price_sdg),
+        totals_sdg: v.price_sdg_totals?.map(Number) ?? null,
         max_quantity: v.max_quantity,
         fields: fields.data,
       });

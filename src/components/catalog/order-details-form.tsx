@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -9,19 +9,23 @@ import {
   labelClasses,
   selectClasses,
 } from "@/components/ui/styles";
+import type { Locale } from "@/i18n/routing";
+import { formatSdg } from "@/lib/format";
 import type { FieldType } from "@/lib/fulfillment";
 import type { LocalizedText } from "@/lib/localized";
-import {
-  checkOrderDetails,
-  type OrderDetailsState,
-} from "@/server/catalog/actions";
+import { placeOrder, type PlaceOrderState } from "@/server/orders/actions";
 
 // The only client component on public catalog pages. Everything it shows is
 // resolved on the server (labels, fallbacks, formatted prices) and passed in
 // as props, so no translation files or formatting libraries ship to the
 // browser. Validation shown here comes from the Server Action.
 // Native elements + plain class strings (no tailwind-merge/Radix) keep this
-// component around 2 KB gzipped.
+// component small.
+//
+// Price: the page shows the database's totals (per quantity) and the form
+// sends the chosen one back as the amount the customer agreed to. The server
+// never uses it as the price; it only refuses when it differs from the
+// current price, and this form then shows the new total for confirmation.
 
 export type FormField = {
   key: string;
@@ -37,28 +41,44 @@ export type FormVariant = {
   id: string;
   name: LocalizedText | null;
   price: string | null;
+  /** SDG totals for quantity 1..n, from the database. Null: not orderable. */
+  totals: number[] | null;
   fields: FormField[];
 };
 
 type Strings = {
   chooseOption: string;
   details: string;
-  continue: string;
-  detailsValid: string;
-  orderingSoon: string;
+  placeOrder: string;
+  quantity: string;
+  total: string;
+  priceChanged: string;
+  signInAction: string;
+  kycAction: string;
+  completeAction: string;
   required: string;
   optional: string;
   select: string;
   priceUnavailable: string;
   errors: Record<string, string>;
+  reasons: Record<string, string>;
 };
+
+/** RFC 4122 v4. getRandomValues works on plain http too (randomUUID does not). */
+function newKey() {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
 
 function Alert({
   tone,
   children,
   ...rest
 }: {
-  tone: "error" | "success";
+  tone: "error" | "success" | "warning";
   children: React.ReactNode;
 } & React.HTMLAttributes<HTMLDivElement>) {
   return (
@@ -87,17 +107,34 @@ function Text({ value }: { value: LocalizedText | null }) {
 export function OrderDetailsForm({
   variants,
   strings,
+  locale,
+  loginHref,
 }: {
   variants: FormVariant[];
   strings: Strings;
+  locale: Locale;
+  loginHref: string;
 }) {
   const [selected, setSelected] = useState(variants[0].id);
-  const [state, action, pending] = useActionState<OrderDetailsState, FormData>(
-    checkOrderDetails,
+  const [quantity, setQuantity] = useState(1);
+  const [state, action, pending] = useActionState<PlaceOrderState, FormData>(
+    placeOrder,
     { status: "idle" },
   );
+  // One key per order attempt: a double submit or a retry after a timeout
+  // returns the same order instead of creating a second one.
+  const idempotencyKey = useRef<string | null>(null);
   const variant = variants.find((v) => v.id === selected) ?? variants[0];
+  const maxQuantity = variant.totals?.length ?? 1;
+  const changed =
+    state.status === "price_changed" &&
+    state.variantId === variant.id &&
+    state.quantity === quantity
+      ? state.totalSdg
+      : null;
+  const expectedTotal = changed ?? variant.totals?.[quantity - 1] ?? null;
   const errors = state.status === "invalid" ? state.errors : {};
+  const reason = state.status === "error" ? state.reason : null;
   // Errors for keys this variant does not declare (a forged extra field).
   const unexpected = Object.keys(errors).some(
     (k) => k !== "_form" && !variant.fields.some((f) => f.key === k),
@@ -105,10 +142,25 @@ export function OrderDetailsForm({
 
   return (
     <form
-      action={action}
+      // onSubmit rather than a form action: React resets uncontrolled fields
+      // after a form action, which would wipe what the customer typed when the
+      // server answers "price changed" or with a field error.
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        idempotencyKey.current ??= newKey();
+        formData.set("idempotencyKey", idempotencyKey.current);
+        startTransition(() => action(formData));
+      }}
       className="grid gap-6"
       data-testid="order-details-form"
     >
+      <input type="hidden" name="locale" value={locale} />
+      <input
+        type="hidden"
+        name="expectedTotalSdg"
+        value={expectedTotal ?? ""}
+      />
       <fieldset className="grid gap-2">
         <legend className="mb-2 font-bold">{strings.chooseOption}</legend>
         {variants.map((v) => (
@@ -122,7 +174,10 @@ export function OrderDetailsForm({
                 name="variantId"
                 value={v.id}
                 checked={v.id === selected}
-                onChange={() => setSelected(v.id)}
+                onChange={() => {
+                  setSelected(v.id);
+                  setQuantity(1);
+                }}
                 className="size-4 accent-primary"
               />
               <Text value={v.name} />
@@ -133,6 +188,29 @@ export function OrderDetailsForm({
           </label>
         ))}
       </fieldset>
+
+      {maxQuantity > 1 ? (
+        <div className="grid gap-2">
+          <label htmlFor="quantity" className={labelClasses}>
+            {strings.quantity}
+          </label>
+          <select
+            id="quantity"
+            name="quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className={`${selectClasses} max-w-24`}
+          >
+            {Array.from({ length: maxQuantity }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <input type="hidden" name="quantity" value="1" />
+      )}
 
       {variant.fields.length > 0 && (
         <fieldset className="grid gap-4" key={variant.id}>
@@ -209,18 +287,56 @@ export function OrderDetailsForm({
         <Alert tone="error">{strings.errors[state.errors._form]}</Alert>
       )}
       {unexpected && <Alert tone="error">{strings.errors.unknown}</Alert>}
-      {state.status === "valid" && state.variantId === variant.id && (
-        <Alert tone="success" data-testid="details-valid">
-          {strings.detailsValid} {strings.orderingSoon}
+      {changed !== null && (
+        <Alert tone="warning" data-testid="price-changed">
+          {strings.priceChanged.replace(
+            "{price}",
+            formatSdg(changed, locale) ?? "",
+          )}
         </Alert>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className={`${buttonVariants()} justify-self-start`}
-      >
-        {strings.continue}
-      </button>
+      {reason && (
+        <Alert tone="error" data-testid="order-error" data-reason={reason}>
+          {strings.reasons[reason] ?? strings.reasons.server_error}{" "}
+          {reason === "sign_in" && (
+            <a href={loginHref} className="font-medium underline">
+              {strings.signInAction}
+            </a>
+          )}
+          {reason === "kyc_required" && (
+            <a
+              href={`/${locale}/account/kyc`}
+              className="font-medium underline"
+            >
+              {strings.kycAction}
+            </a>
+          )}
+          {reason === "incomplete_account" && (
+            <a
+              href={`/${locale}/complete-account`}
+              className="font-medium underline"
+            >
+              {strings.completeAction}
+            </a>
+          )}
+        </Alert>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <p className="font-bold" dir="auto" data-testid="order-total">
+          {strings.total}:{" "}
+          {expectedTotal === null
+            ? strings.priceUnavailable
+            : formatSdg(expectedTotal, locale)}
+        </p>
+        <button
+          type="submit"
+          disabled={pending || expectedTotal === null}
+          className={buttonVariants()}
+        >
+          {strings.placeOrder}
+        </button>
+      </div>
     </form>
   );
 }

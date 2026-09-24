@@ -10,7 +10,7 @@ export default async function AccountLayout({
 }: LayoutProps<"/[locale]/account">) {
   await requireCompleteUser((await params).locale as Locale);
   return (
-    <ClientMessages namespaces={["Auth", "Account", "Kyc"]}>
+    <ClientMessages namespaces={["Auth", "Account", "Kyc", "Orders"]}>
       <div className="mx-auto w-full max-w-3xl px-4 py-10">{children}</div>
     </ClientMessages>
   );

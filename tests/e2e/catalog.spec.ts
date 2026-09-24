@@ -86,7 +86,7 @@ test.describe("forged order-details submissions are rejected by the server", () 
     });
   });
   const submit = (page: import("@playwright/test").Page) =>
-    page.getByRole("button", { name: "Continue" }).click();
+    page.getByRole("button", { name: "Place order" }).click();
   const fieldError = (page: import("@playwright/test").Page, key: string) =>
     page.locator(`[data-field-error="${key}"]`);
 
@@ -98,7 +98,7 @@ test.describe("forged order-details submissions are rejected by the server", () 
     await expect(fieldError(page, "server")).toHaveText(
       "This field is required.",
     );
-    await expect(page.getByTestId("details-valid")).toHaveCount(0);
+    await expect(page.getByTestId("order-error")).toHaveCount(0);
   });
 
   test("an extra field injected into the form", async ({ page }) => {
@@ -119,7 +119,7 @@ test.describe("forged order-details submissions are rejected by the server", () 
     await expect(page.locator("[data-tone=error]")).toHaveText(
       "Unexpected field.",
     );
-    await expect(page.getByTestId("details-valid")).toHaveCount(0);
+    await expect(page.getByTestId("order-error")).toHaveCount(0);
   });
 
   test("wrong-typed values: letters in a digits field, an option that does not exist", async ({
@@ -152,13 +152,17 @@ test.describe("forged order-details submissions are rejected by the server", () 
     );
   });
 
-  test("control: a valid submission (Arabic-Indic digits) is accepted", async ({
+  test("control: a valid submission (Arabic-Indic digits) passes validation and only asks to sign in", async ({
     page,
   }) => {
     await page.fill("#f-player_id", "١٢٣٤٥٦");
     await page.selectOption("#f-server", "eu");
     await submit(page);
-    await expect(page.getByTestId("details-valid")).toBeVisible();
+    await expect(page.getByTestId("order-error")).toHaveAttribute(
+      "data-reason",
+      "sign_in",
+    );
+    await expect(page.locator("[data-field-error]:not(:empty)")).toHaveCount(0);
   });
 });
 

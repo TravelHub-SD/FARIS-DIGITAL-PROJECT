@@ -17,7 +17,7 @@ select set_eq(
   $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('anon', p.oid, 'execute') $$,
-  array['search_products', 'price_sdg'],
+  array['search_products', 'price_sdg', 'price_sdg_totals'],
   'anon can execute exactly the public catalog functions (both SECURITY INVOKER)');
 
 select set_eq(
@@ -25,7 +25,7 @@ select set_eq(
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute') $$,
   array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted',
-        'search_products', 'price_sdg'],
+        'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
