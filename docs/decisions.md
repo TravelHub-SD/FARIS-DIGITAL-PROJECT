@@ -142,3 +142,49 @@ Format:
 
 ## 2026-09-23 — Correction to the Phase 1 report
 - Phase 1 reported "no console errors except the intended 404". That was wrong: the second 404 was attributed to `/favicon.ico` without proof. Instrumented in Phase 2, it is a background RSC segment prefetch for `/en` (see roadmap Phase 9 known issue). Navigation works; the prefetch fails. Logged, not fixed in Phase 2 (out of scope, framework-level).
+
+## 2026-09-24 — Phase 3: Google sign-in creates incomplete accounts
+- **Context:** Hassan's rule: Google may create new accounts, but an account is only completed after a phone number is verified by OTP; an abandoned Google sign-up must never become usable.
+- **Decision:** a Google sign-in creates an auth user with no phone. "Complete" = `profiles.phone_verified_at IS NOT NULL`. Enforced at three levels:
+  1. App: every authenticated route (`/account/**`, `/admin/**`) goes through `requireCompleteUser()`; incomplete sessions are redirected to `/[locale]/complete-account`, the only page they can open. Admin checks run after the completeness check.
+  2. Database: orders, KYC submission and comments already require a verified phone (order trigger, `submit_kyc`, comments RLS), so a direct PostgREST call with an incomplete session achieves nothing.
+  3. Cleanup: `private.purge_incomplete_accounts()` deletes incomplete accounts older than 24 h, scheduled nightly with `pg_cron` (free tier).
+- Completing = OTP to a phone that is not already registered → `auth.admin.updateUserById(phone, phone_confirm, app_metadata.signup_verified='otp')`; the `auth.users` trigger fills the profile. If the phone belongs to another account, the user is told to sign in with that phone and link Google from the account page (`linkIdentity`, manual linking enabled).
+- **Not verifiable locally:** there are no Google credentials in development. The Google path is covered by SIMULATED accounts (an `auth.users` row exactly as GoTrue creates it, `provider = google`) and by testing the hook with Google/non-Google payloads. The real OAuth round-trip must be tested once credentials exist (launch checklist).
+
+## 2026-09-24 — Phase 3: sign-up layers revised for Google
+- **Context:** Phase 2 closed sign-up with the global `enable_signup = false`. That also blocks Google OAuth sign-ups, which are now required.
+- **Decision:** `[auth] enable_signup = true`, and every other creation path is closed individually:
+  1. `before_user_created` Auth hook (`private.auth_hook_before_user_created`) rejects every creation whose `app_metadata.provider` is not `google`. Verified: GoTrue does not call this hook for the admin API, which is how the server creates accounts after OTP.
+  2. DB guard `guard_auth_user_insert` (deferred constraint trigger) now accepts the OTP marker **or** `provider = google`.
+  3. Email provider off (customers never use email), anonymous sign-in off.
+  4. **Send SMS hook refuses every message.** Found while probing: with the phone provider on, `signInWithOtp({phone})` made GoTrue generate its own OTP and hand the plaintext code to the SMS hook — a second login path outside our limits and budget. The refusing hook disables GoTrue's phone OTP login, phone-change codes and SMS confirmations. Our OTPs go only through the WhatsApp service.
+- **Local CLI quirk:** the CLI turns the phone provider (needed for phone + password login) on only when an SMS provider is "enabled", so `config.toml` has Twilio placeholders. Twilio is never called (the hook takes precedence). Hosted: enable the Phone provider with the Send SMS hook; no Twilio account.
+- Acceptance test 1 re-run with the new layout (all public paths refused, GoTrue phone OTP refused, server path works).
+
+## 2026-09-24 — Phase 3: OTP design
+- Codes: 6 digits from `crypto.randomInt`, stored only as `HMAC-SHA256(OTP_HMAC_PEPPER, phone|purpose|code)`. Plaintext exists only in memory and in the WhatsApp message. `message_logs` rows for OTPs cannot carry a payload (DB constraint). Proven by searching every row of `otp_codes`, `message_logs`, `audit_logs`, `rate_limit_events` for the code (0 hits) and by capturing all console output during issue + verify.
+- Issue/verify are atomic database functions (`otp_issue`, `otp_verify`, service role only). Limits: 5-minute expiry; 5 attempts per code, counted before comparison, then the code is dead even for the right answer; only the newest code per (phone, purpose) is valid; 60 s cooldown per phone; 5/hour and 10/day per phone; 10 codes/hour per IP; 30 failed verifications/hour per IP; global daily budget (`security_settings.otp_daily_budget`, default 300) that stops all sending. Worst case per phone: 25 guesses/hour out of 1,000,000.
+- Issuance is serialised with a transaction advisory lock (no race past the limits; fine at this volume).
+- Registration verifies the code and creates the account in one Server Action: there is never a half-registered phone account.
+- Login: phone + password; failed-login throttles 10/phone and 30/IP per 15 min on top of GoTrue's per-IP limits. `otp_login_policy = 'always'` fails closed until implemented as a real second factor.
+- Password reset answers identically for registered and unregistered numbers, then revokes all sessions of the user.
+- Accepted residual risk: registration says "this number already has an account" (needed UX), so account existence can be probed at 30 lookups/hour per IP.
+
+## 2026-09-24 — Phase 3: WhatsApp dev driver guard
+- The dev driver prints OTP codes, so it is allowed only when `NODE_ENV` is `development`/`test` **and** the process is not a Vercel preview/production deployment. Checked at server boot (`src/instrumentation.ts`), when the driver is built, and again on every send. A missing/unknown `WHATSAPP_DRIVER` also refuses to boot.
+- Proven on a real production build: `next start` with the dev driver → every request 500 with the refusal message; `next dev` with `VERCEL_ENV=preview` → exits; `meta` → serves 200. Vercel preview deployments therefore cannot use the dev driver either (their logs would contain codes); previews need the Meta driver (Phase 7).
+- The Meta driver exists as a stub that throws "not implemented (Phase 7)" — nothing pretends to deliver.
+
+## 2026-09-24 — Phase 3: KYC pipeline
+- Browser shrinks the photo (≤2000 px JPEG) before upload for weak connections; the server trusts none of it: size ≤ 5 MB, extension and declared MIME allowlists, real format from the bytes (sharp), decompression-bomb limit (40 MP), minimum 300 px, then **decode + re-encode** to JPEG without metadata (EXIF/GPS/XMP/ICC and any appended payload removed).
+- Upload with the service role (only `src/server/files/storage.ts`, inside the existing allowlist — no allowlist change), then `submit_kyc()` with the customer's own session: path must be in their folder, the object must exist, phone verified, one pending, 3/day.
+- Review with the reviewer's own session: `kyc_open_document()` writes an audit row for every view, then a 60 s signed URL is created; plain `<img>` (never `next/image`). `review_kyc()` refuses reviewing one's own submission and requires a reason to reject. The file is deleted through the Storage API right after the verdict (new policy: reviewers may delete only non-pending documents); `kyc_mark_file_deleted()` refuses while the object still exists.
+- Who can read a KYC file: only admins with the `kyc` permission (the Owner has all permissions). The customer who uploaded it cannot read it back (Phase 2 design, kept). If the customer should be able to see their own pending document, that is one storage policy — not done without approval.
+- Known gap: if the post-review delete fails, the file stays until retried (row keeps `storage_path`, visible as "pending deletion"); an automatic retry job is Phase 7 (cron) work.
+
+## 2026-09-24 — Phase 3: bank branch names
+- Arabic branch names in `bank_accounts` stay as placeholders; client content arrives at the end of the project (Hassan, 2026-09-24).
+
+## 2026-09-24 — Phase 3 dependencies
+- `sharp` (image validation + re-encoding; already used by Next, now explicit), `react-hook-form` + `@hookform/resolvers` (declared stack), `@playwright/test` (dev: end-to-end tests required by the verification rule; browsers not downloaded in CI sandboxes, `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can point to a local Chromium).

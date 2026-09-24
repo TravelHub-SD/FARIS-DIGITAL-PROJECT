@@ -13,7 +13,8 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeSystem": "System",
+    "account": "My account"
   },
   "Home": {
     "title": "Digital products and services, simple and secure",
@@ -30,5 +31,160 @@
     "notFoundTitle": "Page not found",
     "notFoundBody": "The link you opened is wrong or no longer available.",
     "backHome": "Back to home"
+  },
+  "Auth": {
+    "phone": "Phone number (WhatsApp)",
+    "phoneHint": "Sudanese number, e.g. 0912345678",
+    "password": "Password",
+    "newPassword": "New password",
+    "passwordHint": "At least 10 characters",
+    "fullName": "Full name",
+    "code": "Verification code",
+    "codeHint": "6-digit code sent to your WhatsApp",
+    "sendCode": "Send code",
+    "resendCode": "Send a new code",
+    "resendIn": "New code in {seconds}s",
+    "changePhone": "Change number",
+    "codeSentTo": "We sent a code to {phone} on WhatsApp.",
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in with your phone number and password.",
+      "submit": "Sign in",
+      "forgot": "Forgot your password?",
+      "noAccount": "No account yet?",
+      "register": "Create an account"
+    },
+    "register": {
+      "title": "Create an account",
+      "description": "We verify your number with a WhatsApp code before the account is created.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "login": "Sign in"
+    },
+    "reset": {
+      "title": "Reset your password",
+      "description": "Enter your number to receive a WhatsApp code.",
+      "submit": "Save new password",
+      "sentGeneric": "If this number is registered, a code has been sent on WhatsApp.",
+      "back": "Back to sign in"
+    },
+    "complete": {
+      "title": "Verify your phone number",
+      "description": "Your Google sign-in worked. To finish creating your account, verify a phone number with a WhatsApp code. Until then the account cannot be used.",
+      "submit": "Verify and continue",
+      "signOut": "Sign out",
+      "existingAccount": "If this number already has an account, sign in with your phone and password instead, then link Google from your account page."
+    },
+    "or": "or",
+    "google": "Continue with Google",
+    "googleUnavailable": "Google sign-in is not available right now.",
+    "errors": {
+      "invalid_phone": "Enter a valid Sudanese mobile number.",
+      "country_not_allowed": "This phone number's country is not supported.",
+      "cooldown": "Please wait {seconds} seconds before requesting a new code.",
+      "phone_hourly_limit": "Too many codes for this number. Try again later.",
+      "phone_daily_limit": "Too many codes for this number today. Try again tomorrow.",
+      "ip_hourly_limit": "Too many requests from your network. Try again later.",
+      "budget_exhausted": "Verification is temporarily unavailable. Please try again later.",
+      "delivery_failed": "We could not send the WhatsApp message. Try again shortly.",
+      "invalid_or_expired": "The code is invalid or has expired. Request a new one.",
+      "invalid_code": "Wrong code. Attempts left: {attempts}.",
+      "too_many_attempts": "Too many wrong attempts. Request a new code.",
+      "ip_verify_limit": "Too many attempts from your network. Try again later.",
+      "invalid_input": "Please check the fields and try again.",
+      "phone_taken": "This number already has an account.",
+      "invalid_credentials": "Phone number or password is incorrect.",
+      "rate_limited": "Too many attempts. Try again in a few minutes.",
+      "already_complete": "Your account is already verified.",
+      "not_signed_in": "Please sign in again.",
+      "login_otp_unavailable": "Sign-in is temporarily unavailable. Please contact support.",
+      "server_error": "Something went wrong. Please try again.",
+      "oauth": "Google sign-in did not complete. Please try again.",
+      "password_too_short": "Use at least 10 characters.",
+      "password_too_long": "Password is too long.",
+      "name_too_short": "Enter your full name.",
+      "name_too_long": "Name is too long.",
+      "invalid_code_format": "Enter the 6-digit code.",
+      "password_required": "Enter your password."
+    }
+  },
+  "Account": {
+    "title": "My account",
+    "profile": "Profile",
+    "phone": "Phone",
+    "language": "Preferred language",
+    "save": "Save",
+    "saved": "Saved.",
+    "saveFailed": "Could not save. Try again.",
+    "signOut": "Sign out",
+    "kycStatus": "Identity verification",
+    "kycAction": "Verify identity",
+    "blocked": "This account is suspended. Contact support.",
+    "linkGoogle": "Link Google account",
+    "googleLinked": "Google account linked",
+    "languages": {
+      "ar": "العربية",
+      "en": "English"
+    }
+  },
+  "Kyc": {
+    "title": "Identity verification",
+    "intro": "Orders above a set amount need a verified identity. Upload a clear photo of one document. It is reviewed by our team and deleted after review.",
+    "status": {
+      "none": "Not verified",
+      "pending": "Under review",
+      "verified": "Verified",
+      "rejected": "Rejected"
+    },
+    "rejectedReason": "Reason: {reason}",
+    "pendingNote": "We are reviewing your document. You will get a WhatsApp message with the result.",
+    "verifiedNote": "Your identity is verified.",
+    "docType": "Document type",
+    "docTypes": {
+      "national_id": "National ID card",
+      "passport": "Passport",
+      "driving_license": "Driving licence"
+    },
+    "file": "Photo of the document",
+    "fileHint": "JPG, PNG or WebP, up to 5 MB. Location data and other metadata are removed.",
+    "submit": "Submit for review",
+    "submitted": "Submitted. We will review it shortly.",
+    "errors": {
+      "empty": "Choose a photo.",
+      "too_large": "The file is larger than 5 MB.",
+      "bad_extension": "Use a JPG, PNG or WebP photo.",
+      "bad_mime": "Use a JPG, PNG or WebP photo.",
+      "type_mismatch": "The file type does not match its content.",
+      "not_an_image": "This file is not a readable image.",
+      "too_small": "The photo is too small to read. Use a clearer photo.",
+      "too_many_pixels": "The image is too large.",
+      "not_allowed": "You cannot do this.",
+      "invalid_input": "Check the fields and try again.",
+      "already_pending": "A document is already under review.",
+      "already_verified": "Your identity is already verified.",
+      "rate_limited": "Too many submissions today. Try again tomorrow.",
+      "upload_failed": "Upload failed. Try again.",
+      "reason_required": "A reason is required to reject.",
+      "not_pending": "This submission was already reviewed.",
+      "cannot_review_own": "You cannot review your own submission.",
+      "server_error": "Something went wrong. Try again."
+    }
+  },
+  "Admin": {
+    "title": "Admin",
+    "kycQueue": "KYC review queue",
+    "empty": "No documents waiting for review.",
+    "submitted": "Submitted",
+    "customer": "Customer",
+    "document": "Document",
+    "open": "Review",
+    "review": "Review document",
+    "imageNote": "This link expires in 60 seconds. Reload the page to view again. Every view is recorded.",
+    "noImage": "The file is no longer available.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "reason": "Rejection reason (sent to the customer)",
+    "done": "Review saved.",
+    "back": "Back to queue"
   }
 }

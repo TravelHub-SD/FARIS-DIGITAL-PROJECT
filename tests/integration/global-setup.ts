@@ -17,4 +17,5 @@ export default function setup() {
   process.env.TEST_ANON_KEY = status.ANON_KEY;
   process.env.TEST_SERVICE_ROLE_KEY = status.SERVICE_ROLE_KEY;
   process.env.TEST_JWT_SECRET = status.JWT_SECRET;
+  process.env.TEST_DB_URL = status.DB_URL;
 }

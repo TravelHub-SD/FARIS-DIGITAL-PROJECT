@@ -17,6 +17,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // KYC photos: 5 MB file limit + multipart overhead. The browser shrinks
+      // photos first, so real uploads are far smaller.
+      bodySizeLimit: "6mb",
+    },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

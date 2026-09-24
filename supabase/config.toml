@@ -172,16 +172,20 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-# CLOSED (docs/decisions.md, acceptance test 1): accounts are created only by
-# the server after OTP verification. The DB trigger guard_auth_user_insert is
-# a second layer. Push to the hosted project with `supabase config push`.
-enable_signup = false
+# ON only so that Google OAuth can create (incomplete) accounts. Every other
+# public creation path is refused (docs/decisions.md, Phase 3 sign-up layers):
+#   1. [auth.hook.before_user_created] rejects anything but Google OAuth
+#      (the server's post-OTP admin createUser does not invoke this hook);
+#   2. DB constraint trigger guard_auth_user_insert (OTP marker or Google);
+#   3. the email provider is off, anonymous sign-in is off, and the Send SMS
+#      hook refuses every message, so GoTrue's own SMS/OTP flows cannot run.
+enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
-enable_manual_linking = false
+enable_manual_linking = true
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 10
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -219,8 +223,9 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
-enable_signup = true
+# Email provider OFF (in this CLI version this flag controls the whole provider).
+# Customers use phone + password; nobody signs up or logs in by email.
+enable_signup = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -258,7 +263,7 @@ otp_expiry = 3600
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = false
+enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
@@ -278,9 +283,16 @@ max_frequency = "5s"
 # inactivity_timeout = "8h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
-# [auth.hook.before_user_created]
-# enabled = true
-# uri = "pg-functions://postgres/auth/before-user-created-hook"
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/private/auth_hook_before_user_created"
+
+# GoTrue never sends SMS: our OTPs go through the WhatsApp service with their
+# own limits. This hook refuses every message, which disables GoTrue's phone
+# OTP login, phone-change codes and SMS confirmations.
+[auth.hook.send_sms]
+enabled = true
+uri = "pg-functions://postgres/private/auth_hook_send_sms"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
 # [auth.hook.custom_access_token]
@@ -288,12 +300,16 @@ max_frequency = "5s"
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# LOCAL CLI QUIRK: the CLI enables the phone provider (needed for phone +
+# password login) only when an SMS provider is "enabled". Twilio is never
+# called: the Send SMS hook above takes precedence and refuses every message.
+# These are placeholders, not credentials. Hosted: enable the Phone provider
+# with the Send SMS hook; no Twilio account is needed.
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+enabled = true
+account_sid = "ACplaceholder"
+message_service_sid = "MGplaceholder"
+auth_token = "placeholder-not-a-secret"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
@@ -321,6 +337,18 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# Google sign-in (docs/decisions.md). Creates an INCOMPLETE account that is
+# unusable until a phone number is verified by OTP. Disabled locally: there are
+# no Google credentials in development. Enable on the hosted project with the
+# client id/secret from Google Cloud Console (never commit the secret).
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = false
+
 [auth.external.apple]
 enabled = false
 client_id = ""

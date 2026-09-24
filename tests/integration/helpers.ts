@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -32,7 +33,8 @@ export function randomPhoneDigits() {
 
 export type TestUser = {
   id: string;
-  email: string;
+  phone: string; // E.164
+  password: string;
   client: SupabaseClient;
   accessToken: string;
 };
@@ -40,21 +42,19 @@ export type TestUser = {
 type AdminSpec = { owner?: boolean; permissions?: string[] };
 
 /**
- * Creates a user the way the server will after OTP verification
+ * Creates a user the way the server does after OTP verification
  * (service role + `signup_verified: 'otp'` marker), then signs in as them
- * with the public anon key.
+ * with phone + password and the public anon key (email login is disabled).
  */
 export async function createUser(
   opts: { admin?: AdminSpec; name?: string } = {},
 ): Promise<TestUser> {
   const sb = service();
-  const email = `t-${randomUUID()}@test.local`;
+  const phoneDigits = randomPhoneDigits();
   const password = randomBytes(12).toString("hex");
   const { data, error } = await sb.auth.admin.createUser({
-    email,
     password,
-    email_confirm: true,
-    phone: randomPhoneDigits(),
+    phone: phoneDigits,
     phone_confirm: true,
     app_metadata: { signup_verified: "otp" },
     user_metadata: { full_name: opts.name ?? "Test Customer" },
@@ -77,9 +77,18 @@ export async function createUser(
   }
 
   const client = createClient(url(), anonKey(), noSession);
-  const signIn = await client.auth.signInWithPassword({ email, password });
+  const signIn = await client.auth.signInWithPassword({
+    phone: `+${phoneDigits}`,
+    password,
+  });
   if (signIn.error) throw new Error(`signIn: ${signIn.error.message}`);
-  return { id, email, client, accessToken: signIn.data.session!.access_token };
+  return {
+    id,
+    phone: `+${phoneDigits}`,
+    password,
+    client,
+    accessToken: signIn.data.session!.access_token,
+  };
 }
 
 export const VARIANT_CHEAP = "00000000-0000-4000-c000-000000000001"; // 1.10 USD (seed)
@@ -214,4 +223,21 @@ export function customerClaims(userId: string, expOffsetSeconds: number) {
     iat: now - 60,
     exp: now + expOffsetSeconds,
   };
+}
+
+/** Runs SQL as postgres on the LOCAL test database (time travel, fixtures). */
+export function sql(query: string): string {
+  try {
+    return execFileSync(
+      "psql",
+      [process.env.TEST_DB_URL!, "-v", "ON_ERROR_STOP=1", "-Atqc", query],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    ).trim();
+  } catch (error) {
+    const stderr = (error as { stderr?: string }).stderr ?? "";
+    throw new Error(stderr.trim() || String(error));
+  }
 }

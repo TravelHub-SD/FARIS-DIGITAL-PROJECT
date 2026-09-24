@@ -14,9 +14,12 @@
     "db:reset": "supabase db reset",
     "test:db": "supabase test db",
     "test:integration": "supabase db reset && vitest run",
-    "test": "npm run test:integration && npm run test:db"
+    "test": "npm run test:integration && npm run test:db && npm run test:e2e",
+    "test:unit": "vitest run tests/unit",
+    "test:e2e": "supabase db reset && playwright test"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.1",
     "class-variance-authority": "^0.7.1",
@@ -28,11 +31,14 @@
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-hook-form": "^7.88.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.4",
     "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.4",
     "@types/react": "^19",

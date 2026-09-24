@@ -32,11 +32,13 @@ npm run dev                     # http://localhost:3000 → redirects to /ar
 
 Require Docker and the local Supabase stack (`npx supabase start`; if `public.ecr.aws` is blocked, prefix with `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`).
 
-| Script                     | What it does                                                                                                                                   |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run test:integration` | Resets the local DB, then runs Vitest over HTTP with the anon key: acceptance tests 1–3, admin boundaries, audit append-only                   |
-| `npm run test:db`          | pgTAP (`supabase/tests`): order/invoice snapshot, KYC threshold, transitions, duplicate receipts, gapless invoice numbers, audit, RLS coverage |
-| `npm test`                 | Both                                                                                                                                           |
+| Script                     | What it does                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run test:unit`        | Vitest, no database: WhatsApp driver guard, phone normalisation, image sanitiser (EXIF, polyglots, bombs)                                                                                                     |
+| `npm run test:integration` | Resets the local DB, then Vitest (unit + integration) over HTTP with the anon key: acceptance tests 1–3, OTP limits, KYC access, incomplete accounts, admin boundaries, audit                                 |
+| `npm run test:db`          | pgTAP (`supabase/tests`): order/invoice snapshot, KYC threshold, transitions, duplicate receipts, gapless invoice numbers, audit, RLS coverage                                                                |
+| `npm run test:e2e`         | Resets the DB, starts `next dev` on :3100 (dev WhatsApp driver; codes read from `.e2e/dev.log`) and runs Playwright: registration, login, reset, half-finished accounts, KYC upload/review, signed-URL expiry |
+| `npm test`                 | All of the above                                                                                                                                                                                              |
 
 Tests never run against a hosted project (the harness refuses any API URL that is not `127.0.0.1`).
 

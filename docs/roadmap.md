@@ -37,14 +37,14 @@ Output: `docs/architecture.md`
   - [x] Customer cannot read another customer's orders, receipts, invoices or KYC records via direct PostgREST
 
 ## Phase 3 — Auth & KYC
-- [ ] WhatsApp service interface + dev driver (moved from Phase 7)
-- [ ] Phone registration + password, OTP architecture (hashed, expiry, attempts, rate limits)
-- [ ] Login, configurable OTP policy
-- [ ] Password recovery
-- [ ] Google OAuth + account linking
-- [ ] Profiles
-- [ ] KYC upload (MIME/extension/size validation, EXIF stripping), statuses, admin review with signed URLs
-- [ ] Tests: OTP abuse, KYC authorization, document access
+- [x] WhatsApp service interface + dev driver (moved from Phase 7)
+- [x] Phone registration + password, OTP architecture (hashed, expiry, attempts, rate limits)
+- [x] Login, configurable OTP policy
+- [x] Password recovery
+- [x] Google OAuth + account linking
+- [x] Profiles
+- [x] KYC upload (MIME/extension/size validation, EXIF stripping), statuses, admin review with signed URLs
+- [x] Tests: OTP abuse, KYC authorization, document access
 
 ## Phase 4 — Catalog
 - [ ] Categories, products, variants, bilingual fields, visibility
@@ -72,6 +72,7 @@ Output: `docs/architecture.md`
 - [ ] OTP, order status, KYC result templates
 - [ ] Webhook, `message_logs`, delivery status
 - [ ] Retries, failure handling, admin alerts
+- [ ] Retry job for KYC files whose post-review deletion failed
 
 ## Phase 8 — Invoices
 - [ ] Sequential numbering at the database level
@@ -91,6 +92,8 @@ Output: `docs/architecture.md`
 - [ ] Full test run, mobile testing, RTL and LTR testing
 - [ ] SEO and performance validation
 - [ ] Production environment, deployment checklist, placeholder-replacement check
-- [ ] Hosted Supabase: sign-ups disabled (`supabase config push` / dashboard), verified by running acceptance test 1 against the hosted project
+- [ ] Hosted Supabase auth config applied (`supabase config push` / dashboard): email provider off, anonymous off, phone provider on with the Send SMS hook (refuses all), `before_user_created` hook, manual linking on, min password 10; verified by running acceptance test 1 against the hosted project
+- [ ] Google OAuth credentials configured; real Google sign-in → incomplete account → phone OTP → complete, tested end to end (not testable locally)
+- [ ] `OTP_HMAC_PEPPER` generated for production (64 random hex chars), `WHATSAPP_DRIVER=meta`
 - [ ] Manual backup procedure (DB dump + storage export) documented in the handover guide
 - [ ] User guide (Arabic) for the client, source handover via GitHub + archive

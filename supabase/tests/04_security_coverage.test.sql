@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(5);
+select plan(7);
 
 select is_empty(
   $$ select n.nspname || '.' || c.relname
@@ -23,8 +23,25 @@ select set_eq(
   $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute') $$,
-  array['change_order_status'],
+  array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted'],
   'authenticated can execute exactly the intended public RPCs');
+
+select set_eq(
+  $$ select p.proname::text from pg_proc p
+      where p.pronamespace = 'public'::regnamespace
+        and has_function_privilege('service_role', p.oid, 'execute')
+        and not has_function_privilege('authenticated', p.oid, 'execute') $$,
+  array['otp_issue', 'otp_verify', 'rate_limit_exceeded', 'rate_limit_record', 'rate_limit_clear',
+        'auth_user_id_by_phone', 'auth_revoke_sessions'],
+  'OTP / session functions are server-only (service_role), never authenticated');
+
+select set_eq(
+  $$ select p.proname::text from pg_proc p
+      where p.pronamespace = 'private'::regnamespace
+        and has_function_privilege('supabase_auth_admin', p.oid, 'execute')
+        and p.proname like 'auth_hook_%' $$,
+  array['auth_hook_before_user_created', 'auth_hook_send_sms'],
+  'GoTrue (supabase_auth_admin) can call exactly the two auth hooks');
 
 select is_empty(
   $$ select c.relname from pg_class c

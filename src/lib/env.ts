@@ -10,6 +10,9 @@ const publicSchema = z.object({
 
 const serverSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(20),
+  // HMAC key for OTP codes. Without it a leaked otp_codes table could be
+  // brute-forced offline (only 10^6 codes), so it must be long and random.
+  OTP_HMAC_PEPPER: z.string().min(32),
 });
 
 export type PublicEnv = z.infer<typeof publicSchema>;
@@ -42,6 +45,7 @@ export function getServerEnv(): ServerEnv {
   }
   const parsed = serverSchema.safeParse({
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+    OTP_HMAC_PEPPER: process.env.OTP_HMAC_PEPPER,
   });
   if (!parsed.success) {
     // Never echo the value itself, only which variable is wrong.
