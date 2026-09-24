@@ -218,3 +218,9 @@ Format:
 
 ## 2026-09-25 — Phase 4: grants for generated columns and CHECK functions
 - Found by the fixtures: `service_role` could not insert a product (`permission denied for function normalize_ar`) because functions in generated columns and CHECK constraints are evaluated with the writing role's privileges, and `service_role` had no USAGE on `private`. Migration `20260925100100_catalog_grants.sql` grants USAGE + EXECUTE on the two pure functions only (`normalize_ar`, `valid_field_definitions`). The seed never hit this because it runs as `postgres`.
+
+## 2026-09-25 — Login page weight: accepted debt (target Phase 9)
+- **Measured (Phase 4, `next build` + `next start`, gzip):** `/ar/login` ships **312 KB** of JavaScript (379 KB before the Google button was made lazy); public catalog pages ship 184–186 KB.
+- **Cause:** the auth forms validate on the client with the shared Zod schemas + React Hook Form + `@hookform/resolvers`. One chunk holding Zod and RHF is ≈102 KB gzip. Zod v4's classic API is not tree-shakeable enough for this use.
+- **Why it matters (Hassan):** login is the first page a customer hits after browsing; 312 KB is too heavy on weak connections.
+- **Target Phase 9:** move the shared schemas to `zod/mini` (tree-shakeable) or keep full validation server-side only and use native HTML constraints in the browser; re-measure and record the new number here.
