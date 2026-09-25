@@ -26,7 +26,8 @@ select set_eq(
         and has_function_privilege('authenticated', p.oid, 'execute') $$,
   array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted',
         'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt',
-        'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments'],
+        'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments',
+        'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
@@ -35,8 +36,10 @@ select set_eq(
         and has_function_privilege('service_role', p.oid, 'execute')
         and not has_function_privilege('authenticated', p.oid, 'execute') $$,
   array['otp_issue', 'otp_verify', 'rate_limit_exceeded', 'rate_limit_record', 'rate_limit_clear',
-        'auth_user_id_by_phone', 'auth_revoke_sessions'],
-  'OTP / session functions are server-only (service_role), never authenticated');
+        'auth_user_id_by_phone', 'auth_revoke_sessions',
+        'whatsapp_claim', 'whatsapp_message_context', 'whatsapp_mark_sent', 'whatsapp_mark_failure',
+        'whatsapp_log_otp', 'whatsapp_apply_status'],
+  'OTP / session / WhatsApp dispatcher functions are server-only (service_role), never authenticated');
 
 select set_eq(
   $$ select p.proname::text from pg_proc p

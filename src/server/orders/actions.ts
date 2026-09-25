@@ -16,6 +16,7 @@ import { getSessionUser, isComplete } from "@/server/auth/session";
 import { getVisibleVariant } from "@/server/catalog/queries";
 import { type ImageRejection, sanitizeImage } from "@/server/files/image";
 import { removeUploadedFile, uploadPrivateJpeg } from "@/server/files/storage";
+import { dispatchSoon } from "@/server/whatsapp";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -133,6 +134,9 @@ export async function placeOrder(
   }
   if (result.status === "error") return result;
 
+  // "Order received" was queued with the order (outbox); WhatsApp is tried
+  // after this response, so an outage never blocks or fails the order.
+  dispatchSoon();
   revalidatePath(`/${locale}/account/orders`);
   redirect(`/${locale}/account/orders/${result.reference}`);
 }

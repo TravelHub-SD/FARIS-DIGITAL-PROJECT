@@ -28,6 +28,7 @@ import {
   getRate,
   listAdminCategories,
 } from "@/server/admin/catalog-queries";
+import { PUBLIC_UPLOAD_MAX_BYTES } from "@/server/admin/public-images";
 import { requireAdmin } from "@/server/auth/session";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -117,6 +118,7 @@ export default async function EditProductPage({
               id="file"
               name="file"
               type="file"
+              data-max-bytes={PUBLIC_UPLOAD_MAX_BYTES}
               accept="image/jpeg,image/png,image/webp"
               required
               className={inputClasses}

@@ -1,0 +1,61 @@
+{
+  "_comment": "Mirror of docs/whatsapp-templates.md: the templates the fake Graph API accepts (name, language, category, body parameter count, copy-code button). Keep in sync with the templates submitted to Meta.",
+  "templates": [
+    {
+      "name": "otp_code",
+      "language": "ar",
+      "category": "authentication",
+      "body": 1,
+      "button": true
+    },
+    {
+      "name": "otp_code",
+      "language": "en",
+      "category": "authentication",
+      "body": 1,
+      "button": true
+    },
+    {
+      "name": "order_status_update",
+      "language": "ar",
+      "category": "utility",
+      "body": 3,
+      "button": false
+    },
+    {
+      "name": "order_status_update",
+      "language": "en",
+      "category": "utility",
+      "body": 3,
+      "button": false
+    },
+    {
+      "name": "kyc_approved",
+      "language": "ar",
+      "category": "utility",
+      "body": 0,
+      "button": false
+    },
+    {
+      "name": "kyc_approved",
+      "language": "en",
+      "category": "utility",
+      "body": 0,
+      "button": false
+    },
+    {
+      "name": "kyc_rejected",
+      "language": "ar",
+      "category": "utility",
+      "body": 1,
+      "button": false
+    },
+    {
+      "name": "kyc_rejected",
+      "language": "en",
+      "category": "utility",
+      "body": 1,
+      "button": false
+    }
+  ]
+}

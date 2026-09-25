@@ -276,3 +276,36 @@ export async function deleteFaq(formData: FormData): Promise<ActionResult> {
   if (result.ok) revalidatePublic();
   return result;
 }
+
+const rate = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^\d{1,4}(\.\d{1,5})?$/.test(v))
+  .transform((v) => (v === "" ? null : Number(v)));
+const ratesSchema = z.object({
+  authentication: rate,
+  utility: rate,
+  marketing: rate,
+  service: rate,
+});
+
+/** WhatsApp price per delivered message, copied from Meta's rate card. */
+export async function saveWhatsAppRates(
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
+  const input = ratesSchema.safeParse(fields(formData));
+  if (!input.success) return INVALID;
+  const supabase = await createClient();
+  for (const [category, usd] of Object.entries(input.data)) {
+    const result = affected(
+      await supabase
+        .from("whatsapp_rates")
+        .update({ usd_per_message: usd })
+        .eq("category", category)
+        .select("category"),
+    );
+    if (!result.ok) return result;
+  }
+  return { ok: true };
+}

@@ -71,11 +71,12 @@ Output: `docs/architecture.md`
 - [x] Fixed: forms could submit natively (GET, values in URL) before hydration — found in Phase 6, affected Phase 3 auth forms
 
 ## Phase 7 — WhatsApp
-- [ ] Meta Cloud API driver (interface + dev driver already landed in Phase 3)
-- [ ] OTP, order status, KYC result templates
-- [ ] Webhook, `message_logs`, delivery status
-- [ ] Retries, failure handling, admin alerts
-- [ ] Retry job for KYC files whose post-review deletion failed
+- [x] Meta Cloud API driver (interface + dev driver already landed in Phase 3)
+- [x] OTP, order status, KYC result templates (texts for Meta: docs/whatsapp-templates.md)
+- [x] Webhook, `message_logs`, delivery status
+- [x] Retries, failure handling, admin alerts, cost per message and monthly spend
+- [ ] Retry job for KYC files whose post-review deletion failed: **open, needs Hassan's decision** (decisions.md 2026-09-28)
+- Note: built against a fake Graph API; Meta credentials and template approval were not available. Real-API checks are in Phase 10.
 
 ## Phase 8 — Invoices
 - [ ] Sequential numbering at the database level
@@ -103,5 +104,7 @@ Output: `docs/architecture.md`
 - [ ] Hosted Supabase auth config applied (`supabase config push` / dashboard): email provider off, anonymous off, phone provider on with the Send SMS hook (refuses all), `before_user_created` hook, manual linking on, min password 10; verified by running acceptance test 1 against the hosted project
 - [ ] Google OAuth credentials configured; real Google sign-in → incomplete account → phone OTP → complete, tested end to end (not testable locally)
 - [ ] `OTP_HMAC_PEPPER` generated for production (64 random hex chars), `WHATSAPP_DRIVER=meta`
+- [ ] WhatsApp against the real Meta API: the 17-point checklist in docs/whatsapp-templates.md (templates approved in ar/en, button format, API version, error codes, webhook signature and pricing fields, rates, scheduler)
+- [ ] WhatsApp setup on the hosted project (docs/handover.md): Vercel variables, webhook subscription then `WHATSAPP_VERIFY_TOKEN` removed, the two Vault secrets for the retry scheduler, Sudan rates entered
 - [ ] Manual backup procedure (DB dump + storage export) documented in the handover guide
 - [ ] User guide (Arabic) for the client, source handover via GitHub + archive

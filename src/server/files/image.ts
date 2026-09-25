@@ -136,6 +136,8 @@ export async function sanitizeImage(
 export type PublicImageProfile = {
   minWidth: number;
   minHeight: number;
+  /** Longest side of the ORIGINAL; larger files must be resized before upload. */
+  maxEdge: number;
   /** width / height must fall inside this range */
   aspect: [number, number];
   /** Output sizes, largest first; each fits inside a box of this edge. */
@@ -146,6 +148,7 @@ export const PUBLIC_IMAGE_PROFILES = {
   product: {
     minWidth: 300,
     minHeight: 300,
+    maxEdge: 4000,
     aspect: [1 / 3, 3],
     sizes: [
       { name: "full", box: 1000, quality: 80 },
@@ -155,18 +158,21 @@ export const PUBLIC_IMAGE_PROFILES = {
   banner: {
     minWidth: 800,
     minHeight: 200,
+    maxEdge: 6000,
     aspect: [1.5, 6],
     sizes: [{ name: "full", box: 1600, quality: 80 }],
   },
   logo: {
     minWidth: 64,
     minHeight: 64,
+    maxEdge: 2000,
     aspect: [1 / 2, 6],
     sizes: [{ name: "full", box: 512, quality: 90 }],
   },
 } satisfies Record<string, PublicImageProfile>;
 
-export type PublicImageRejection = ImageRejection | "bad_dimensions";
+export type PublicImageRejection =
+  ImageRejection | "bad_dimensions" | "too_big_dimensions";
 
 export type ProcessedPublicImage = {
   ok: true;
@@ -187,6 +193,9 @@ export async function processPublicImage(
   const height = (swap ? checked.meta.width : checked.meta.height) ?? 0;
   if (width < profile.minWidth || height < profile.minHeight) {
     return { ok: false, error: "too_small" };
+  }
+  if (Math.max(width, height) > profile.maxEdge) {
+    return { ok: false, error: "too_big_dimensions" };
   }
   const ratio = width / height;
   if (ratio < profile.aspect[0] || ratio > profile.aspect[1]) {

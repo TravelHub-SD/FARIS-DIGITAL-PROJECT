@@ -189,3 +189,18 @@ describe("public image pipeline (product profile)", () => {
       expect((await sharp(out.outputs[0].webp).metadata()).hasAlpha).toBe(true);
   });
 });
+
+describe("upload limits (handover guide: resize before upload)", () => {
+  it("rejects an original whose longest side exceeds the profile's maximum", async () => {
+    const big = await sharp({
+      create: { width: 4200, height: 3000, channels: 3, background: "#123456" },
+    })
+      .jpeg({ quality: 40 })
+      .toBuffer();
+    const out = await processPublicImage(
+      { name: "camera.jpg", type: "image/jpeg", bytes: big },
+      PUBLIC_IMAGE_PROFILES.product,
+    );
+    expect(out).toEqual({ ok: false, error: "too_big_dimensions" });
+  });
+});

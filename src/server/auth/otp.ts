@@ -2,7 +2,7 @@ import "server-only";
 
 import { getServerEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWhatsApp } from "@/server/whatsapp";
+import { sendOtp } from "@/server/whatsapp";
 
 import { issueOtp, type OtpDeps, verifyOtp } from "./otp-core";
 
@@ -12,7 +12,7 @@ function deps(): OtpDeps {
   return {
     db: createAdminClient(),
     pepper: getServerEnv().OTP_HMAC_PEPPER,
-    send: (message, context) => sendWhatsApp(message, context),
+    send: (message, context) => sendOtp(message, context),
   };
 }
 

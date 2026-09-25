@@ -304,10 +304,10 @@ describe("OTP codes are never stored or logged in plaintext", () => {
     ).toEqual([]);
   });
 
-  it("a message_logs row for an OTP cannot carry a payload (DB constraint)", () => {
+  it("message_logs has no column that could hold a code (payload dropped in Phase 7)", () => {
     expect(() =>
       sql(`insert into public.message_logs (phone_e164, message_type, template_name, payload)
-           values ('+249911111111', 'otp', 'auth_otp', '{"code":"123456"}')`),
-    ).toThrow(/message_logs_no_otp_payload/);
+           values ('+249911111111', 'otp', 'otp_code', '{"code":"123456"}')`),
+    ).toThrow(/column "payload" of relation "message_logs" does not exist/);
   });
 });

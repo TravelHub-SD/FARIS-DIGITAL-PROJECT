@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { actionAdmin, actionCompleteUser } from "@/server/auth/session";
 import { type ImageRejection, sanitizeImage } from "@/server/files/image";
 import { removeUploadedFile, uploadPrivateJpeg } from "@/server/files/storage";
-import { sendWhatsApp } from "@/server/whatsapp";
+import { dispatchSoon } from "@/server/whatsapp";
 
 import { KYC_DOC_TYPES } from "./constants";
 
@@ -93,7 +93,8 @@ const reviewSchema = z.object({
 
 /**
  * Approve/reject with the reviewer's own session (audit records the actor),
- * then delete the file (decisions.md) and notify the customer.
+ * then delete the file (decisions.md). The customer notification is queued
+ * by the database and sent after the response.
  */
 export async function reviewKyc(input: unknown): Promise<KycResult> {
   const parsed = reviewSchema.safeParse(input);
@@ -124,23 +125,9 @@ export async function reviewKyc(input: unknown): Promise<KycResult> {
     }
   }
 
-  const { data: customer } = await supabase
-    .from("profiles")
-    .select("phone_e164, locale")
-    .eq("id", row.user_id)
-    .single();
-  if (customer?.phone_e164) {
-    await sendWhatsApp(
-      {
-        type: "kyc_result",
-        to: customer.phone_e164,
-        approved: parsed.data.approve,
-        reason: parsed.data.reason ?? null,
-        locale: customer.locale === "en" ? "en" : "ar",
-      },
-      { userId: row.user_id },
-    );
-  }
+  // The decision queued the WhatsApp result in the same transaction (outbox);
+  // it is sent after this response, and retried if Meta is unavailable.
+  dispatchSoon();
   revalidatePath("/[locale]/admin/kyc", "layout");
   return { ok: true };
 }

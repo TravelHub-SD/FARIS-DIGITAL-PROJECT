@@ -28,6 +28,8 @@ import {
   getAdminOrder,
   RECEIPT_URL_TTL_SECONDS,
 } from "@/server/admin/orders-queries";
+import { MessageList } from "@/components/admin/message-list";
+import { orderMessages } from "@/server/admin/messages-queries";
 import { requireAdmin } from "@/server/auth/session";
 import type { OrderStatus } from "@/server/orders/queries";
 
@@ -50,6 +52,7 @@ export default async function AdminOrderPage({
   if (!data) notFound();
   const t = await getTranslations("Admin");
   const { order, customer, receipts, history, notes, nextStatuses } = data;
+  const messages = await orderMessages(order.id);
   const closed = order.status === "completed" || order.status === "cancelled";
   const bankName = (b: { bank_name_ar: string; bank_name_en: string }) =>
     locale === "ar" ? b.bank_name_ar : b.bank_name_en;
@@ -492,6 +495,19 @@ export default async function AdminOrderPage({
           </ActionForm>
         </Section>
       </div>
+      <Section
+        title={t("orders.notifications")}
+        description={t("orders.notificationsHint")}
+        testId="order-messages"
+      >
+        {messages.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t("orders.noNotifications")}
+          </p>
+        ) : (
+          <MessageList rows={messages} showOrder={false} />
+        )}
+      </Section>
     </>
   );
 }

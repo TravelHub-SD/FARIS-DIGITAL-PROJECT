@@ -1,8 +1,10 @@
 import { getTranslations } from "next-intl/server";
 
 import { AdminNav } from "@/components/admin/admin-nav";
+import { MessagingAlert } from "@/components/admin/message-list";
 import { ClientMessages } from "@/components/layout/client-messages";
 import type { Locale } from "@/i18n/routing";
+import { messagingHealth } from "@/server/admin/messages-queries";
 import { getIsOwner, requireAdmin } from "@/server/auth/session";
 
 // Admins only (404 for everyone else). Each page re-checks its own
@@ -17,6 +19,8 @@ export default async function AdminLayout({
   const owner = await getIsOwner(user.id);
   const t = await getTranslations("Admin.nav");
   const base = `/${locale}/admin`;
+  // Delivery problems are shown on every admin page to staff who handle orders.
+  const health = permissions.has("orders") ? await messagingHealth() : null;
 
   const items = [
     { href: base, label: t("dashboard"), exact: true, show: true },
@@ -40,6 +44,12 @@ export default async function AdminLayout({
       href: `${base}/comments`,
       label: t("comments"),
       show: permissions.has("comments"),
+    },
+    {
+      href: `${base}/messages`,
+      label: t("messages"),
+      show: permissions.has("orders"),
+      badge: health?.attention ?? null,
     },
     {
       href: `${base}/faqs`,
@@ -66,7 +76,16 @@ export default async function AdminLayout({
         <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
           <AdminNav items={items} label={t("label")} />
         </aside>
-        <div className="grid min-w-0 content-start gap-6">{children}</div>
+        <div className="grid min-w-0 content-start gap-6">
+          {health && (
+            <MessagingAlert
+              systemic={health.systemic}
+              outage={health.outage}
+              stuck={health.stuck}
+            />
+          )}
+          {children}
+        </div>
       </div>
     </ClientMessages>
   );

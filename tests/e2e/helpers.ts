@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-
 import { createServerClient } from "@supabase/ssr";
 import type { BrowserContext } from "@playwright/test";
 
@@ -7,19 +5,54 @@ import { anonKey, url } from "../integration/helpers";
 
 export * from "../integration/helpers";
 
-/** The WhatsApp dev driver's console output, read like an inbox. */
-export async function readOtp(phoneE164: string, after = 0): Promise<string> {
-  const pattern = new RegExp(`OTP for \\${phoneE164}: (\\d{6})`, "g");
-  for (let i = 0; i < 40; i++) {
-    const log = readFileSync(".e2e/dev.log", "utf8").slice(after);
-    const match = [...log.matchAll(pattern)].pop();
-    if (match) return match[1];
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  throw new Error(`no OTP for ${phoneE164} in .e2e/dev.log`);
+export const FAKE_META = "http://127.0.0.1:3199";
+
+export type FakeMessage = {
+  seq: number;
+  id: string;
+  at: number;
+  to: string;
+  template: string;
+  language: string;
+  category: string;
+  params: string[];
+  buttonParam: string | null;
+};
+
+/** Messages the app's real Meta driver delivered to the fake Graph API. */
+export async function fakeInbox(
+  to?: string,
+  since = 0,
+): Promise<FakeMessage[]> {
+  const q = new URLSearchParams({
+    since: String(since),
+    ...(to ? { to: to.replace(/^\+/, "") } : {}),
+  });
+  return (await fetch(`${FAKE_META}/__inbox?${q}`)).json();
 }
 
-export const logSize = () => readFileSync(".e2e/dev.log", "utf8").length;
+export async function fakeControl(body: Record<string, unknown>) {
+  const r = await fetch(`${FAKE_META}/__control`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+/** Reads the OTP the customer received on "WhatsApp" (the fake's inbox). */
+export async function readOtp(phoneE164: string, after = 0): Promise<string> {
+  for (let i = 0; i < 40; i++) {
+    const otp = (await fakeInbox(phoneE164, after))
+      .filter((m) => m.template === "otp_code")
+      .pop();
+    if (otp) return otp.params[0];
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`no OTP for ${phoneE164} in the fake WhatsApp inbox`);
+}
+
+/** A point in time: messages delivered from now on. */
+export const logSize = () => Date.now();
 
 /** Real Supabase session cookies (as the app sets them) for a phone user. */
 export async function signInCookies(

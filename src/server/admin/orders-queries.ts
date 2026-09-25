@@ -243,6 +243,14 @@ export async function dashboardCounts(permissions: Set<string>) {
             .eq("status", "pending"),
         )
       : null,
+    messagesAttention: permissions.has("orders")
+      ? await count(
+          supabase
+            .from("message_logs")
+            .select("id", head)
+            .eq("needs_attention", true),
+        )
+      : null,
     hiddenComments: permissions.has("comments")
       ? await count(
           supabase.from("comments").select("id", head).eq("status", "hidden"),

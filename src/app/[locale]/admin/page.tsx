@@ -46,6 +46,12 @@ export default async function AdminHome({
       urgent: true,
     },
     {
+      value: counts.messagesAttention,
+      label: t("home.messagesAttention"),
+      href: "/admin/messages",
+      urgent: true,
+    },
+    {
       value: counts.hiddenComments,
       label: t("home.hiddenComments"),
       href: "/admin/comments?status=hidden",

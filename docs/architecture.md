@@ -53,7 +53,7 @@ Assumptions (flag if wrong):
 Browser ──HTTPS──► Vercel (Next.js App Router, one app)
                      ├─ Server Components  (public pages, SSR, minimal client JS)
                      ├─ Server Actions     (all mutations; each re-checks auth + permission)
-                     ├─ Route handlers     (/api/whatsapp/webhook, /api/cron/*, /auth/callback)
+                     ├─ Route handlers     (/api/whatsapp/webhook, /api/whatsapp/dispatch, /auth/callback)
                      └─ server/whatsapp    (interface → MetaDriver | DevDriver)
                               │
                               ▼
@@ -78,7 +78,7 @@ Browser ──HTTPS──► Vercel (Next.js App Router, one app)
    - **Admin mutations never use service_role.** They go through the admin's own session, so RLS, `aal2` and audit attribution all apply.
 3. **Server Actions are public HTTP endpoints.** Every action begins with `requireUser()` / `requirePermission('orders')`. Page-level guards are UX only.
 4. **The database is the last line.** Price, KYC threshold, transitions, invoice numbers and permissions are all enforced in Postgres, so a bug in TS can't bypass them.
-5. **No extra infrastructure.** No Redis, queue or separate backend. Rate limits and the WhatsApp retry state live in Postgres tables. The retry job runs on Vercel Cron.
+5. **No extra infrastructure.** No Redis, queue or separate backend. Rate limits and the WhatsApp retry state live in Postgres tables. Retries are driven by `pg_cron` → `pg_net` calling the app (Phase 7; Vercel Cron runs only daily on the free plan).
 
 **New dependencies beyond the stack (with reasons):**
 - `sharp`: re-encode uploaded images. This strips EXIF and neutralises polyglot files. Next already uses it.
@@ -163,7 +163,7 @@ Policy/about/terms texts: MDX files in the repo per locale for the MVP (the clie
 |---|---|
 | `private.otp_codes` | `phone_e164`, `purpose`, `code_hash` (HMAC-SHA256 with server pepper over `phone|purpose|code`), `expires_at` (now+5 min), `attempts`, `max_attempts` (5), `consumed_at`, `ip inet`; index `(phone_e164, purpose, created_at desc)`, index `(ip, created_at)` |
 | `private.rate_limit_events` | `bucket`, `key`, `created_at`; index `(bucket, key, created_at)`; function `private.hit_rate_limit(bucket, key, max, window) returns boolean`; purged nightly |
-| `message_logs` | `phone_e164`, `user_id`, `message_type`, `template_name`, `order_id`, `provider_message_id` (unique), `status message_status`, `error_code`, `error_message`, `attempts`, `next_retry_at`, `estimated_cost_usd numeric(8,4)`, `payload jsonb` (**never the OTP code**), timestamps; index `(status, next_retry_at)` |
+| `message_logs` | As built in Phase 7: an outbox with **no content**: references (`order_id`, `status_history_id`, `kyc_submission_id`), `template_name`, `language`, `status`, `attempts`/`max_attempts`, `next_retry_at`, `locked_until`, `error_code` (code format only), delivery timestamps, `needs_attention`/`handled_by`, `pricing_category`, `billable`, `cost_usd`, `cost_source`. `private.message_events`: one row per (wamid, status). `whatsapp_rates`: USD per category. See decisions.md 2026-09-28 |
 | `audit_logs` | `id bigint identity`, `actor_id`, `action` (`order.status_changed`, `kyc.reviewed`, `kyc.document_viewed`, `variant.price_changed`, `admin.permission_granted`, `invoice.issued`, …), `entity_type`, `entity_id`, `old_data jsonb`, `new_data jsonb`, `created_at`; indexes `(entity_type, entity_id)`, `(actor_id, created_at desc)`, `(created_at desc)`. Written **only by triggers/definer functions**. `REVOKE update, delete, truncate` from `anon, authenticated, service_role`, plus a `BEFORE UPDATE OR DELETE` trigger that raises (so service_role is blocked too). Limitation: the Postgres superuser can still alter it. Optional later: a `prev_hash` chain for tamper evidence |
 
 ### Storage buckets
@@ -271,11 +271,9 @@ Every definer function re-checks the caller (`auth.uid()`, `has_permission`) int
    - Transition must exist in `order_status_transitions`.
    - **Guard:** `→ processing` requires an `accepted` receipt; `→ completed` requires `processing`.
    - Update and insert `order_status_history`. Audit trigger. Set `completed_at`/`cancelled_at`. Increment `products.completed_orders_count` on completion.
-2. After commit, if `notify_customer`: `notifications.orderStatusChanged(order)`:
-   - Insert `message_logs(queued)`, send the template, store `provider_message_id`.
-   - On error: `failed`, `next_retry_at` with backoff (1 m, 5 m, 30 m; max 3). Status changes never fail because WhatsApp failed.
-3. `/api/cron/whatsapp-retry` (Vercel Cron, `CRON_SECRET`) resends due rows. After the last failure the row stays `failed` and shows as an **admin dashboard alert** with the customer phone for manual contact. OTP messages are never retried (expired by then).
-4. `/api/whatsapp/webhook`: GET verify-token handshake. POST **`X-Hub-Signature-256` HMAC verified** with the app secret, then idempotent status update by `provider_message_id`.
+2. As built (Phase 7): if the status has `notify_customer`, a trigger on `order_status_history` queues a `message_logs` row in the same transaction (references only). Status changes never wait for or fail because of WhatsApp.
+3. The server sends it right after the response (`after()`), rendering the template from the source records; failures are retried after 1, 5 and 30 minutes by `/api/whatsapp/dispatch`, called every minute by `pg_cron → pg_net` while something is due (bearer secret from Vault). After the 4th failure the row is `failed` + `needs_attention` and shows in the dashboard (follow-up list, card, order page, banner) with the customer phone for manual contact. OTP messages are never retried.
+4. `/api/whatsapp/webhook`: GET verify-token handshake. POST **`X-Hub-Signature-256` HMAC verified** over the raw body with the app secret, then each (wamid, status) applied once; statuses only move forward; Meta's pricing fixes the cost.
 
 ### 5. Invoice
 1. Admin (`invoices`) on a `completed` order → `issue_invoice(order_id)`:
@@ -358,7 +356,7 @@ Every definer function re-checks the caller (`auth.uid()`, `has_permission`) int
 │   │   │                      settings, admins, audit, messages
 │   │   ├── api/
 │   │   │   ├── whatsapp/webhook/route.ts
-│   │   │   └── cron/whatsapp-retry/route.ts
+│   │   │   └── whatsapp/dispatch/route.ts   (pg_cron → pg_net, Phase 7)
 │   │   ├── auth/callback/route.ts
 │   │   ├── sitemap.ts, robots.ts
 │   ├── components/

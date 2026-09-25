@@ -10,6 +10,8 @@ import {
   type PublicImageRejection,
 } from "@/server/files/image";
 
+export const PUBLIC_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
+
 // Public images are written with the ADMIN'S session, not the service role:
 // the storage policy lets `products` staff write under products/ and
 // categories/, and `settings` staff under site/ — nothing else, nowhere else.
@@ -22,6 +24,11 @@ export async function uploadPublicImage(
   | { ok: true; path: string }
   | { ok: false; error: PublicImageRejection | "upload_failed" }
 > {
+  // Catalog/site images are resized by staff before upload (handover guide):
+  // a 2 MB cap keeps uploads quick on slow connections and rejects raw
+  // camera files early. The bytes are still fully validated below.
+  if (file.size > PUBLIC_UPLOAD_MAX_BYTES)
+    return { ok: false, error: "too_large" };
   const image = await processPublicImage(
     {
       name: file.name,

@@ -12,6 +12,7 @@ import {
   createUser,
   customerClaims,
   service,
+  sql,
   signJwt,
   type TestUser,
   withToken,
@@ -51,6 +52,11 @@ beforeAll(async () => {
     message_type: "order_status",
     template_name: "order_status_update",
     order_id: aliceOrder.id,
+    status_history_id: Number(
+      sql(
+        `select id from public.order_status_history where order_id = '${aliceOrder.id}' limit 1`,
+      ),
+    ),
   });
   if (msg.error) throw new Error(msg.error.message);
 });

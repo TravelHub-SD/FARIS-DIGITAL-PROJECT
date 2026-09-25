@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { actionAdmin } from "@/server/auth/session";
+import { dispatchSoon } from "@/server/whatsapp";
 
 import {
   type ActionResult,
@@ -34,7 +35,9 @@ export async function reviewReceipt(formData: FormData): Promise<ActionResult> {
     p_accept: accept,
     p_reason: accept ? null : input.data.reason,
   });
-  return error ? dbError(error) : { ok: true };
+  if (error) return dbError(error);
+  dispatchSoon(); // accepting moved the order to processing: customer notified
+  return { ok: true };
 }
 
 const statusSchema = z.object({
@@ -57,7 +60,9 @@ export async function changeOrderStatus(
     p_to_status: input.data.to,
     p_customer_note: input.data.customerNote || null,
   });
-  return error ? dbError(error) : { ok: true };
+  if (error) return dbError(error);
+  dispatchSoon(); // the status change queued the customer notification
+  return { ok: true };
 }
 
 const noteSchema = z.object({

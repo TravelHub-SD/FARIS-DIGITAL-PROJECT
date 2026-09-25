@@ -122,8 +122,8 @@ select throws_ok(
 
 select throws_ok(
   $$ insert into message_logs (phone_e164, message_type, template_name, payload)
-     values ('+249911000011', 'otp', 'auth_otp', '{"code":"123456"}') $$,
-  '23514', null, 'an OTP message log cannot carry a payload (no plaintext codes)');
+     values ('+249911000011', 'otp', 'otp_code', '{"code":"123456"}') $$,
+  '42703', null, 'message_logs has no column that could hold message content (payload dropped in Phase 7)');
 
 select * from finish();
 rollback;

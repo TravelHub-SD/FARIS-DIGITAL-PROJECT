@@ -43,7 +43,9 @@ export type AdminErrorKey =
   | "not_an_image"
   | "too_small"
   | "too_many_pixels"
-  | "bad_dimensions";
+  | "bad_dimensions"
+  | "too_big_dimensions"
+  | "not_retryable";
 
 export const NOT_ALLOWED: ActionResult = { ok: false, error: "not_allowed" };
 export const INVALID: ActionResult = { ok: false, error: "invalid_input" };
@@ -65,6 +67,7 @@ const DB_ERRORS: [RegExp, AdminErrorKey][] = [
   [/_slug_key/, "slug_taken"],
   [/foreign key/i, "in_use"],
   [/check constraint|invalid input/i, "invalid_input"],
+  [/MESSAGE_NOT_RETRYABLE/, "not_retryable"],
   [/_NOT_FOUND/, "not_found"],
 ];
 

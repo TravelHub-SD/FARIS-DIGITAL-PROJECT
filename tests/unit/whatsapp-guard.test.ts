@@ -78,10 +78,10 @@ describe("WhatsApp dev driver can never run in production", () => {
     try {
       await expect(
         driver.send({
-          type: "otp",
           to: "+249911111111",
-          code: "123456",
-          locale: "ar",
+          template: "otp_code",
+          language: "ar",
+          params: { code: "123456" },
         }),
       ).rejects.toThrow(/dev driver refused/);
     } finally {

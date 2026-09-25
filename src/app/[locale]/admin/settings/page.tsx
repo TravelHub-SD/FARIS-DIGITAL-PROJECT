@@ -22,6 +22,7 @@ import {
   uploadSiteImage,
 } from "@/server/admin/settings";
 import { getSettings } from "@/server/admin/settings-queries";
+import { PUBLIC_UPLOAD_MAX_BYTES } from "@/server/admin/public-images";
 import { requireAdmin } from "@/server/auth/session";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -177,6 +178,7 @@ async function SiteImage({
             id={`${kind}-file`}
             name="file"
             type="file"
+            data-max-bytes={PUBLIC_UPLOAD_MAX_BYTES}
             accept="image/jpeg,image/png,image/webp"
             required
             className={inputClasses}

@@ -46,6 +46,17 @@ export function ActionForm({
         event.preventDefault();
         if (confirmMessage && !window.confirm(confirmMessage)) return;
         const form = event.currentTarget;
+        // Refuse oversized files before uploading them over a slow
+        // connection. The server enforces the same limit regardless.
+        for (const input of form.querySelectorAll<HTMLInputElement>(
+          "input[type=file][data-max-bytes]",
+        )) {
+          const file = input.files?.[0];
+          if (file && file.size > Number(input.dataset.maxBytes)) {
+            setResult({ ok: false, error: "too_large" });
+            return;
+          }
+        }
         const submitter = (event.nativeEvent as SubmitEvent).submitter;
         const formData = new FormData(form, submitter);
         startTransition(async () => {
