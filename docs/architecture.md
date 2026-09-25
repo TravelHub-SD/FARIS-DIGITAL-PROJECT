@@ -275,17 +275,17 @@ Every definer function re-checks the caller (`auth.uid()`, `has_permission`) int
 3. The server sends it right after the response (`after()`), rendering the template from the source records; failures are retried after 1, 5 and 30 minutes by `/api/whatsapp/dispatch`, called every minute by `pg_cron → pg_net` while something is due (bearer secret from Vault). After the 4th failure the row is `failed` + `needs_attention` and shows in the dashboard (follow-up list, card, order page, banner) with the customer phone for manual contact. OTP messages are never retried.
 4. `/api/whatsapp/webhook`: GET verify-token handshake. POST **`X-Hub-Signature-256` HMAC verified** over the raw body with the app secret, then each (wamid, status) applied once; statuses only move forward; Meta's pricing fixes the cost.
 
-### 5. Invoice
-1. Admin (`invoices`) on a `completed` order → `issue_invoice(order_id)`:
-   - Lock the order. No issued invoice may already exist.
-   - Next number from `private.invoice_counters` for the current Khartoum year → `INV-2026-00001`.
-   - Build `snapshot` from the order snapshot + `app_settings` + bank. Insert. Audit.
-2. Invoices are immutable. A correction = `void_invoice(id, reason)` + a new invoice with a new number, never an edit or delete.
-3. Views:
-   - `/[locale]/admin/invoices/[number]`
-   - `/[locale]/account/orders/[ref]/invoice`: owner only, via RLS.
-   - Print stylesheet and PDF per G4.
-   - Searchable list by number, reference, customer phone and date.
+### 5. Invoice (as built, Phase 8)
+1. Completing an order issues its invoice **in the same transaction** (`orders_issue_invoice` trigger → `invoices` BEFORE INSERT):
+   - Lock the order; only `completed` orders; one issued invoice per order (partial unique index).
+   - Next number from the `private.invoice_counters` row for the current Khartoum year → `INV-2026-00001`. The row lock serialises concurrent completions; a rolled-back completion gives its number back (gapless).
+   - `snapshot` = seller (business name, contacts, address), customer (name, phone), order lines and money, accepted payment. Totals copied from the order snapshot. Audited.
+2. Invoices are immutable. A correction = `void_invoice(id, reason)` + `reissue_invoice(order_id)` (new number, snapshot taken again), `invoices` permission, audited; never an edit or delete.
+3. Views (rendered only from the snapshot):
+   - `/[locale]/account/invoices` and `/[locale]/account/invoices/[number]`: the caller's own issued invoices (RLS + explicit owner filter).
+   - `/[locale]/admin/invoices` (search by number, order reference, customer name or phone, status, dates) and `/[locale]/admin/invoices/[number]` (void / re-issue).
+   - Search: `search_invoices()`, SECURITY INVOKER, so RLS decides what each caller sees.
+   - PDF = the browser's print ("Save as PDF") of the invoice page; print CSS removes the site around it (decisions.md 2026-09-29).
 
 ---
 

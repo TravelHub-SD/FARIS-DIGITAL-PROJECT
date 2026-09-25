@@ -274,6 +274,37 @@ export default async function SettingsPage({
             </Field>
           </div>
           <h3 className="font-bold">{t("settings.contacts")}</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label={t("settings.businessNameAr")}
+              htmlFor="business_name_ar"
+              hint={t("settings.businessNameHint")}
+            >
+              <input
+                id="business_name_ar"
+                name="business_name_ar"
+                defaultValue={s("business_name_ar")}
+                required
+                maxLength={120}
+                dir="rtl"
+                className={inputClasses}
+              />
+            </Field>
+            <Field
+              label={t("settings.businessNameEn")}
+              htmlFor="business_name_en"
+            >
+              <input
+                id="business_name_en"
+                name="business_name_en"
+                defaultValue={s("business_name_en")}
+                required
+                maxLength={120}
+                dir="ltr"
+                className={inputClasses}
+              />
+            </Field>
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("settings.phone")} htmlFor="contact_phone">
               <input

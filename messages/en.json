@@ -131,7 +131,8 @@
       "en": "English"
     },
     "orders": "My orders",
-    "ordersAction": "View orders"
+    "ordersAction": "View orders",
+    "invoicesLink": "My invoices"
   },
   "Kyc": {
     "title": "Identity verification",
@@ -218,7 +219,8 @@
       "settings": "Settings",
       "admins": "Admins",
       "audit": "Audit log",
-      "messages": "WhatsApp messages"
+      "messages": "WhatsApp messages",
+      "invoices": "Invoices"
     },
     "permissions": {
       "orders": "Orders",
@@ -536,7 +538,10 @@
       "otpLogin": "Code at every sign-in",
       "otpLoginHint": "Sign-up and password reset always use a code.",
       "otpNever": "No (password only)",
-      "otpAlways": "Yes (password + code)"
+      "otpAlways": "Yes (password + code)",
+      "businessNameAr": "Business name (Arabic)",
+      "businessNameEn": "Business name (English)",
+      "businessNameHint": "Printed on new invoices. Invoices already issued keep the name they were issued with."
     },
     "admins": {
       "title": "Admins",
@@ -630,7 +635,9 @@
       "too_many_pixels": "The image is too large.",
       "bad_dimensions": "The image proportions do not fit (it is too wide or too tall).",
       "too_big_dimensions": "The image dimensions are too large. Resize it before uploading (see the limits above).",
-      "not_retryable": "This message cannot be retried."
+      "not_retryable": "This message cannot be retried.",
+      "delete_failed": "The file could not be deleted from storage. Try again; if it keeps failing, report it.",
+      "already_issued": "This order already has a valid invoice."
     },
     "messages": {
       "title": "WhatsApp messages",
@@ -732,6 +739,42 @@
         "app_db": "Temporary database problem while preparing the message",
         "unknown": "Unknown error"
       }
+    },
+    "kycDeletion": {
+      "title": "Documents awaiting deletion",
+      "intro": "Reviewed identity documents whose file is still stored because the automatic deletion after the decision failed. Delete them here.",
+      "none": "No documents are waiting for deletion.",
+      "reviewed": "Reviewed {at}",
+      "overdue": "Over 24 hours",
+      "delete": "Delete file",
+      "deleted": "File deleted.",
+      "alert": "{count, plural, one {# identity document has} other {# identity documents have}} waited more than 24 hours for deletion (oldest reviewed {at}).",
+      "open": "Open the KYC page"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "intro": "Every invoice issued, with search. Invoices are issued automatically when an order is completed.",
+      "searchPlaceholder": "Invoice no., order no., customer name or phone",
+      "from": "From",
+      "to": "To",
+      "statusAll": "All statuses",
+      "count": "{count, plural, =0 {No invoices} one {# invoice} other {# invoices}}",
+      "customer": "Customer",
+      "issued": "Issued",
+      "total": "Total",
+      "voidTitle": "Void this invoice",
+      "voidIntro": "Voiding cannot be undone. Use it to correct an invoice: void it, fix the cause (for example the customer's name), then issue a new one with a new number.",
+      "voidReason": "Reason",
+      "voidSubmit": "Void invoice",
+      "voidConfirm": "Void this invoice? This cannot be undone.",
+      "voided": "Invoice voided.",
+      "reissueTitle": "Issue a new invoice",
+      "reissueIntro": "The order has no valid invoice. A new invoice gets the next number and takes the customer's current name and phone.",
+      "reissueSubmit": "Issue new invoice",
+      "reissued": "New invoice issued.",
+      "history": "All invoices for this order",
+      "openOrder": "Open order",
+      "orderInvoice": "Invoice"
     }
   },
   "Catalog": {
@@ -890,6 +933,53 @@
       "duplicate_file": "This receipt image has already been used for another payment.",
       "upload_failed": "Upload failed. Try again.",
       "server_error": "Something went wrong. Try again."
+    }
+  },
+  "Invoices": {
+    "title": "Invoices",
+    "intro": "Invoices for your completed orders. Open one to print it or save it as a PDF.",
+    "empty": "No invoices yet. An invoice is issued when an order is completed.",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Invoice or order number",
+    "search": "Search",
+    "clear": "Clear",
+    "noResults": "No invoices match.",
+    "open": "Open",
+    "back": "Back to invoices",
+    "backToOrder": "Back to the order",
+    "viewInvoice": "View invoice",
+    "invoiceForOrder": "Invoice",
+    "print": "Print / Save as PDF",
+    "printHint": "To get a PDF file, choose “Save as PDF” as the printer in the print window.",
+    "status": {
+      "issued": "Issued",
+      "void": "Void"
+    },
+    "doc": {
+      "title": "Invoice",
+      "number": "Invoice no.",
+      "issued": "Issue date",
+      "order": "Order no.",
+      "placed": "Order date",
+      "completed": "Completed",
+      "billTo": "Billed to",
+      "phone": "Phone",
+      "email": "Email",
+      "item": "Description",
+      "qty": "Qty",
+      "unitPrice": "Unit price",
+      "amount": "Amount",
+      "subtotal": "Total (USD)",
+      "rate": "Exchange rate",
+      "rateValue": "1 USD = {rate} SDG",
+      "total": "Total paid",
+      "payment": "Payment",
+      "bank": "Bank transfer to",
+      "transfer": "Transfer no.",
+      "acceptedAt": "Confirmed",
+      "voidStamp": "VOID",
+      "voidNotice": "This invoice was voided on {at}. Reason: {reason}",
+      "footer": "Issued electronically by {seller}. Amounts were fixed when the order was placed and do not change afterwards."
     }
   }
 }

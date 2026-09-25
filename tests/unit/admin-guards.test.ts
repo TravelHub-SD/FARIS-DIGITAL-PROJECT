@@ -27,6 +27,7 @@ const PAGE_GUARD: [RegExp, string][] = [
   [/^faqs\//, 'requireAdmin(locale, "settings")'],
   [/^settings\//, 'requireAdmin(locale, "settings")'],
   [/^messages\//, 'requireAdmin(locale, "orders")'],
+  [/^invoices\//, 'requireAdmin(locale, "invoices")'],
   [/^admins\//, "requireOwner(locale)"],
   [/^audit\//, "requireOwner(locale)"],
   [/^page\.tsx$/, "requireAdmin(locale)"],
@@ -52,6 +53,8 @@ const ACTION_GUARD: Record<string, Record<string, string>> = {
   "catalog.ts": { "*": 'actionAdmin("products")' },
   "settings.ts": { "*": 'actionAdmin("settings")' },
   "messages.ts": { "*": 'actionAdmin("orders")' },
+  "kyc.ts": { "*": 'actionAdmin("kyc")' },
+  "invoices.ts": { "*": 'actionAdmin("invoices")' },
   "people.ts": {
     setCustomerBlocked: 'actionAdmin("customers")',
     moderateComment: 'actionAdmin("comments")',

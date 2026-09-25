@@ -22,6 +22,7 @@ export default async function AccountPage({
   const user = await requireCompleteUser(locale);
   const t = await getTranslations("Account");
   const tKyc = await getTranslations("Kyc");
+  const tInv = await getTranslations("Invoices");
   const { profile } = user;
 
   return (
@@ -62,6 +63,18 @@ export default async function AccountPage({
             className={buttonVariants({ size: "sm", variant: "outline" })}
           >
             {t("ordersAction")}
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <span className="font-bold">{tInv("title")}</span>
+          <Link
+            href="/account/invoices"
+            className={buttonVariants({ size: "sm", variant: "outline" })}
+          >
+            {t("invoicesLink")}
           </Link>
         </CardContent>
       </Card>

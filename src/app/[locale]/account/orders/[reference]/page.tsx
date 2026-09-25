@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Locale } from "@/i18n/routing";
 import { formatDateTime, formatSdg, formatUsd } from "@/lib/format";
 import { localized } from "@/lib/localized";
+import { buttonVariants } from "@/components/ui/button";
 import { requireCompleteUser } from "@/server/auth/session";
+import { invoicesForOrder } from "@/server/invoices/queries";
 import { getMyOrder } from "@/server/orders/queries";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -27,6 +29,11 @@ export default async function OrderPage({
   if (!data) notFound();
   const { order, receipts, history, banks } = data;
   const t = await getTranslations("Orders");
+  const tInv = await getTranslations("Invoices");
+  const invoice =
+    order.status === "completed"
+      ? (await invoicesForOrder(order.id, { ownerId: user.id }))[0]
+      : undefined;
 
   const amount = formatSdg(order.total_sdg, locale)!;
   const pendingReceipt = receipts.some((r) => r.status === "pending");
@@ -101,6 +108,16 @@ export default async function OrderPage({
           <p className="text-muted-foreground">
             {formatDateTime(order.created_at, locale)}
           </p>
+          {invoice && (
+            <Link
+              href={`/account/invoices/${invoice.invoice_number}`}
+              className={`${buttonVariants({ size: "sm", variant: "outline" })} justify-self-start`}
+              data-testid="order-invoice-link"
+            >
+              {tInv("viewInvoice")}{" "}
+              <bdi dir="ltr">{invoice.invoice_number}</bdi>
+            </Link>
+          )}
         </CardContent>
       </Card>
 

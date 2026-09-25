@@ -45,7 +45,9 @@ export type AdminErrorKey =
   | "too_many_pixels"
   | "bad_dimensions"
   | "too_big_dimensions"
-  | "not_retryable";
+  | "not_retryable"
+  | "delete_failed"
+  | "already_issued";
 
 export const NOT_ALLOWED: ActionResult = { ok: false, error: "not_allowed" };
 export const INVALID: ActionResult = { ok: false, error: "invalid_input" };
@@ -68,6 +70,9 @@ const DB_ERRORS: [RegExp, AdminErrorKey][] = [
   [/foreign key/i, "in_use"],
   [/check constraint|invalid input/i, "invalid_input"],
   [/MESSAGE_NOT_RETRYABLE/, "not_retryable"],
+  [/KYC_FILE_STILL_PRESENT/, "delete_failed"],
+  [/VOID_REASON_REQUIRED/, "reason_required"],
+  [/INVOICE_ALREADY_ISSUED/, "already_issued"],
   [/_NOT_FOUND/, "not_found"],
 ];
 

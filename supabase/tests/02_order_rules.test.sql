@@ -96,17 +96,15 @@ select is(
   'receipt owner is derived from the order, not the caller');
 
 -- Gapless invoice numbering: a failed issue does not consume a number.
-update payment_receipts set status = 'accepted', reviewed_at = now() where storage_path = 'r3.jpg';
-update orders set status = 'processing' where id = '20000000-0000-4000-8000-000000000011';
-update orders set status = 'completed' where id = '20000000-0000-4000-8000-000000000011';
-
 select throws_ok(
   $$ insert into invoices (order_id, total_usd, usd_sdg_rate, total_sdg, snapshot)
      values ('20000000-0000-4000-8000-000000000013', 0, 0, 0, '{}') $$,
   'P0001', 'ORDER_NOT_COMPLETED', 'no invoice for an order that is not completed');
 
-insert into invoices (order_id, total_usd, usd_sdg_rate, total_sdg, snapshot)
-values ('20000000-0000-4000-8000-000000000011', 0, 0, 0, '{}');
+-- Completion issues the invoice (Phase 8).
+update payment_receipts set status = 'accepted', reviewed_at = now() where storage_path = 'r3.jpg';
+update orders set status = 'processing' where id = '20000000-0000-4000-8000-000000000011';
+update orders set status = 'completed' where id = '20000000-0000-4000-8000-000000000011';
 
 select is(
   (select invoice_number from invoices where order_id = '20000000-0000-4000-8000-000000000011'),

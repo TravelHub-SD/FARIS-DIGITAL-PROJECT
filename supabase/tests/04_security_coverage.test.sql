@@ -27,7 +27,8 @@ select set_eq(
   array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted',
         'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt',
         'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments',
-        'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend'],
+        'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend',
+        'void_invoice', 'reissue_invoice', 'search_invoices'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(

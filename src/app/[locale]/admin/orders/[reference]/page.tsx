@@ -31,6 +31,7 @@ import {
 import { MessageList } from "@/components/admin/message-list";
 import { orderMessages } from "@/server/admin/messages-queries";
 import { requireAdmin } from "@/server/auth/session";
+import { invoicesForOrder } from "@/server/invoices/queries";
 import type { OrderStatus } from "@/server/orders/queries";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -53,6 +54,10 @@ export default async function AdminOrderPage({
   const t = await getTranslations("Admin");
   const { order, customer, receipts, history, notes, nextStatuses } = data;
   const messages = await orderMessages(order.id);
+  // Invoices are visible to staff who also hold the invoices permission.
+  const invoice = permissions.has("invoices")
+    ? (await invoicesForOrder(order.id)).find((i) => i.status === "issued")
+    : undefined;
   const closed = order.status === "completed" || order.status === "cancelled";
   const bankName = (b: { bank_name_ar: string; bank_name_en: string }) =>
     locale === "ar" ? b.bank_name_ar : b.bank_name_en;
@@ -76,13 +81,25 @@ export default async function AdminOrderPage({
         }
         description={formatDateTime(order.created_at, locale)}
         actions={
-          <Badge
-            tone={ORDER_STATUS_TONE[order.status]}
-            data-testid="admin-order-status"
-            data-status={order.status}
-          >
-            {t(`status.${order.status}`)}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            {invoice && (
+              <Link
+                href={`/admin/invoices/${invoice.invoice_number}`}
+                className="text-sm text-primary hover:underline"
+                data-testid="admin-order-invoice"
+              >
+                {t("invoices.orderInvoice")}{" "}
+                <bdi dir="ltr">{invoice.invoice_number}</bdi>
+              </Link>
+            )}
+            <Badge
+              tone={ORDER_STATUS_TONE[order.status]}
+              data-testid="admin-order-status"
+              data-status={order.status}
+            >
+              {t(`status.${order.status}`)}
+            </Badge>
+          </div>
         }
       />
 

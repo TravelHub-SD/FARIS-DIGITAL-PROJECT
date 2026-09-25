@@ -97,3 +97,16 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/* Printing (invoices): A4 paper, white, no site chrome. Chrome elements carry
+   `print:hidden`; the invoice document has its own paper colours. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+}

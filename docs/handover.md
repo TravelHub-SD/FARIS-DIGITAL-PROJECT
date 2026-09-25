@@ -85,3 +85,33 @@ redeploy; nothing is stored in the database.
 - **تواصل عبر واتساب** يفتح محادثة مع العميل، و**إعادة المحاولة** ترسل الرسالة مرة أخرى بعد حل المشكلة، و**تمت المتابعة** عندما يُبلَّغ العميل بطريقة أخرى. كل ذلك يُسجَّل في سجل التدقيق.
 - رموز التحقق لا يعاد إرسالها تلقائياً؛ العميل يطلب رمزاً جديداً.
 - نص الرسائل لا يُحفظ في اللوحة عمداً؛ تظهر فقط الحالة والمحاولات والخطأ والتكلفة.
+
+## Invoices
+
+- An invoice is issued automatically when an order is marked **completed**. Numbers
+  run `INV-2026-00001`, `INV-2026-00002`, … per year with no gaps.
+- An issued invoice never changes. To correct one (for example a misspelled
+  customer name): fix the cause, open the invoice, **Void invoice** with a reason,
+  then **Issue new invoice**. The new one gets the next number; the old one stays
+  visible to staff marked VOID. Customers only see the valid one.
+- The business name printed on new invoices is in *Settings → Business name*.
+  Invoices already issued keep the name they were issued with.
+- PDF: open the invoice → **Print / Save as PDF** → choose "Save as PDF" as the
+  printer. The button opens the phone's print screen too; on an iPhone the PDF is
+  saved from the share button of the print preview. (Phone steps to be confirmed
+  on real devices in Phase 10.)
+
+### بالعربية (لطاقم العمل)
+
+- تصدر الفاتورة تلقائياً عند تحويل الطلب إلى **مكتمل**، بأرقام متسلسلة بلا فجوات لكل سنة.
+- الفاتورة الصادرة لا تتغير. للتصحيح (مثل خطأ في اسم العميل): صحّح السبب، ثم افتح الفاتورة واضغط **إلغاء الفاتورة** مع ذكر السبب، ثم **إصدار فاتورة جديدة**. تبقى الملغاة ظاهرة للطاقم فقط.
+- الاسم التجاري المطبوع على الفواتير الجديدة في *الإعدادات*.
+- لحفظ PDF: افتح الفاتورة ← **طباعة / حفظ PDF** ← اختر «حفظ بتنسيق PDF».
+
+## KYC documents awaiting deletion
+
+Identity documents are deleted right after the review. If that deletion fails
+(storage unavailable), the document appears on the KYC page under **Documents
+awaiting deletion**; press **Delete file**. After 24 hours a red banner appears on
+every admin page for KYC staff until it is done.
+- بالعربية: إذا ظهر مستند تحت «مستندات بانتظار الحذف» في صفحة التحقق من الهوية فاضغط **حذف الملف**. بعد 24 ساعة يظهر شريط أحمر في كل صفحات الإدارة حتى يُحذف.

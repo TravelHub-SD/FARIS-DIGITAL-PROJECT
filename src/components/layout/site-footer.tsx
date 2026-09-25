@@ -24,7 +24,7 @@ export async function SiteFooter() {
   const whatsapp = settings.contact_whatsapp?.replace(/[^\d]/g, "");
 
   return (
-    <footer className="border-t">
+    <footer data-testid="site-footer" className="border-t print:hidden">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 text-sm text-muted-foreground sm:grid-cols-2">
         <div className="grid content-start gap-2" data-testid="footer-contacts">
           {(settings.contact_phone ||

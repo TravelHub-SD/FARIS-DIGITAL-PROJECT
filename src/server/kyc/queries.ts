@@ -66,3 +66,55 @@ export async function getKycForReview(submissionId: string) {
   }
   return { submission, customer, imageUrl };
 }
+
+/** Identity documents may not linger: anything waiting over 24 h is an alert. */
+export const KYC_DELETION_ALERT_HOURS = 24;
+
+export type PendingDeletion = {
+  id: string;
+  status: "accepted" | "rejected";
+  reviewed_at: string;
+  doc_type: string;
+  overdue: boolean;
+};
+
+/**
+ * Reviewed documents whose file is still in storage: the deletion right after
+ * the verdict failed (docs/decisions.md). Reviewers delete them from the KYC
+ * page with their own session.
+ */
+export async function listPendingDeletion(): Promise<PendingDeletion[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kyc_submissions")
+    .select("id, status, reviewed_at, doc_type")
+    .neq("status", "pending")
+    .not("storage_path", "is", null)
+    .order("reviewed_at", { ascending: true })
+    .limit(100);
+  if (error) throw new Error(`pending deletion query failed: ${error.message}`);
+  const before = Date.now() - KYC_DELETION_ALERT_HOURS * 3600 * 1000;
+  return (data ?? []).map((r) => ({
+    ...(r as Omit<PendingDeletion, "overdue">),
+    overdue: new Date(r.reviewed_at as string).getTime() < before,
+  }));
+}
+
+export async function kycDeletionOverdue(): Promise<{
+  count: number;
+  oldest: string | null;
+}> {
+  const supabase = await createClient();
+  const before = new Date(
+    Date.now() - KYC_DELETION_ALERT_HOURS * 3600 * 1000,
+  ).toISOString();
+  const { data, count } = await supabase
+    .from("kyc_submissions")
+    .select("reviewed_at", { count: "exact" })
+    .neq("status", "pending")
+    .not("storage_path", "is", null)
+    .lt("reviewed_at", before)
+    .order("reviewed_at", { ascending: true })
+    .limit(1);
+  return { count: count ?? 0, oldest: data?.[0]?.reviewed_at ?? null };
+}

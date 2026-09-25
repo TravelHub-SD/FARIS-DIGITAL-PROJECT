@@ -75,14 +75,14 @@ Output: `docs/architecture.md`
 - [x] OTP, order status, KYC result templates (texts for Meta: docs/whatsapp-templates.md)
 - [x] Webhook, `message_logs`, delivery status
 - [x] Retries, failure handling, admin alerts, cost per message and monthly spend
-- [ ] Retry job for KYC files whose post-review deletion failed: **open, needs Hassan's decision** (decisions.md 2026-09-28)
+- [x] KYC files whose post-review deletion failed: reviewer list + 24 h admin banner (done in the Phase 8 session, decisions.md 2026-09-29)
 - Note: built against a fake Graph API; Meta credentials and template approval were not available. Real-API checks are in Phase 10.
 
 ## Phase 8 — Invoices
-- [ ] Sequential numbering at the database level
-- [ ] Invoice page, print styles
-- [ ] Arabic PDF export (evaluate options first)
-- [ ] Invoice history and search
+- [x] Sequential numbering at the database level (issued on completion; gapless under concurrency)
+- [x] Invoice page, print styles
+- [x] Arabic PDF export (evaluated: browser print; decisions.md 2026-09-29)
+- [x] Invoice history and search (customer and admin), void and re-issue
 
 ## Phase 9 — UX, SEO, performance
 - [ ] Final responsive pass, accessibility, empty/loading/error states
@@ -105,6 +105,7 @@ Output: `docs/architecture.md`
 - [ ] Google OAuth credentials configured; real Google sign-in → incomplete account → phone OTP → complete, tested end to end (not testable locally)
 - [ ] `OTP_HMAC_PEPPER` generated for production (64 random hex chars), `WHATSAPP_DRIVER=meta`
 - [ ] WhatsApp against the real Meta API: the 17-point checklist in docs/whatsapp-templates.md (templates approved in ar/en, button format, API version, error codes, webhook signature and pricing fields, rates, scheduler)
+- [ ] Invoices on real phones: "Print / Save as PDF" on Android Chrome and iPhone Safari produces a one-page A4 PDF with correct Arabic (only desktop Chromium was tested); also Firefox desktop
 - [ ] WhatsApp setup on the hosted project (docs/handover.md): Vercel variables, webhook subscription then `WHATSAPP_VERIFY_TOKEN` removed, the two Vault secrets for the retry scheduler, Sudan rates entered
 - [ ] Manual backup procedure (DB dump + storage export) documented in the handover guide
 - [ ] User guide (Arabic) for the client, source handover via GitHub + archive

@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(22);
+select plan(24);
 
 -- Fixture customer, created the way the server does after OTP.
 insert into auth.users (id, instance_id, aud, role, email, phone, phone_confirmed_at,
@@ -87,14 +87,15 @@ update payment_receipts set status = 'accepted', reviewed_at = now()
  where order_id = '20000000-0000-4000-8000-000000000001';
 update orders set status = 'processing' where id = '20000000-0000-4000-8000-000000000001';
 update orders set status = 'completed' where id = '20000000-0000-4000-8000-000000000001';
-insert into invoices (id, order_id, total_sdg, total_usd, usd_sdg_rate, snapshot)
-values ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
-        1, 1, 1, '{}');
+-- Completion issued the invoice in the same transaction (Phase 8).
+create temp table inv on commit drop as
+  select id from invoices where order_id = '20000000-0000-4000-8000-000000000001';
+select is((select count(*)::int from inv), 1, 'completing the order issued exactly one invoice');
 
 select results_eq(
   $$ select total_usd, usd_sdg_rate, total_sdg,
             (snapshot -> 'order' ->> 'unit_price_usd')::numeric
-       from invoices where id = '30000000-0000-4000-8000-000000000001' $$,
+       from invoices where id = (select id from inv) $$,
   $$ values (3.30::numeric, 2600::numeric, 8580::numeric, 1.10::numeric) $$,
   'invoice totals come from the order snapshot, not current prices or the caller');
 
@@ -102,31 +103,41 @@ update product_variants set price_usd = 9.99 where id = '00000000-0000-4000-c000
 update app_settings set usd_sdg_rate = 4000 where id;
 select results_eq(
   $$ select total_usd, usd_sdg_rate, total_sdg from invoices
-      where id = '30000000-0000-4000-8000-000000000001' $$,
+      where id = (select id from inv) $$,
   $$ values (3.30::numeric, 2600::numeric, 8580::numeric) $$,
   'invoice unchanged after later price and rate changes');
 
 select throws_ok(
-  $$ update invoices set total_sdg = 1 where id = '30000000-0000-4000-8000-000000000001' $$,
+  $$ update invoices set total_sdg = 1 where id = (select id from inv) $$,
   '42501', 'INVOICE_IMMUTABLE', 'invoice totals cannot be edited');
 select throws_ok(
-  $$ update invoices set snapshot = '{}' where id = '30000000-0000-4000-8000-000000000001' $$,
+  $$ update invoices set snapshot = '{}' where id = (select id from inv) $$,
   '42501', 'INVOICE_IMMUTABLE', 'invoice snapshot cannot be edited');
 select throws_ok(
-  $$ delete from invoices where id = '30000000-0000-4000-8000-000000000001' $$,
+  $$ delete from invoices where id = (select id from inv) $$,
   '42501', null, 'invoices cannot be deleted');
 select throws_ok(
-  $$ update invoices set status = 'void' where id = '30000000-0000-4000-8000-000000000001' $$,
+  $$ update invoices set status = 'void' where id = (select id from inv) $$,
   'P0001', 'VOID_REASON_REQUIRED', 'voiding requires a reason');
 select lives_ok(
   $$ update invoices set status = 'void', void_reason = 'test'
-      where id = '30000000-0000-4000-8000-000000000001' $$,
+      where id = (select id from inv) $$,
   'issued → void with a reason is the only permitted change');
 select throws_ok(
-  $$ update invoices set status = 'issued' where id = '30000000-0000-4000-8000-000000000001' $$,
+  $$ update invoices set status = 'issued' where id = (select id from inv) $$,
   '42501', null, 'a void invoice cannot be re-issued');
-select is((select total_sdg from invoices where id = '30000000-0000-4000-8000-000000000001'),
+select is((select total_sdg from invoices where id = (select id from inv)),
           8580::numeric, 'void invoice still carries the original totals');
+
+-- A new invoice for the order: whatever the caller sends is overwritten.
+insert into invoices (order_id, invoice_number, total_sdg, total_usd, usd_sdg_rate, snapshot, issued_by)
+values ('20000000-0000-4000-8000-000000000001', 'INV-1999-99999', 1, 1, 1, '{}',
+        '10000000-0000-4000-8000-000000000001');
+select results_eq(
+  $$ select total_usd, usd_sdg_rate, total_sdg, issued_by is null, invoice_number <> 'INV-1999-99999'
+       from invoices where order_id = '20000000-0000-4000-8000-000000000001' and status = 'issued' $$,
+  $$ values (3.30::numeric, 2600::numeric, 8580::numeric, true, true) $$,
+  'number, totals and issuer come from the database, not the caller');
 
 select * from finish();
 rollback;

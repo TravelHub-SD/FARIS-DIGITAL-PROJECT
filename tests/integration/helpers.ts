@@ -170,6 +170,24 @@ export async function uploadPrivate(bucket: string, path: string) {
 
 export const sha256Hex = () => randomBytes(32).toString("hex");
 
+/** An order with an accepted receipt, in `processing`: ready to complete. */
+export async function createPaidOrder(userId: string) {
+  const order = await createOrder(userId);
+  const receipt = await createReceipt(order);
+  const sb = service();
+  const acc = await sb
+    .from("payment_receipts")
+    .update({ status: "accepted", reviewed_at: new Date().toISOString() })
+    .eq("id", receipt.id);
+  if (acc.error) throw new Error(`accept receipt: ${acc.error.message}`);
+  const r = await sb
+    .from("orders")
+    .update({ status: "processing" })
+    .eq("id", order.id);
+  if (r.error) throw new Error(`processing: ${r.error.message}`);
+  return order as { id: string; user_id: string; reference: string };
+}
+
 /** Receipt row + file for an order (as the server ingest will do in Phase 5). */
 export async function createReceipt(
   order: { id: string; user_id: string },
@@ -208,10 +226,12 @@ export async function completeOrderWithInvoice(order: {
     const r = await sb.from("orders").update({ status }).eq("id", order.id);
     if (r.error) throw new Error(`status ${status}: ${r.error.message}`);
   }
+  // Completion issues the invoice in the same transaction (Phase 8).
   const inv = await sb
     .from("invoices")
-    .insert({ order_id: order.id })
     .select()
+    .eq("order_id", order.id)
+    .eq("status", "issued")
     .single();
   if (inv.error) throw new Error(`invoice: ${inv.error.message}`);
   return { receipt, invoice: inv.data };

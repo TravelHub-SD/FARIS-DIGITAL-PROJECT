@@ -40,7 +40,11 @@ const decimal = (scale: number) =>
     .regex(new RegExp(`^\\d{1,10}(\\.\\d{1,${scale}})?$`))
     .transform(Number);
 
+const businessName = z.string().trim().min(1).max(120);
+
 const generalSchema = z.object({
+  business_name_ar: businessName,
+  business_name_en: businessName,
   usd_sdg_rate: decimal(4).refine((n) => n > 0),
   kyc_threshold_usd: decimal(2),
   contact_phone: optionalText(32),
@@ -59,7 +63,7 @@ const generalSchema = z.object({
   telegram: optionalUrl,
 });
 
-/** Rate, KYC threshold, contacts, social links. Changes every SDG price shown. */
+/** Business name (new invoices), rate, KYC threshold, contacts, social links. */
 export async function saveGeneralSettings(
   formData: FormData,
 ): Promise<ActionResult> {

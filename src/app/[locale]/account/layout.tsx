@@ -11,7 +11,9 @@ export default async function AccountLayout({
   await requireCompleteUser((await params).locale as Locale);
   return (
     <ClientMessages namespaces={["Auth", "Account", "Kyc", "Orders"]}>
-      <div className="mx-auto w-full max-w-3xl px-4 py-10">{children}</div>
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 print:max-w-none print:p-0">
+        {children}
+      </div>
     </ClientMessages>
   );
 }
