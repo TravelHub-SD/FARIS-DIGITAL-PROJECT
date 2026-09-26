@@ -317,3 +317,34 @@ Format:
 - **Corrections:** `invoices` staff void (reason required) and re-issue (next number, snapshot taken again: e.g. after fixing the customer's name). Customers only ever see their current issued invoice.
 - **Access:** RLS (Phase 1) plus, on customer pages, an explicit owner filter (`search_invoices(p_mine)`, `getInvoice(ownerId)`), because invoices staff are customers too and RLS would show them everyone's invoices on "My invoices".
 - **Search:** `search_invoices()` (SECURITY INVOKER): number, order reference, customer name (Arabic-normalised), phone in local `09…` or `+249` form, status, date range; newest first, 25 per page. No trigram index yet: invoice volume is small; add one if search slows.
+
+## 2026-09-26 — Staging environment (before Phase 9)
+
+**What:** a separate Supabase project `faris-digital-staging` (free tier) and a
+separate Vercel project `faris-digital-staging`, holding demo data only. Demo
+accounts sign in with phone + password; their passwords exist only in the reply
+to Hassan, and `supabase/staging/demo-seed.sql` receives bcrypt hashes as psql
+variables. The demo data is created through the same database functions the app
+uses (review_receipt, change_order_status, review_kyc, void/reissue_invoice) as
+the demo staff, so history, audit and the outbox are real, not inserted rows.
+WhatsApp uses the real Meta driver with no credentials: sends fail visibly.
+
+**Why:** Hassan needs a URL to review; production must never hold demo data
+(CLAUDE.md rule 8), so staging is its own project rather than a branch of it.
+
+**How it was applied:** SUPABASE_ACCESS_TOKEN / VERCEL_TOKEN were not set in the
+agent environment, so the Supabase and Vercel connectors were used instead. Each
+migration was sent as-is, wrapped in a block that checks its md5 against the
+repository file before executing it; schema fingerprints (tables, columns,
+grants, policies, functions, triggers, indexes, cron jobs, buckets) matched the
+local stack exactly.
+
+**Rejected:** a Supabase branch (paid feature); the dev WhatsApp driver on
+staging (it prints OTP codes and is refused outside local development by design);
+seeding demo users with the service key over the API (the key is not available to
+the agent; SQL seeding through the real functions gives the same result).
+
+**Open:** auth settings that exist only in the dashboard (phone provider, hooks,
+sign-up toggle, password length) and `SUPABASE_SECRET_KEY` in Vercel are set by
+Hassan (handover.md → Staging). The robots/noindex handling for staging belongs to
+Phase 9.

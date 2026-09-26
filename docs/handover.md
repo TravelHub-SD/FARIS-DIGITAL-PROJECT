@@ -115,3 +115,39 @@ Identity documents are deleted right after the review. If that deletion fails
 awaiting deletion**; press **Delete file**. After 24 hours a red banner appears on
 every admin page for KYC staff until it is done.
 - بالعربية: إذا ظهر مستند تحت «مستندات بانتظار الحذف» في صفحة التحقق من الهوية فاضغط **حذف الملف**. بعد 24 ساعة يظهر شريط أحمر في كل صفحات الإدارة حتى يُحذف.
+
+## Staging (faris-digital-staging)
+
+A hosted copy for review with demo data only. It never holds real customers.
+
+- **Supabase:** project `faris-digital-staging` (ref `iojsknoiyewndldggwfo`, free tier).
+  All migrations in `supabase/migrations/` are applied (history versions match the
+  file names), then `supabase/seed.sql`, then `supabase/staging/demo-seed.sql`.
+- **Vercel:** project `faris-digital-staging`, linked to this repository. Every push
+  to the branch deploys; `*.vercel.app` URLs are behind Vercel Authentication
+  (team members only).
+- **WhatsApp:** `WHATSAPP_DRIVER=meta` with no Meta credentials, so every send
+  fails and is shown as failed (OTP screens say the code could not be sent;
+  admin pages show the WhatsApp banners). The production guard is unchanged:
+  the dev driver refuses to start on Vercel.
+- **Demo accounts:** owner, orders-only staff and one customer sign in with phone
+  + password (`+249900000001/2/3`). Passwords are never in the repository;
+  `demo-seed.sql` takes their bcrypt hashes as psql variables. Other demo
+  customers have no password.
+- **Not seeded:** receipt and identity-document images (Storage is written only
+  by the app). Review screens show "no image" for demo rows.
+
+Settings that live only in the dashboards (not in migrations):
+1. Vercel → Project → Settings → Environment Variables: `SUPABASE_SECRET_KEY`
+   (Supabase → Project Settings → API Keys → secret key), type *Sensitive*,
+   Production + Preview. Then redeploy.
+2. Supabase → Authentication → Sign In / Providers: Phone **on**; Email **off**;
+   "Allow new users to sign up" **off**; minimum password length 10.
+3. Supabase → Authentication → Hooks: *Send SMS* → Postgres
+   `private.auth_hook_send_sms`; *Before User Created* → Postgres
+   `private.auth_hook_before_user_created`.
+
+Public sign-up is closed even if (2) is misconfigured: the deferred
+`guard_auth_user_insert` trigger rejects any new `auth.users` row without the
+server's OTP marker at commit (checked on staging: phone, anonymous and email
+sign-ups → `SIGNUP_NOT_ALLOWED`).
