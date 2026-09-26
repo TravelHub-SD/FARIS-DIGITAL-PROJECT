@@ -14,7 +14,8 @@ import type { Locale } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/env";
 import { formatDateTime, formatSdg } from "@/lib/format";
 import { localized } from "@/lib/localized";
-import { alternates, jsonLd, metaDescription, ogLocale } from "@/lib/seo";
+import { publicAssetUrl } from "@/lib/assets";
+import { alternates, jsonLd, metaDescription, openGraph } from "@/lib/seo";
 import { getProduct } from "@/server/catalog/queries";
 import { listProductComments } from "@/server/catalog/site";
 import type { PlaceOrderError } from "@/server/orders/actions";
@@ -55,13 +56,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: name,
     description,
     alternates: alternates(locale, `/p/${slug}`),
-    openGraph: {
-      type: "website",
+    openGraph: openGraph(locale, {
+      siteName: (await getTranslations({ locale, namespace: "Metadata" }))(
+        "title",
+      ),
       title: name,
       description,
-      url: `/${locale}/p/${slug}`,
-      locale: ogLocale(locale),
-    },
+      path: `/p/${slug}`,
+      image: product.image_path ? publicAssetUrl(product.image_path) : null,
+    }),
   };
 }
 
@@ -118,6 +121,9 @@ export default async function ProductPage({ params }: Props) {
       description: description?.text,
       category: categoryName?.text,
       url,
+      ...(product.image_path
+        ? { image: publicAssetUrl(product.image_path) }
+        : {}),
       ...(prices.length
         ? {
             offers: {
@@ -259,7 +265,10 @@ export default async function ProductPage({ params }: Props) {
                     · {formatDateTime(c.created_at, locale)}
                   </span>
                 </span>
-                <p className="text-sm whitespace-pre-wrap" dir="auto">
+                <p
+                  className="text-sm wrap-anywhere whitespace-pre-wrap"
+                  dir="auto"
+                >
                   {c.body}
                 </p>
               </li>

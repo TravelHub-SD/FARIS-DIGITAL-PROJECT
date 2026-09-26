@@ -188,7 +188,11 @@ export function Pagination({
 /** Wide tables scroll inside their box; the page itself never scrolls sideways. */
 export function TableWrap({ children }: { children: React.ReactNode }) {
   return (
-    <div className="-mx-4 overflow-x-auto sm:mx-0">
+    // Focusable so keyboard users can scroll it (it may hold no links).
+    <div
+      tabIndex={0}
+      className="-mx-4 overflow-x-auto outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:mx-0"
+    >
       <table className="w-full min-w-[40rem] border-collapse text-sm [&_td]:border-t [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-start [&_th]:font-medium [&_th]:text-muted-foreground">
         {children}
       </table>

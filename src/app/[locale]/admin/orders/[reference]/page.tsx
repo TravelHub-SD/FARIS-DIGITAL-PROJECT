@@ -231,7 +231,7 @@ export default async function AdminOrderPage({
                 )}
               </>,
               order.fulfillment_data[f.key] !== undefined ? (
-                <span dir="auto" className="font-mono select-all">
+                <span dir="auto" className="font-mono wrap-anywhere select-all">
                   {order.fulfillment_data[f.key]}
                 </span>
               ) : closed && f.sensitive ? (
@@ -307,7 +307,7 @@ export default async function AdminOrderPage({
                         <span
                           key="r"
                           dir="ltr"
-                          className="font-mono select-all"
+                          className="font-mono wrap-anywhere select-all"
                         >
                           {r.transaction_ref}
                         </span>,
@@ -478,7 +478,9 @@ export default async function AdminOrderPage({
                   key={n.id}
                   className="grid gap-1 rounded-md border bg-card p-3"
                 >
-                  <span className="whitespace-pre-wrap">{n.body}</span>
+                  <span className="wrap-anywhere whitespace-pre-wrap">
+                    {n.body}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {n.author} · {formatDateTime(n.created_at, locale)}
                   </span>

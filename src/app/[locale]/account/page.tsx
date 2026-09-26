@@ -10,7 +10,10 @@ import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
 import { formatPhone } from "@/lib/phone";
 import { signOut } from "@/server/auth/actions";
-import { requireCompleteUser } from "@/server/auth/session";
+import {
+  getAdminPermissions,
+  requireCompleteUser,
+} from "@/server/auth/session";
 
 export const metadata: Metadata = { robots: { index: false } };
 
@@ -24,6 +27,10 @@ export default async function AccountPage({
   const tKyc = await getTranslations("Kyc");
   const tInv = await getTranslations("Invoices");
   const { profile } = user;
+  // Staff reach the dashboard from here (the site header is shared by static
+  // public pages, so it cannot depend on who is signed in). Customers get no
+  // hint that an admin area exists.
+  const isStaff = (await getAdminPermissions(user.id)) !== null;
 
   return (
     <div className="grid gap-6">
@@ -36,6 +43,22 @@ export default async function AccountPage({
         </form>
       </div>
       {profile.is_blocked && <Alert tone="error">{t("blocked")}</Alert>}
+
+      {isStaff && (
+        <Card data-testid="admin-entry" className="border-primary/40">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-1">
+              <span className="font-bold">{t("adminTitle")}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("adminDescription")}
+              </span>
+            </div>
+            <Link href="/admin" className={buttonVariants({ size: "sm" })}>
+              {t("adminAction")}
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

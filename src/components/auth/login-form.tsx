@@ -1,23 +1,20 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { phoneSchema } from "@/lib/validation/auth";
+import { loginPasswordRule, phoneRule } from "@/lib/validation/auth-rules";
 import { login } from "@/server/auth/actions";
 import { useHydrated } from "@/lib/use-hydrated";
 
-import { type ActionFailure, Field, useErrorText } from "./form-bits";
-
-const loginForm = z.object({
-  phone: phoneSchema,
-  password: z.string().min(1, "password_required"),
-});
+import {
+  type ActionFailure,
+  Field,
+  useErrorText,
+  useRuleForm,
+} from "./form-bits";
 
 export function LoginForm({ next }: { next?: string }) {
   const t = useTranslations("Auth");
@@ -26,45 +23,42 @@ export function LoginForm({ next }: { next?: string }) {
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
   const hydrated = useHydrated();
-  const form = useForm<
-    z.input<typeof loginForm>,
-    unknown,
-    z.output<typeof loginForm>
-  >({
-    resolver: zodResolver(loginForm),
-  });
+  const form = useRuleForm(
+    { phone: phoneRule, password: loginPasswordRule },
+    (v) =>
+      startTransition(async () => {
+        setFailure(null);
+        const res = await login({ ...v, locale, next });
+        if (res && !res.ok) setFailure(res);
+      }),
+  );
 
   return (
     <form
       method="post"
       className="grid gap-4"
       noValidate
-      onSubmit={form.handleSubmit((v) =>
-        startTransition(async () => {
-          setFailure(null);
-          const res = await login({ ...v, locale, next });
-          if (res && !res.ok) setFailure(res);
-        }),
-      )}
+      onSubmit={form.onSubmit}
+      onChange={form.onChange}
     >
       <Field
         id="phone"
+        name="phone"
         label={t("phone")}
         hint={t("phoneHint")}
         type="tel"
         inputMode="tel"
         autoComplete="tel"
         dir="ltr"
-        error={form.formState.errors.phone}
-        {...form.register("phone")}
+        error={form.errors.phone}
       />
       <Field
         id="password"
+        name="password"
         label={t("password")}
         type="password"
         autoComplete="current-password"
-        error={form.formState.errors.password}
-        {...form.register("password")}
+        error={form.errors.password}
       />
       {failure && <Alert tone="error">{errorText(failure)}</Alert>}
       <Button type="submit" disabled={pending || !hydrated}>

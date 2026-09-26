@@ -34,7 +34,8 @@
     "retry": "Try again",
     "notFoundTitle": "Page not found",
     "notFoundBody": "The link you opened is wrong or no longer available.",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "loading": "Loading…"
   },
   "Auth": {
     "phone": "Phone number (WhatsApp)",
@@ -132,7 +133,10 @@
     },
     "orders": "My orders",
     "ordersAction": "View orders",
-    "invoicesLink": "My invoices"
+    "invoicesLink": "My invoices",
+    "adminTitle": "Admin dashboard",
+    "adminDescription": "You are a member of staff.",
+    "adminAction": "Open the dashboard"
   },
   "Kyc": {
     "title": "Identity verification",

@@ -1,15 +1,12 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
-import { otpCodeSchema, phoneSchema } from "@/lib/validation/auth";
+import { otpCodeRule, phoneRule } from "@/lib/validation/auth-rules";
 import { completePhoneLink, requestPhoneLinkOtp } from "@/server/auth/actions";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -18,10 +15,8 @@ import {
   Field,
   useCountdown,
   useErrorText,
+  useRuleForm,
 } from "./form-bits";
-
-const phoneForm = z.object({ phone: phoneSchema });
-const codeForm = z.object({ code: otpCodeSchema });
 
 export function CompleteAccountForm() {
   const t = useTranslations("Auth");
@@ -32,20 +27,6 @@ export function CompleteAccountForm() {
   const [pending, startTransition] = useTransition();
   const hydrated = useHydrated();
   const cooldown = useCountdown();
-  const first = useForm<
-    z.input<typeof phoneForm>,
-    unknown,
-    z.output<typeof phoneForm>
-  >({
-    resolver: zodResolver(phoneForm),
-  });
-  const second = useForm<
-    z.input<typeof codeForm>,
-    unknown,
-    z.output<typeof codeForm>
-  >({
-    resolver: zodResolver(codeForm),
-  });
 
   const sendCode = (e164: string) =>
     startTransition(async () => {
@@ -59,19 +40,22 @@ export function CompleteAccountForm() {
         if (res.retryAfter) cooldown.start(res.retryAfter);
       }
     });
+  const first = useRuleForm({ phone: phoneRule }, (v) => sendCode(v.phone));
+  const second = useRuleForm({ code: otpCodeRule }, (v) =>
+    startTransition(async () => {
+      setFailure(null);
+      const res = await completePhoneLink({ ...v, phone, locale });
+      if (res && !res.ok) setFailure(res);
+    }),
+  );
 
   return phone ? (
     <form
       method="post"
       className="grid gap-4"
       noValidate
-      onSubmit={second.handleSubmit((v) =>
-        startTransition(async () => {
-          setFailure(null);
-          const res = await completePhoneLink({ ...v, phone, locale });
-          if (res && !res.ok) setFailure(res);
-        }),
-      )}
+      onSubmit={second.onSubmit}
+      onChange={second.onChange}
     >
       <Alert>{t("codeSentTo", { phone: formatPhone(phone) })}</Alert>
       <Field
@@ -82,8 +66,8 @@ export function CompleteAccountForm() {
         autoComplete="one-time-code"
         dir="ltr"
         maxLength={6}
-        error={second.formState.errors.code}
-        {...second.register("code")}
+        name="code"
+        error={second.errors.code}
       />
       {failure && <Alert tone="error">{errorText(failure)}</Alert>}
       <Button type="submit" disabled={pending || !hydrated}>
@@ -106,7 +90,8 @@ export function CompleteAccountForm() {
       method="post"
       className="grid gap-4"
       noValidate
-      onSubmit={first.handleSubmit((v) => sendCode(v.phone))}
+      onSubmit={first.onSubmit}
+      onChange={first.onChange}
     >
       <Field
         id="phone"
@@ -116,8 +101,8 @@ export function CompleteAccountForm() {
         inputMode="tel"
         autoComplete="tel"
         dir="ltr"
-        error={first.formState.errors.phone}
-        {...first.register("phone")}
+        name="phone"
+        error={first.errors.phone}
       />
       {failure && (
         <Alert tone="error">

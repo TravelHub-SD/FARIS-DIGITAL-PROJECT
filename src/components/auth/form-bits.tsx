@@ -1,24 +1,25 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import type { FieldError } from "react-hook-form";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AuthErrorKey } from "@/i18n/keys";
+import type { Rule } from "@/lib/validation/auth-rules";
 
 type FieldProps = React.ComponentProps<typeof Input> & {
   id: string;
   label: string;
   hint?: string;
-  error?: FieldError;
+  /** An Auth.errors key from a failed rule. */
+  error?: string;
 };
 
 /** Label + input + hint + translated validation message (Auth.errors.*). */
 export function Field({ id, label, hint, error, ...inputProps }: FieldProps) {
   const t = useTranslations("Auth.errors");
-  const message = error?.message as AuthErrorKey | undefined;
+  const message = error as AuthErrorKey | undefined;
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
@@ -38,6 +39,50 @@ export function Field({ id, label, hint, error, ...inputProps }: FieldProps) {
       </p>
     </div>
   );
+}
+
+type Rules = Record<string, Rule<unknown>>;
+type Values<R extends Rules> = {
+  [K in keyof R]: R[K] extends Rule<infer T> ? T : never;
+};
+
+/**
+ * Checks the named inputs of a submitted form against the shared auth rules
+ * (the same ones the Server Action re-checks). On failure it shows the
+ * messages and focuses the first invalid input; otherwise it calls `onValid`
+ * with the normalised values. Editing an input clears its message.
+ */
+export function useRuleForm<R extends Rules>(
+  rules: R,
+  onValid: (values: Values<R>) => void,
+) {
+  const [errors, setErrors] = useState<Partial<Record<keyof R, string>>>({});
+  return {
+    errors,
+    onSubmit(event: FormEvent<HTMLFormElement>) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const next: Partial<Record<keyof R, string>> = {};
+      const values = {} as Values<R>;
+      for (const name of Object.keys(rules) as (keyof R & string)[]) {
+        const input = form.elements.namedItem(name) as HTMLInputElement | null;
+        const result = rules[name](input?.value ?? "");
+        if (result.ok) values[name] = result.value as Values<R>[typeof name];
+        else next[name] = result.error;
+      }
+      setErrors(next);
+      const firstInvalid = Object.keys(rules).find((name) => next[name]);
+      if (firstInvalid) {
+        (form.elements.namedItem(firstInvalid) as HTMLInputElement)?.focus();
+        return;
+      }
+      onValid(values);
+    },
+    onChange(event: FormEvent<HTMLFormElement>) {
+      const name = (event.target as HTMLInputElement).name as keyof R;
+      if (errors[name]) setErrors((e) => ({ ...e, [name]: undefined }));
+    },
+  };
 }
 
 export type ActionFailure = {

@@ -1,42 +1,34 @@
 import { z } from "zod";
 
-import { normalizeSudanPhone, toLatinDigits } from "@/lib/phone";
+import {
+  fullNameRule,
+  loginPasswordRule,
+  newPasswordRule,
+  otpCodeRule,
+  phoneRule,
+  type Rule,
+} from "./auth-rules";
 
-// Shared by client forms (React Hook Form) and Server Actions. The server
-// always re-parses; client validation is only for faster feedback.
+// Server Actions parse with these; the rules themselves live in
+// ./auth-rules.ts, which the browser forms call directly (no Zod shipped).
 
 export const localeSchema = z.enum(["ar", "en"]);
 
-export const phoneSchema = z
-  .string()
-  .trim()
-  .max(32)
-  .transform((value, ctx) => {
-    const e164 = normalizeSudanPhone(value);
-    if (!e164) {
-      ctx.addIssue({ code: "custom", message: "invalid_phone" });
+function fromRule(rule: Rule) {
+  return z.string().transform((input, ctx) => {
+    const result = rule(input);
+    if (!result.ok) {
+      ctx.addIssue({ code: "custom", message: result.error });
       return z.NEVER;
     }
-    return e164;
+    return result.value;
   });
+}
 
-// bcrypt (GoTrue) ignores bytes beyond 72, so longer passwords are refused
-// rather than silently truncated.
-export const passwordSchema = z
-  .string()
-  .min(10, "password_too_short")
-  .refine((v) => new TextEncoder().encode(v).length <= 72, "password_too_long");
-
-export const fullNameSchema = z
-  .string()
-  .trim()
-  .min(2, "name_too_short")
-  .max(100, "name_too_long");
-
-export const otpCodeSchema = z
-  .string()
-  .transform((v) => toLatinDigits(v).replace(/\s/g, ""))
-  .pipe(z.string().regex(/^\d{6}$/, "invalid_code_format"));
+export const phoneSchema = fromRule(phoneRule);
+export const passwordSchema = fromRule(newPasswordRule);
+export const fullNameSchema = fromRule(fullNameRule);
+export const otpCodeSchema = fromRule(otpCodeRule);
 
 export const requestOtpSchema = z.object({
   phone: phoneSchema,
@@ -53,7 +45,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   phone: phoneSchema,
-  password: z.string().min(1, "password_required").max(200),
+  password: fromRule(loginPasswordRule),
   locale: localeSchema,
   next: z.string().max(300).optional(),
 });

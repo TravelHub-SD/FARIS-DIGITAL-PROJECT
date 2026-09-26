@@ -171,7 +171,10 @@ export default async function AuditPage({
                           {t("audit.noDetails")}
                         </p>
                       ) : (
-                        <div className="-mx-3 overflow-x-auto px-3">
+                        <div
+                          tabIndex={0}
+                          className="-mx-3 overflow-x-auto px-3 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        >
                           <table className="w-full min-w-[32rem] text-xs [&_td]:border-t [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_th]:px-2 [&_th]:py-1 [&_th]:text-start">
                             <thead>
                               <tr>

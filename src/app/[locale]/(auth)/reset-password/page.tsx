@@ -37,7 +37,10 @@ export default async function ResetPasswordPage({
       </CardHeader>
       <CardContent className="grid gap-5">
         <ResetPasswordForm />
-        <Link href="/login" className="text-sm text-primary hover:underline">
+        <Link
+          href="/login"
+          className="text-sm text-primary underline underline-offset-4"
+        >
           {t("reset.back")}
         </Link>
       </CardContent>

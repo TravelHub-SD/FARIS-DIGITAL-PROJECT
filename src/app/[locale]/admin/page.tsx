@@ -78,7 +78,7 @@ export default async function AdminHome({
                 <span
                   className={
                     c.urgent && c.value
-                      ? "text-3xl font-bold text-highlight"
+                      ? "text-3xl font-bold text-highlight-text"
                       : "text-3xl font-bold"
                   }
                 >

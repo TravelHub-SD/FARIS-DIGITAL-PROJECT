@@ -101,7 +101,7 @@ export async function FaqSection({
             <L10n
               value={f.a}
               as="p"
-              className="mt-3 text-sm leading-relaxed whitespace-pre-line text-muted-foreground"
+              className="mt-3 text-sm leading-relaxed wrap-anywhere whitespace-pre-line text-muted-foreground"
             />
           </details>
         ))}

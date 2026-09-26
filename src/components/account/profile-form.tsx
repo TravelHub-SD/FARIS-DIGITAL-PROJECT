@@ -1,17 +1,14 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import type { z } from "zod";
 
-import { Field } from "@/components/auth/form-bits";
+import { Field, useRuleForm } from "@/components/auth/form-bits";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { profileSchema } from "@/lib/validation/auth";
+import { fullNameRule, localeRule } from "@/lib/validation/auth-rules";
 import { updateProfile } from "@/server/account/actions";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -27,36 +24,33 @@ export function ProfileForm({
   const [status, setStatus] = useState<"idle" | "saved" | "failed">("idle");
   const [pending, startTransition] = useTransition();
   const hydrated = useHydrated();
-  const form = useForm<
-    z.input<typeof profileSchema>,
-    unknown,
-    z.output<typeof profileSchema>
-  >({
-    resolver: zodResolver(profileSchema),
-    defaultValues: { fullName, locale },
-  });
+  const form = useRuleForm(
+    { fullName: fullNameRule, locale: localeRule },
+    (v) =>
+      startTransition(async () => {
+        const res = await updateProfile(v);
+        setStatus(res.ok ? "saved" : "failed");
+      }),
+  );
 
   return (
     <form
       method="post"
       className="grid gap-4"
       noValidate
-      onSubmit={form.handleSubmit((v) =>
-        startTransition(async () => {
-          const res = await updateProfile(v);
-          setStatus(res.ok ? "saved" : "failed");
-        }),
-      )}
+      onSubmit={form.onSubmit}
+      onChange={form.onChange}
     >
       <Field
         id="fullName"
+        name="fullName"
         label={tAuth("fullName")}
-        error={form.formState.errors.fullName}
-        {...form.register("fullName")}
+        defaultValue={fullName}
+        error={form.errors.fullName}
       />
       <div className="grid gap-2">
         <Label htmlFor="locale">{t("language")}</Label>
-        <NativeSelect id="locale" {...form.register("locale")}>
+        <NativeSelect id="locale" name="locale" defaultValue={locale}>
           <option value="ar">{t("languages.ar")}</option>
           <option value="en">{t("languages.en")}</option>
         </NativeSelect>

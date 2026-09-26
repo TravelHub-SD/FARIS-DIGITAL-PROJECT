@@ -8,6 +8,10 @@
  * Orange is exposed as `highlight`, not shadcn's `accent` (which shadcn uses
  * for subtle hover surfaces). Contrast: white on #005CFF ≈ 5.3:1 (AA);
  * white on #FF7A00 ≈ 2.6:1 fails, so highlight uses dark text (≈ 7.6:1).
+ * Orange as TEXT on white also fails (≈ 2.6:1), so text uses the darker
+ * `highlight-text`. Dark mode: brand blue text on the dark background is
+ * ≈ 3.3:1, so primary is a lighter tint of the same hue there, with dark
+ * text on primary buttons (Phase 9 accessibility scan, docs/decisions.md).
  */
 :root {
   --radius: 0.75rem;
@@ -30,7 +34,8 @@
   --accent-foreground: oklch(0.25 0.03 260);
   --highlight: var(--brand-orange);
   --highlight-foreground: oklch(0.18 0.02 60);
-  --destructive: oklch(0.577 0.245 27.325);
+  --highlight-text: oklch(0.553 0.195 38.402);
+  --destructive: oklch(0.505 0.213 27.518);
   --border: oklch(0.91 0.01 260);
   --input: oklch(0.91 0.01 260);
   --ring: var(--brand-blue);
@@ -43,8 +48,8 @@
   --card-foreground: oklch(0.97 0.005 260);
   --popover: oklch(0.2 0.02 260);
   --popover-foreground: oklch(0.97 0.005 260);
-  --primary: var(--brand-blue);
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: oklch(0.72 0.15 262);
+  --primary-foreground: oklch(0.16 0.015 260);
   --secondary: oklch(0.26 0.02 260);
   --secondary-foreground: oklch(0.97 0.005 260);
   --muted: oklch(0.26 0.02 260);
@@ -53,6 +58,7 @@
   --accent-foreground: oklch(0.97 0.005 260);
   --highlight: var(--brand-orange);
   --highlight-foreground: oklch(0.18 0.02 60);
+  --highlight-text: var(--brand-orange);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
@@ -78,6 +84,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-text: var(--highlight-text);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);

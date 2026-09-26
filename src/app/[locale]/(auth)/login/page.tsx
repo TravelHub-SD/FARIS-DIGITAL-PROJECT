@@ -55,12 +55,18 @@ export default async function LoginPage({
           </>
         )}
         <div className="flex flex-wrap justify-between gap-2 text-sm">
-          <Link href="/reset-password" className="text-primary hover:underline">
+          <Link
+            href="/reset-password"
+            className="text-primary underline underline-offset-4"
+          >
             {t("login.forgot")}
           </Link>
           <span className="text-muted-foreground">
             {t("login.noAccount")}{" "}
-            <Link href="/register" className="text-primary hover:underline">
+            <Link
+              href="/register"
+              className="text-primary underline underline-offset-4"
+            >
               {t("login.register")}
             </Link>
           </span>

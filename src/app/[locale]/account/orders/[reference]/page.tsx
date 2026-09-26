@@ -168,7 +168,10 @@ export default async function OrderPage({
                   <p className="font-medium">{bankName(b)}</p>
                   <p>
                     {t("accountNumber")}:{" "}
-                    <span dir="ltr" className="font-mono font-bold select-all">
+                    <span
+                      dir="ltr"
+                      className="font-mono font-bold wrap-anywhere select-all"
+                    >
                       {b.account_number}
                     </span>
                   </p>
@@ -203,7 +206,9 @@ export default async function OrderPage({
               {receipts.map((r) => (
                 <li key={r.id} className="grid gap-1 py-2">
                   <span className="flex flex-wrap justify-between gap-2">
-                    <span dir="ltr">{r.transaction_ref}</span>
+                    <span dir="ltr" className="wrap-anywhere">
+                      {r.transaction_ref}
+                    </span>
                     <span data-receipt-status={r.status}>
                       {t(`receiptStatuses.${r.status}`)}
                     </span>

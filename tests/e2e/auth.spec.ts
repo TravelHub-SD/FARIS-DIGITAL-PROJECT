@@ -180,3 +180,38 @@ test("non-admins get 404 on admin routes; admins without kyc get 404 on the KYC 
     await context.close();
   }
 });
+
+test("login form checks input in the browser (shared rules, no Zod shipped) before calling the server", async ({
+  page,
+}) => {
+  const actionCalls: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.headers()["next-action"])
+      actionCalls.push(r.url());
+  });
+  await page.goto("/en/login");
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  await page.fill("#phone", "0812345678");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.locator("#phone-help")).toHaveText(
+    "Enter a valid Sudanese mobile number.",
+  );
+  await expect(page.locator("#password-help")).toHaveText(
+    "Enter your password.",
+  );
+  await expect(page.locator("#phone")).toBeFocused();
+  await expect(page.locator("#phone")).toHaveAttribute("aria-invalid", "true");
+  expect(actionCalls).toHaveLength(0);
+
+  // Editing a field clears its message; Arabic-Indic digits are accepted.
+  await page.fill("#phone", "٠٩١٢٣٤٥٦٧٨");
+  await expect(page.locator("#phone-help")).toHaveText(
+    "Sudanese number, e.g. 0912345678",
+  );
+  await page.fill("#password", "wrong-password-123");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(
+    page.getByText("Phone number or password is incorrect."),
+  ).toBeVisible();
+  expect(actionCalls).toHaveLength(1);
+});

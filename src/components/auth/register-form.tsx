@@ -1,21 +1,18 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
 import { useHydrated } from "@/lib/use-hydrated";
 import {
-  fullNameSchema,
-  otpCodeSchema,
-  passwordSchema,
-  phoneSchema,
-} from "@/lib/validation/auth";
+  fullNameRule,
+  newPasswordRule,
+  otpCodeRule,
+  phoneRule,
+} from "@/lib/validation/auth-rules";
 import {
   completeRegistration,
   requestRegistrationOtp,
@@ -26,14 +23,8 @@ import {
   Field,
   useCountdown,
   useErrorText,
+  useRuleForm,
 } from "./form-bits";
-
-const phoneForm = z.object({ phone: phoneSchema });
-const verifyForm = z.object({
-  code: otpCodeSchema,
-  fullName: fullNameSchema,
-  password: passwordSchema,
-});
 
 export function RegisterForm() {
   const t = useTranslations("Auth");
@@ -44,21 +35,6 @@ export function RegisterForm() {
   const [pending, startTransition] = useTransition();
   const hydrated = useHydrated();
   const cooldown = useCountdown();
-
-  const first = useForm<
-    z.input<typeof phoneForm>,
-    unknown,
-    z.output<typeof phoneForm>
-  >({
-    resolver: zodResolver(phoneForm),
-  });
-  const second = useForm<
-    z.input<typeof verifyForm>,
-    unknown,
-    z.output<typeof verifyForm>
-  >({
-    resolver: zodResolver(verifyForm),
-  });
 
   const sendCode = (e164: string) =>
     startTransition(async () => {
@@ -72,6 +48,16 @@ export function RegisterForm() {
         if (res.retryAfter) cooldown.start(res.retryAfter);
       }
     });
+  const first = useRuleForm({ phone: phoneRule }, (v) => sendCode(v.phone));
+  const second = useRuleForm(
+    { code: otpCodeRule, fullName: fullNameRule, password: newPasswordRule },
+    (v) =>
+      startTransition(async () => {
+        setFailure(null);
+        const res = await completeRegistration({ ...v, phone, locale });
+        if (res && !res.ok) setFailure(res);
+      }),
+  );
 
   if (!phone) {
     return (
@@ -79,7 +65,8 @@ export function RegisterForm() {
         method="post"
         className="grid gap-4"
         noValidate
-        onSubmit={first.handleSubmit((v) => sendCode(v.phone))}
+        onSubmit={first.onSubmit}
+        onChange={first.onChange}
       >
         <Field
           id="phone"
@@ -89,8 +76,8 @@ export function RegisterForm() {
           inputMode="tel"
           autoComplete="tel"
           dir="ltr"
-          error={first.formState.errors.phone}
-          {...first.register("phone")}
+          name="phone"
+          error={first.errors.phone}
         />
         {failure && <Alert tone="error">{errorText(failure)}</Alert>}
         <Button type="submit" disabled={pending || !hydrated}>
@@ -105,13 +92,8 @@ export function RegisterForm() {
       method="post"
       className="grid gap-4"
       noValidate
-      onSubmit={second.handleSubmit((v) =>
-        startTransition(async () => {
-          setFailure(null);
-          const res = await completeRegistration({ ...v, phone, locale });
-          if (res && !res.ok) setFailure(res);
-        }),
-      )}
+      onSubmit={second.onSubmit}
+      onChange={second.onChange}
     >
       <Alert>{t("codeSentTo", { phone: formatPhone(phone) })}</Alert>
       <Field
@@ -122,15 +104,15 @@ export function RegisterForm() {
         autoComplete="one-time-code"
         dir="ltr"
         maxLength={6}
-        error={second.formState.errors.code}
-        {...second.register("code")}
+        name="code"
+        error={second.errors.code}
       />
       <Field
         id="fullName"
         label={t("fullName")}
         autoComplete="name"
-        error={second.formState.errors.fullName}
-        {...second.register("fullName")}
+        name="fullName"
+        error={second.errors.fullName}
       />
       <Field
         id="password"
@@ -138,8 +120,8 @@ export function RegisterForm() {
         hint={t("passwordHint")}
         type="password"
         autoComplete="new-password"
-        error={second.formState.errors.password}
-        {...second.register("password")}
+        name="password"
+        error={second.errors.password}
       />
       {failure && <Alert tone="error">{errorText(failure)}</Alert>}
       <Button type="submit" disabled={pending || !hydrated}>

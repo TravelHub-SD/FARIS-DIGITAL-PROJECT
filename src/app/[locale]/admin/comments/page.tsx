@@ -112,7 +112,10 @@ export default async function CommentsPage({
                     <Badge tone="warning">{t("comments.hidden")}</Badge>
                   )}
                 </div>
-                <p className="text-sm whitespace-pre-wrap" dir="auto">
+                <p
+                  className="text-sm wrap-anywhere whitespace-pre-wrap"
+                  dir="auto"
+                >
                   {c.body}
                 </p>
                 {c.hidden_reason && (

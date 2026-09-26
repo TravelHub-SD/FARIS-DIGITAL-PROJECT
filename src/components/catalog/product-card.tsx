@@ -12,9 +12,12 @@ import { ProductVisual } from "./product-visual";
 export async function ProductCard({
   product,
   locale,
+  heading = "h3",
 }: {
   product: ProductSummary;
   locale: Locale;
+  /** h3 under a section heading (home); h2 in a list right under the h1. */
+  heading?: "h2" | "h3";
 }) {
   const t = await getTranslations("Catalog");
   const name = localized(product.name_ar, product.name_en, locale);
@@ -38,8 +41,8 @@ export async function ProductCard({
         <div className="grid gap-1">
           <L10n
             value={name}
-            as="h3"
-            className="leading-snug font-bold group-hover:text-primary"
+            as={heading}
+            className="text-base leading-snug font-bold group-hover:text-primary"
           />
           <L10n value={category} className="text-xs text-muted-foreground" />
         </div>

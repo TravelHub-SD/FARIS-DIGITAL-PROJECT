@@ -3,6 +3,14 @@
 Operational notes for whoever runs Faris Digital after delivery. Grows phase by
 phase; completed in Phase 10 together with the Arabic user guide.
 
+## Opening the dashboard
+
+Staff sign in like customers (phone + password), then open **My account**: a
+card at the top, **Admin dashboard → Open the dashboard**, appears only for
+staff. Customers never see it. Each staff member sees only the sections their
+permissions allow.
+- بالعربية: يسجّل الموظف الدخول برقم الهاتف وكلمة المرور، ثم يفتح **حسابي**؛ تظهر في الأعلى بطاقة **لوحة الإدارة ← فتح لوحة الإدارة** للموظفين فقط، ولا يراها العملاء.
+
 ## Product, banner and logo images
 
 Images are **not** resized by an image service at request time (that costs
@@ -127,9 +135,19 @@ A hosted copy for review with demo data only. It never holds real customers.
   to the branch deploys; `*.vercel.app` URLs are behind Vercel Authentication
   (team members only).
 - **WhatsApp:** `WHATSAPP_DRIVER=meta` with no Meta credentials, so every send
-  fails and is shown as failed (OTP screens say the code could not be sent;
-  admin pages show the WhatsApp banners). The production guard is unchanged:
-  the dev driver refuses to start on Vercel.
+  fails and is shown as failed (OTP screens say the code could not be sent).
+  The production guard is unchanged: the dev driver refuses to start on Vercel.
+- **Expected red banner on staging: "27 messages are waiting longer than
+  expected".** The demo data was created with SQL, so the send that normally
+  follows each staff action never ran, and the retry scheduler has no Vault
+  secrets on staging, so nothing ever picks the messages up. They stay
+  *Waiting to send* forever and the banner stays. This is not a fault and needs
+  no action. In production the same banner means the scheduler is not running
+  (handover step 3 above).
+  Do **not** connect real Meta credentials or the scheduler to staging while
+  those demo messages exist: they are addressed to the demo numbers
+  (+2499000000xx), which could belong to real people.
+  - بالعربية: الشريط الأحمر في staging («27 رسالة تنتظر أكثر من المتوقع») متوقع: البيانات التجريبية أُدخلت بـ SQL، وخدمة إعادة الإرسال غير مفعّلة هناك، وواتساب غير موصول. لا يحتاج أي إجراء. لا توصل بيانات Meta الحقيقية بـ staging لأن الرسائل موجهة لأرقام تجريبية قد تكون لأشخاص حقيقيين.
 - **Demo accounts:** owner, orders-only staff and one customer sign in with phone
   + password (`+249900000001/2/3`). Passwords are never in the repository;
   `demo-seed.sql` takes their bcrypt hashes as psql variables. Other demo

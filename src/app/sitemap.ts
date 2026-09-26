@@ -17,12 +17,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: new URL(`/ar${path}`, base).toString(),
     lastModified,
     alternates: {
-      languages: Object.fromEntries(
-        routing.locales.map((l) => [
-          l,
-          new URL(`/${l}${path}`, base).toString(),
-        ]),
-      ),
+      languages: {
+        ...Object.fromEntries(
+          routing.locales.map((l) => [
+            l,
+            new URL(`/${l}${path}`, base).toString(),
+          ]),
+        ),
+        "x-default": new URL(`/ar${path}`, base).toString(),
+      },
     },
   });
   return [

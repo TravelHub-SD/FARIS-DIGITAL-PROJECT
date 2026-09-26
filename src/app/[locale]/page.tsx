@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { CategoryGrid } from "@/components/catalog/category-grid";
@@ -5,12 +6,31 @@ import { FaqSection, PromoBanner } from "@/components/catalog/home-extras";
 import { ProductCard, ProductGrid } from "@/components/catalog/product-card";
 import { SearchForm } from "@/components/catalog/search-form";
 import type { Locale } from "@/i18n/routing";
+import { publicAssetUrl } from "@/lib/assets";
+import { getSiteUrl } from "@/lib/env";
+import { alternates, jsonLd, openGraph } from "@/lib/seo";
 import { listCategories, searchProducts } from "@/server/catalog/queries";
 import { getSiteSettings, listPublishedFaqs } from "@/server/catalog/site";
 
 // Static, regenerated at most every 5 minutes (ISR). If the database is cold
 // during regeneration, the last good page keeps being served.
 export const revalidate = 300;
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]">): Promise<Metadata> {
+  const locale = (await params).locale as Locale;
+  const t = await getTranslations({ locale, namespace: "Metadata" });
+  return {
+    alternates: alternates(locale, "/"),
+    openGraph: openGraph(locale, {
+      siteName: t("title"),
+      title: t("title"),
+      description: t("description"),
+      path: "/",
+    }),
+  };
+}
 
 export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
@@ -25,8 +45,62 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     listPublishedFaqs(),
   ]);
 
+  const tm = await getTranslations("Metadata");
+  const home = new URL(`/${locale}`, getSiteUrl()).toString();
+  // One identity for both languages, anchored to a page that exists.
+  const organizationId = `${new URL("/ar", getSiteUrl())}#organization`;
+  const structured = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": organizationId,
+      name: tm("title"),
+      url: home,
+      ...(settings.logo_path
+        ? { logo: publicAssetUrl(settings.logo_path) }
+        : {}),
+      ...(settings.contact_phone || settings.contact_email
+        ? {
+            contactPoint: {
+              "@type": "ContactPoint",
+              contactType: "customer service",
+              ...(settings.contact_phone
+                ? { telephone: settings.contact_phone }
+                : {}),
+              ...(settings.contact_email
+                ? { email: settings.contact_email }
+                : {}),
+              areaServed: "SD",
+              availableLanguage: ["ar", "en"],
+            },
+          }
+        : {}),
+      sameAs: Object.values(settings.social_links).filter(Boolean),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: tm("title"),
+      url: home,
+      inLanguage: locale,
+      publisher: { "@id": organizationId },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${new URL(`/${locale}/search`, getSiteUrl())}?q={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ];
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(structured) }}
+      />
       <PromoBanner settings={settings} locale={locale as Locale} />
       <section className="relative overflow-hidden border-b">
         <div

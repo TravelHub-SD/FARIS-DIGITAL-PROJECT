@@ -348,3 +348,127 @@ the agent; SQL seeding through the real functions gives the same result).
 sign-up toggle, password length) and `SUPABASE_SECRET_KEY` in Vercel are set by
 Hassan (handover.md → Staging). The robots/noindex handling for staging belongs to
 Phase 9.
+
+## 2026-09-26 — Phase 9: auth forms validate with shared rules, not Zod + React Hook Form in the browser
+
+**What:** the auth rules (phone, passwords, name, OTP code, locale) are plain
+functions in `src/lib/validation/auth-rules.ts`. Server Actions still parse
+with Zod: the schemas in `validation/auth.ts` are built *from* those rules, so
+browser and server cannot disagree (unit test compares them input by input).
+The browser forms (login, register, reset, complete account, profile) call
+the rules through a 40-line `useRuleForm` hook. React Hook Form and
+`@hookform/resolvers` were removed from the dependencies.
+
+**Why:** login shipped 306.6 KB gzip, of which Zod was ≈ 101 KB and React Hook
+Form ≈ 12 KB. After: 206.3 KB (catalog pages ship 180 KB; the difference is
+next-intl's client runtime and the form components).
+
+**Rejected:** `zod/mini` in the browser (two schema dialects to keep in sync,
+still ~15–20 KB); server-only validation (no instant feedback on a slow
+connection). CLAUDE.md lists "Zod + React Hook Form (schemas shared)"; Zod
+remains the server authority and the rules stay shared, only the browser
+libraries went, as the roadmap line approved in Phase 4 anticipated.
+
+## 2026-09-26 — Phase 9: staff reach the dashboard from the account page
+
+**What:** a card at the top of `/account`, shown only when the signed-in user
+is an active admin (orders-only staff included, deactivated staff excluded).
+Customers get no link and no hint.
+
+**Why not the site header:** the header is part of the public pages, which are
+rendered once and served to everyone (ISR). A per-user link would make every
+public page render per request. "My account" in the header already leads to
+the account page, which is per-user anyway.
+
+## 2026-09-26 — Phase 9: SEO
+
+- **Indexing only in real production:** `isIndexable()` is true only when
+  `VERCEL_ENV=production` *and* `NEXT_PUBLIC_SITE_URL` is not a
+  `*.vercel.app` address. Otherwise robots.txt is `Disallow: /` and every page
+  is `noindex, nofollow`. Staging needs no flag and cannot be indexed; the
+  production launch on a custom domain needs no flag either. If production
+  ever runs on a vercel.app address, it will not be indexed (Phase 10 check).
+- **No canonical in the layout:** it was inherited by every page, so `/login`
+  declared the home page as its canonical. Indexable pages (home, category,
+  product) set canonical + hreflang (ar, en, x-default → ar); private pages
+  are noindex without a canonical.
+- **Open Graph:** brand image `public/og.png` (1200×630, rendered by Chromium
+  with the site's font so Arabic is shaped; `scripts/make-og-image.mjs`); the
+  product image replaces it when a product has one.
+- **Structured data:** home = Organization + WebSite with site search;
+  category = BreadcrumbList + ItemList; product = Product (AggregateOffer in
+  SDG) + BreadcrumbList. Validated against Google's required properties in
+  tests/e2e/seo.spec.ts; every URL named must answer 200.
+
+## 2026-09-26 — Phase 9: segment prefetch 404 = Next 16.3 per-locale inlining
+
+**Root cause:** since 16.3 (`experimental.prefetchInlining`, on by default)
+Next inlines a layout's prefetch data into the page when it is under 2 KB
+gzip, and writes it to its own file otherwise, decided per param value. Our
+`[locale]` layout (header + footer) is just over 2 KB in Arabic and just under
+in English, so only `ar.segments/$d$locale.segment.rsc` existed; the client
+router uses one route tree for both locales and asked for `/en`'s file → 404.
+Found by bisecting our layout (without header+footer, neither file exists; with
+either one alone, neither; with both, only `ar`).
+
+**Fix:** `experimental.prefetchInlining: false`: every segment gets its own
+file in both locales (verified: 276 prefetch requests over the flows that
+used to 404, 0 errors). Cost measured: +44 KB background prefetch on the home
+page after it has loaded, +14 KB on a product page; no effect on first paint.
+Rejected: raising `maxSize` (the result would still depend on how many bytes
+the banner and footer hold, and could flip again).
+
+**Upstream:** a minimal app reproduces the asymmetric build output (only the
+locale whose layout exceeds 2 KB gets a file) but not the 404 itself, so the
+report is not filed yet. Revisit in Phase 10 / on Next upgrades.
+
+## 2026-09-26 — Phase 9: accessibility and dark mode
+
+- axe-core (`@axe-core/playwright`, dev dependency: the standard engine, no
+  alternative without it) scans the main customer and admin pages in both
+  languages and themes; serious/critical fail the test. Found and fixed:
+  dark-mode brand-blue text at ≈ 3.3:1, orange text on white, the red banner
+  text, links inside sentences distinguished by colour only, a scrollable
+  table unreachable by keyboard, heading levels on list pages. Result: 0
+  findings at any level.
+- Brand colours are unchanged as surfaces in light mode. Dark mode uses a
+  lighter tint of the brand blue (`oklch(0.72 0.15 262)`) with dark text on
+  primary buttons; orange as *text* uses a darker `highlight-text` token in
+  light mode; light-mode `destructive` is Tailwind red-700.
+- Dev-only console warning on 404 pages ("Encountered a script tag"): React 19
+  warns about next-themes' inline theme script when the not-found page renders
+  on the client. No effect in production (the 404 page renders in the right
+  theme); next-themes 0.4.6 is the latest release. Left as is.
+
+## 2026-09-26 — Phase 9: measured, not assumed
+
+- `scripts/measure-js.mjs`: gzip size of the scripts a page loads.
+- `scripts/measure-perf.mjs`: Pixel 7, Slow 4G (150 ms RTT, 1.6 Mbps down) and
+  4× CPU, cold cache, median of N runs; page bytes (Resource Timing up to the
+  load event) separated from background prefetch. Limitation: Chrome does not
+  apply the throttle's latency to the HTML document on localhost, so TTFB here
+  excludes one round trip and Vercel's server time; Lighthouse on the real
+  domain is a Phase 10 item.
+- Query review: Supabase performance advisor on staging reports 16 unindexed
+  foreign keys (all "who did it" columns never used as filters; they only
+  slow down deleting a profile), 22 unused indexes (staging has no traffic
+  yet) and two permissive SELECT policies on `profiles` (own row + staff).
+  No action at MVP scale; re-run the advisor after a month of production use.
+
+## 2026-09-26 — Phase 9: no loading boundary above guarded pages
+
+**What:** `loading.tsx` exists only for `/search`. Account and admin pages have
+none; in the admin, the section link that was tapped shows a pulsing dot
+(`useLinkStatus`) until the page arrives.
+
+**Why:** a loading boundary makes Next stream the page, so the HTTP status is
+sent before the page runs. A page that ends in `notFound()` (another
+customer's order or invoice, an admin section without the permission) then
+answers **200** with the not-found content instead of **404**. The full e2e run
+caught it: 9 tests that assert 404 failed with the boundaries in place, all
+passed after removing them. A 404 that does not reveal the admin area matters
+more than a skeleton. A test now asserts both the pending dot and the 404.
+
+**Measured before removing it:** on the production build the skeleton appeared
+79–120 ms after a tap while the server was held for 3 s; the pending dot
+gives the same immediate feedback on admin links.

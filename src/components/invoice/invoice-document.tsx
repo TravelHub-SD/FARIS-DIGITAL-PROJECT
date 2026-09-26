@@ -215,7 +215,7 @@ export async function InvoiceDocument({
             {t("bank")}:{" "}
             {pick(s.payment.bank_name_ar, s.payment.bank_name_en, locale)}
           </p>
-          <p>
+          <p className="wrap-anywhere">
             {t("transfer")}: <Ltr>{s.payment.transaction_ref}</Ltr>
           </p>
           {s.payment.accepted_at && (

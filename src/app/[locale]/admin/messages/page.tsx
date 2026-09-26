@@ -149,7 +149,7 @@ export default async function MessagesPage({
             ${total.toFixed(4)}
           </p>
           {unpriced > 0 && (
-            <p className="text-sm text-highlight">
+            <p className="text-sm text-highlight-text">
               {t("unpriced", { count: unpriced })}
             </p>
           )}

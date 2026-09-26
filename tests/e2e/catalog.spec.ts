@@ -224,7 +224,6 @@ test("SEO basics: canonical, hreflang, Open Graph, JSON-LD with SDG price", asyn
     name: "شدات ببجي",
     offers: { priceCurrency: "SDG", lowPrice: 2860 },
   });
-  const robots = await (await request.get("/robots.txt")).text();
-  expect(robots).toContain("Disallow: /ar/account");
-  expect(robots).toContain("Sitemap:");
+  // robots.txt: closed outside production (seo.spec.ts); the production rules
+  // are unit-tested (tests/unit/seo.test.ts).
 });

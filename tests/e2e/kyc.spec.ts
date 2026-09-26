@@ -56,9 +56,14 @@ test("KYC: upload (EXIF stripped) → reviewer sees it via a signed URL → appr
   await signInCookies(rctx, reviewer.phone, reviewer.password);
   const rpage = await rctx.newPage();
   await rpage.goto("http://localhost:3100/ar/admin/kyc");
+  // This customer's submission, not whichever is oldest in the shared queue
+  // (other test files leave pending submissions behind).
+  const submissionId = sql(
+    `select id from public.kyc_submissions where user_id = '${customer.id}'`,
+  );
   await rpage
-    .getByRole("link", { name: "مراجعة", exact: true })
-    .first()
+    .locator(`a[href$="/admin/kyc/${submissionId}"]`)
+    .getByText("مراجعة", { exact: true })
     .click();
   const img = rpage.locator("img[alt]");
   await expect(img).toBeVisible();

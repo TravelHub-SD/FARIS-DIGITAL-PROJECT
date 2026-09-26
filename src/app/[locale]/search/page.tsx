@@ -149,7 +149,7 @@ export default async function SearchPage({
       ) : (
         <ProductGrid>
           {results.map((p) => (
-            <ProductCard key={p.id} product={p} locale={locale} />
+            <ProductCard key={p.id} product={p} locale={locale} heading="h2" />
           ))}
         </ProductGrid>
       )}

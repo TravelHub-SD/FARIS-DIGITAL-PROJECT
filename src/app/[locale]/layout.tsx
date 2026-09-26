@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { localeDirection, routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/env";
+import { DEFAULT_OG_IMAGE, isIndexable, ogLocale } from "@/lib/seo";
 
 import "../globals.css";
 
@@ -37,10 +38,16 @@ export async function generateMetadata({
     metadataBase: getSiteUrl(),
     title: { default: t("title"), template: `%s | ${t("title")}` },
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}`,
-      languages: Object.fromEntries(routing.locales.map((l) => [l, `/${l}`])),
+    // No canonical here: it would be inherited by every page (login pointed
+    // at the home page). Indexable pages set their own via alternates().
+    openGraph: {
+      type: "website",
+      siteName: t("title"),
+      locale: ogLocale(locale),
+      images: [DEFAULT_OG_IMAGE],
     },
+    twitter: { card: "summary_large_image" },
+    ...(isIndexable() ? {} : { robots: { index: false, follow: false } }),
   };
 }
 

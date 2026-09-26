@@ -52,7 +52,10 @@ export default async function RegisterPage({
         )}
         <p className="text-sm text-muted-foreground">
           {t("register.haveAccount")}{" "}
-          <Link href="/login" className="text-primary hover:underline">
+          <Link
+            href="/login"
+            className="text-primary underline underline-offset-4"
+          >
             {t("register.login")}
           </Link>
         </p>
