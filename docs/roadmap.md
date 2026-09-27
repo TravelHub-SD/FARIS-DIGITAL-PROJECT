@@ -98,19 +98,32 @@ Output: `docs/architecture.md`
 - [x] Mobile performance measured (Slow 4G + 4× CPU) on home, product, login; before/after (scripts/measure-perf.mjs)
 
 ## Phase 10 — QA & deployment
-- [ ] Bootstrap the owner account (one SQL insert after the client registers; decisions.md 2026-09-27)
-- [ ] Confirm `pg_graphql` is disabled on the hosted project (migration drops it)
-- [ ] Revisit admin 2FA (deferred): the dashboard is now live with password-only admin sign-in
-- [ ] Security review: RLS, authorization, file access, server-side validation
-- [ ] Full test run, mobile testing, RTL and LTR testing
-- [ ] SEO and performance validation on the real domain: Lighthouse mobile on production (the local numbers exclude the HTML request's network latency and Vercel's server time); submit the sitemap in Google Search Console; check robots.txt allows crawling (it does only on Vercel production with a non-*.vercel.app NEXT_PUBLIC_SITE_URL)
+Done without the client (2026-09-26):
+- [x] Content-Security-Policy with a per-request nonce on every page; injected inline script proven blocked on public, customer and admin pages; every page × ar/en × role has zero violations, in dev and on the production build (decisions.md 2026-09-26)
+- [x] Security review: RLS, authorization, file access, server-side validation, accepted risks re-evaluated (docs/security-review.md); fixed F1 comments table public, F2 IPv6 /64 rate-limit bypass, F3 pg_net schema, F4 silent OTP budget exhaustion, HSTS; new pgTAP guards
+- [x] `pg_graphql` confirmed absent on the hosted staging project (production: runbook step 2.3)
+- [x] Revisit admin 2FA: recommendation is TOTP for all staff before launch (security-review.md) — **awaiting Hassan's approval**
+- [ ] Admin TOTP (enrolment, sign-in step, `aal2` in `admin_assurance_ok()`, recovery, tests) — if approved
+- [x] Vercel functions pinned to `fra1`, next to the Frankfurt database (`vercel.json`; staging ran in `iad1`)
+- [x] `main` branch for production deployments
+- [x] Launch runbook (docs/launch-runbook.md): client-owned Supabase + Vercel, migrations only, auth settings, secrets, WhatsApp + scheduler, Google OAuth, owner bootstrap, demo-data proof, backups, rollback
+- [x] Manual backup procedure (DB dump + storage export), commands run on the local stack
+- [x] Arabic operations guide for the client (docs/handover.md): daily work, every admin screen, backups, what to do when something fails
+- [x] Full test run (unit + integration, pgTAP, e2e on dev and on the production build)
+- [ ] About / Terms / Privacy pages (spec §3 "Static pages"): not built, found missing in this review — **decision needed**
+- [ ] Lighthouse mobile on staging: blocked here (the container cannot reach `*.vercel.app`, and staging is behind Vercel Authentication); measured on the local production build instead
 - [ ] Revisit `experimental.prefetchInlining: false` when Next fixes per-locale segment inlining upstream (decisions.md 2026-09-26)
-- [ ] Production environment, deployment checklist, placeholder-replacement check
-- [ ] Hosted Supabase auth config applied (`supabase config push` / dashboard): email provider off, anonymous off, phone provider on with the Send SMS hook (refuses all), `before_user_created` hook, manual linking on, min password 10; verified by running acceptance test 1 against the hosted project
-- [ ] Google OAuth credentials configured; real Google sign-in → incomplete account → phone OTP → complete, tested end to end (not testable locally)
-- [ ] `OTP_HMAC_PEPPER` generated for production (64 random hex chars), `WHATSAPP_DRIVER=meta`
+- [ ] Restore drill of a backup into an empty hosted project (runbook step 12)
+
+Depends on the client (runbook §0):
+- [ ] Client-owned Supabase (Pro) and Vercel (Pro) projects; payment card
+- [ ] Domain; production deploy from `main`; SEO and performance on the real domain: Lighthouse mobile, sitemap in Google Search Console, robots.txt allows crawling (only on Vercel production with a non-*.vercel.app `NEXT_PUBLIC_SITE_URL`)
+- [ ] Hosted production auth config (runbook step 3) and the sign-up checks with curl
+- [ ] Bootstrap the owner account (runbook step 8)
+- [ ] Google OAuth credentials; real Google sign-in → incomplete account → phone OTP → complete, end to end
+- [ ] Production secrets generated (`OTP_HMAC_PEPPER`, `WHATSAPP_DISPATCH_SECRET`), `WHATSAPP_DRIVER=meta`
 - [ ] WhatsApp against the real Meta API: the 17-point checklist in docs/whatsapp-templates.md (templates approved in ar/en, button format, API version, error codes, webhook signature and pricing fields, rates, scheduler)
-- [ ] Invoices on real phones: "Print / Save as PDF" on Android Chrome and iPhone Safari produces a one-page A4 PDF with correct Arabic (only desktop Chromium was tested); also Firefox desktop
-- [ ] WhatsApp setup on the hosted project (docs/handover.md): Vercel variables, webhook subscription then `WHATSAPP_VERIFY_TOKEN` removed, the two Vault secrets for the retry scheduler, Sudan rates entered
-- [ ] Manual backup procedure (DB dump + storage export) documented in the handover guide
-- [ ] User guide (Arabic) for the client, source handover via GitHub + archive
+- [ ] WhatsApp setup on the hosted project (runbook step 6): Vercel variables, webhook subscription then `WHATSAPP_VERIFY_TOKEN` removed, the two Vault secrets, Sudan rates
+- [ ] Real content: catalog, rate, KYC threshold, bank branch names confirmed, business name, logo, texts for About/Terms/Privacy
+- [ ] Real phones (Hassan): invoice "Save as PDF" on Android Chrome (and iPhone Safari, Firefox desktop); a full customer order on a Sudanese mobile network
+- [ ] Source handover via GitHub (client-owned repository or transfer) + archive

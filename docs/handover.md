@@ -1,171 +1,114 @@
-# Handover guide
+# دليل التشغيل — فارس ديجيتال
 
-Operational notes for whoever runs Faris Digital after delivery. Grows phase by
-phase; completed in Phase 10 together with the Arabic user guide.
+هذا الدليل لصاحب المتجر وطاقم العمل: العمل اليومي، وماذا تفعل كل شاشة في لوحة
+التحكم، والنسخ الاحتياطي، وماذا تفعل عند حدوث مشكلة. الخطوات التقنية (إنشاء
+الخوادم والإعدادات والمفاتيح) موجودة في `docs/launch-runbook.md` وهي من عمل
+المطوّر.
 
-## Opening the dashboard
+## 1. الدخول إلى لوحة التحكم
 
-Staff sign in like customers (phone + password), then open **My account**: a
-card at the top, **Admin dashboard → Open the dashboard**, appears only for
-staff. Customers never see it. Each staff member sees only the sections their
-permissions allow.
-- بالعربية: يسجّل الموظف الدخول برقم الهاتف وكلمة المرور، ثم يفتح **حسابي**؛ تظهر في الأعلى بطاقة **لوحة الإدارة ← فتح لوحة الإدارة** للموظفين فقط، ولا يراها العملاء.
+- يسجّل الموظف الدخول مثل أي عميل: رقم الهاتف وكلمة المرور.
+- يفتح **حسابي**، فتظهر في الأعلى بطاقة **لوحة الإدارة ← فتح لوحة الإدارة**. هذه البطاقة تظهر للموظفين فقط ولا يراها العملاء.
+- كل موظف يرى الأقسام التي منحه المالك صلاحيتها فقط. المالك يرى كل شيء.
+- لإضافة موظف: يسجّل الموظف في الموقع أولاً برقم هاتفه (يصله رمز واتساب)، ثم يضيفه المالك من **المشرفون** ويمنحه الصلاحيات المناسبة لعمله فقط.
 
-## Product, banner and logo images
+## 2. العمل اليومي
 
-Images are **not** resized by an image service at request time (that costs
-money on the hosting free tier). Staff prepare them before uploading; the
-dashboard then re-encodes each upload to WebP at fixed sizes and removes all
-metadata.
+### دورة الطلب
 
-| Image | Format | File size | Dimensions (original) | Ideal |
-|---|---|---|---|---|
-| Product | JPG, PNG or WebP | up to 2 MB | 300–4000 px on the longest side; not wider/taller than 3:1 | 1200 × 900 |
-| Banner | JPG, PNG or WebP | up to 2 MB | at least 800 × 200, at most 6000 px wide; between 1.5:1 and 6:1 | 1600 × 400 |
-| Logo | PNG (transparent) or WebP | up to 2 MB | 64–2000 px | 512 px wide |
+1. **بانتظار الدفع**: العميل أنشأ الطلب ويرى المبلغ بالجنيه وحسابات البنوك.
+2. العميل يحوّل المبلغ ويرفع **إشعار الدفع** (صورة + رقم العملية).
+3. الموظف يراجع الإشعار: يفتح تطبيق البنك ويتأكد أن المبلغ وصل **فعلاً**، بالمبلغ نفسه بالضبط وإلى الحساب الصحيح وبرقم العملية نفسه. الصورة وحدها ليست دليلاً، لأن الصور يسهل تعديلها.
+4. عند **القبول** ينتقل الطلب إلى **قيد التنفيذ**، ويصل العميل إشعار واتساب. عند **الرفض** يُكتب السبب، ويستطيع العميل رفع إشعار جديد.
+5. ينفّذ الموظف الطلب (الشحن أو الخدمة) ثم يحوّله إلى **مكتمل**. تصدر الفاتورة تلقائياً، ويصل العميل إشعار.
+6. **ملغي**: يمكن إلغاء الطلب وهو بانتظار الدفع أو قيد التنفيذ. الطلب المكتمل أو الملغي مغلق ولا تتغير حالته.
 
-Files outside these limits are refused with a message saying why; a file over
-2 MB is refused in the browser before it is uploaded. Phone camera photos
-(4000+ px, 3–8 MB) must be resized first (any photo editor, or
-<https://squoosh.app>).
+لا يمكن تحويل طلب إلى «قيد التنفيذ» قبل قبول إشعار الدفع؛ النظام يمنع ذلك.
 
-### بالعربية (لطاقم العمل)
+### ما يُفعل كل يوم
 
-- صغّر الصورة **قبل** رفعها: حتى 2 ميجابايت، وأطول ضلع لا يزيد عن 4000 بكسل للمنتج (المقاس المثالي 1200×900).
-- صور الكاميرا مباشرة ترفض لأنها كبيرة؛ صغّرها أولاً بأي برنامج تعديل صور أو بموقع squoosh.app.
-- البانر صورة عريضة (المثالي 1600×400)، والشعار PNG بخلفية شفافة (المثالي عرض 512 بكسل).
+- افتح **نظرة عامة**: تعرض عدد المدفوعات بانتظار المراجعة، والطلبات بانتظار الدفع، والطلبات بانتظار التنفيذ، ومستندات الهوية بانتظار المراجعة، والرسائل التي تحتاج متابعة.
+- راجع **المدفوعات بانتظار المراجعة** أولاً، ثم نفّذ الطلبات **قيد التنفيذ**.
+- راجع **توثيق الهويات** إن وُجدت مستندات جديدة.
+- افتح **رسائل واتساب ← تحتاج متابعة** وتواصل مع من لم تصله رسالته.
+- انتبه لأي شريط أحمر أعلى الصفحات (القسم 6).
+
+### ما يُفعل كل أسبوع أو عند الحاجة
+
+- **سعر الصرف** في الإعدادات: تغييره يغيّر كل الأسعار المعروضة فوراً، ويسري على الطلبات الجديدة فقط. الطلبات القائمة تحتفظ بسعرها.
+- مراجعة **التعليقات** المخفية والجديدة.
+- في المواسم المزدحمة: رفع الحدود في **الإعدادات ← الحدود** إن رُفضت طلبات حقيقية.
+
+## 3. شاشات لوحة التحكم
+
+| الشاشة | الصلاحية | ماذا تفعل |
+|---|---|---|
+| **نظرة عامة** | كل الموظفين | أرقام اليوم وما ينتظر عملاً، وصلاحياتك. |
+| **الطلبات** | الطلبات | البحث برقم الطلب أو اسم العميل أو الهاتف أو رقم العملية، والتصفية بالحالة والتاريخ والمبلغ. صفحة الطلب فيها: بيانات الطلب والسعر، وما أدخله العميل (الحقول الحساسة تُحذف عند إغلاق الطلب)، وإشعارات الدفع مع قبول أو رفض، وتغيير الحالة مع ملاحظة تظهر للعميل، وملاحظات داخلية للموظفين فقط لا تُعدَّل ولا تُحذف، ورسائل واتساب الخاصة بالطلب. صور الإشعارات تظهر لدقائق فقط؛ أعد تحميل الصفحة لرؤيتها مجدداً. |
+| **المنتجات** | المنتجات | الأقسام والمنتجات والباقات والأسعار (بالدولار) والصور وترتيب العرض والحقول التي يملؤها العميل عند الطلب (مثل رقم اللاعب). التعديلات تظهر في الموقع فوراً. |
+| **العملاء** | العملاء | البحث بالاسم أو الهاتف، وصفحة لكل عميل بطلباته وحالة توثيقه. **الحظر**: المحظور يستطيع الدخول ورؤية طلباته لكنه لا يستطيع الطلب أو التعليق. |
+| **توثيق الهويات** | توثيق الهويات | مستندات الهوية بانتظار المراجعة. الطلبات بمبلغ حد التوثيق أو أكثر تتطلب هوية موثقة. عند القبول أو الرفض **يُحذف المستند نهائياً** ويبقى القرار فقط، وكل عرض لمستند يُسجَّل. |
+| **التعليقات** | التعليقات | تعليقات العملاء في صفحات المنتجات: إخفاء (مع سبب اختياري) أو إظهار أو حذف نهائي. |
+| **الفواتير** | الفواتير | كل الفواتير مع البحث. إلغاء فاتورة وإصدار بديلة (القسم 4). |
+| **رسائل واتساب** | الطلبات | كل رسالة أُرسلت للعملاء مع حالتها وتكلفتها، وما يحتاج متابعة، وأسعار الرسائل. نص الرسائل لا يُحفظ عمداً. |
+| **الأسئلة الشائعة** | الإعدادات | الأسئلة التي تظهر في الصفحة الرئيسية بالعربية والإنجليزية؛ منشور أو مسودة. |
+| **الإعدادات** | الإعدادات | سعر الصرف، وحد توثيق الهوية، والاسم التجاري المطبوع على الفواتير، وبيانات التواصل، والعنوان، وروابط التواصل الاجتماعي، والبانر، والشعار، وحسابات البنوك، وحدود الحماية من الإساءة، والحد اليومي لرموز التحقق. كل تغيير يُسجَّل. |
+| **المشرفون** | المالك فقط | إضافة موظف، ومنح الصلاحيات أو سحبها، و**إيقاف المشرف** فوراً عند مغادرته أو الشك في حسابه. |
+| **سجل التدقيق** | المالك فقط | كل تغيير حساس: من قام به ومتى وما الذي تغيّر. لا يمكن لأحد تعديله أو حذفه. |
+
+### الصور (المنتجات والبانر والشعار)
+
+- صغّر الصورة **قبل** رفعها: حتى 2 ميجابايت.
+- صورة المنتج: أطول ضلع بين 300 و4000 بكسل، والمقاس المثالي 1200×900.
+- البانر صورة عريضة: المثالي 1600×400.
+- الشعار: PNG بخلفية شفافة، والمثالي عرض 512 بكسل.
+- صور الكاميرا مباشرة تُرفض لأنها كبيرة. صغّرها أولاً بأي برنامج تعديل صور أو بموقع squoosh.app.
 - اللوحة تعيد ترميز كل صورة وتحذف بياناتها الوصفية (مثل موقع التصوير) تلقائياً.
 
-## WhatsApp (Meta Cloud API)
+## 4. الفواتير
 
-Templates and the real-API checklist: `docs/whatsapp-templates.md`.
+- تصدر الفاتورة تلقائياً عند تحويل الطلب إلى **مكتمل**، بأرقام متسلسلة بلا فجوات لكل سنة (INV-2026-00001، INV-2026-00002، …).
+- الفاتورة الصادرة لا تتغير أبداً. للتصحيح (مثل خطأ في اسم العميل): صحّح السبب، ثم افتح الفاتورة واضغط **إلغاء الفاتورة** مع ذكر السبب، ثم **إصدار فاتورة جديدة**. الجديدة تأخذ الرقم التالي، والملغاة تبقى ظاهرة للطاقم فقط.
+- الاسم التجاري المطبوع على الفواتير الجديدة يُضبط في **الإعدادات**. الفواتير الصادرة تحتفظ بالاسم الذي صدرت به.
+- لحفظ PDF: افتح الفاتورة ← **طباعة / حفظ PDF** ← اختر «حفظ بتنسيق PDF» بدل الطابعة. على الآيفون يُحفظ الملف من زر المشاركة في معاينة الطباعة.
 
-### Setup (once per environment)
+## 5. النسخ الاحتياطي
 
-1. Vercel environment variables (server only, never `NEXT_PUBLIC_`):
-   `WHATSAPP_DRIVER=meta`, `WHATSAPP_ACCESS_TOKEN` (a System User permanent
-   token), `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`,
-   `WHATSAPP_DISPATCH_SECRET` (64 random hex characters) and, only while
-   subscribing the webhook, `WHATSAPP_VERIFY_TOKEN`.
-2. Meta app → WhatsApp → Configuration: callback URL
-   `https://<domain>/api/whatsapp/webhook`, the same verify token, subscribe
-   to **messages**. Once Meta shows the webhook as verified, delete
-   `WHATSAPP_VERIFY_TOKEN` from Vercel and redeploy (Meta puts that token in the
-   URL, so it ends up in request logs; it is not needed afterwards).
-3. Retry scheduler: the database calls the site every minute while something
-   is due. In the Supabase SQL editor, once:
-   ```sql
-   select vault.create_secret('https://<domain>/api/whatsapp/dispatch', 'whatsapp_dispatch_url');
-   select vault.create_secret('<the WHATSAPP_DISPATCH_SECRET value>', 'whatsapp_dispatch_secret');
-   ```
-   To change one later: `select vault.update_secret(id, '<new value>') from vault.secrets where name = '…';`
-   Without these secrets, messages are still sent right after the action that
-   caused them; only the retries of failed sends stop (and the dashboard
-   reports "waiting longer than expected").
-4. Dashboard → WhatsApp messages → Rates: enter Meta's per-message price for
-   Sudan (USD) for Utility and Authentication. Until then costs show as
-   "no cost yet".
+- **تلقائي كل يوم**: خطة Supabase المدفوعة (Pro) تحفظ نسخة من قاعدة البيانات يومياً وتحتفظ بآخر 7 أيام. الاسترجاع يعيد القاعدة كلها إلى يوم معيّن، وتضيع التغييرات التي حدثت بعده. لذلك لا يُستخدم إلا في كارثة حقيقية، وبقرار من المالك مع المطوّر.
+- **نسخة يدوية كل شهر**: يأخذها المطوّر (أو من لديه كلمة مرور قاعدة البيانات) بالأوامر الموجودة في `docs/launch-runbook.md` (القسم 12). تشمل قاعدة البيانات وصور إشعارات الدفع وصور المنتجات.
+- تُحفظ النسخة **مشفّرة** في حساب تخزين يملكه صاحب المتجر، لا في جهاز المطوّر، لأنها تحتوي أسماء العملاء وأرقامهم.
+- **مستندات الهوية لا تدخل أي نسخة احتياطية أبداً**؛ تُحذف بعد المراجعة.
+- الخطة المجانية لا تحفظ أي نسخ وتتوقف عند قلة الاستخدام؛ لا تُستخدم للتشغيل الفعلي.
 
-Rotating the access token or the app secret: change the Vercel variable and
-redeploy; nothing is stored in the database.
+## 6. عند حدوث مشكلة
 
-### What staff see and do
+| ما تراه | السبب المحتمل | ماذا تفعل |
+|---|---|---|
+| شريط أحمر: الإرسال عبر واتساب متوقف أو الرسائل تنتظر أكثر من المتوقع | مشكلة لدى Meta، أو انتهاء صلاحية مفتاح واتساب، أو قالب رسالة غير معتمد، أو خدمة إعادة الإرسال متوقفة | انتظر قليلاً إن كانت Meta متعطلة. إن استمر أكثر من ساعة فأبلغ المطوّر. تواصل مع العملاء المتأثرين من **رسائل واتساب ← تحتاج متابعة**. |
+| رسالة في **تحتاج متابعة** | فشلت بعد 4 محاولات تلقائية (بعد دقيقة، ثم 5 دقائق، ثم 30 دقيقة) | **تواصل عبر واتساب** لإبلاغ العميل يدوياً ثم **تمت المتابعة**، أو **إعادة المحاولة** بعد حل المشكلة. كلاهما يُسجَّل. |
+| شريط: **رموز التحقق اليوم قاربت الحد أو بلغته** | إقبال كبير، أو محاولة لاستنزاف رصيد واتساب | عند بلوغ الحد يتوقف التسجيل الجديد واستعادة كلمة المرور حتى منتصف الليل. إن كان الإقبال حقيقياً (موسم، إعلان) فارفع الحد من **الإعدادات**. إن لم يكن متوقعاً فلا ترفعه، وأبلغ المطوّر. |
+| عميل يقول إن رمز التحقق لم يصله | الرقم خطأ، أو واتساب غير مثبت على الرقم، أو الإرسال متوقف | تأكد من الرقم وأن واتساب يعمل عليه. يستطيع طلب رمز جديد بعد دقيقة، وبحد 5 رموز في الساعة. رموز التحقق لا يعاد إرسالها تلقائياً. |
+| شريط أحمر: **مستندات هوية بانتظار الحذف** | فشل الحذف التلقائي بعد المراجعة | من **توثيق الهويات ← مستندات بانتظار الحذف** اضغط **حذف الملف**. |
+| عميل يشتكي أن الموقع رفض إشعار الدفع لأنه **مستخدم من قبل** | رقم العملية نفسه أو الصورة نفسها مرفوعة لطلب آخر؛ النظام يمنع ذلك تلقائياً | تحقق في تطبيق البنك من التحويل ومن الطلب الذي استُخدم فيه. قد يكون خطأً من العميل (دفع مرة واحدة لطلبين) أو محاولة احتيال. لا تقبل الطلب الثاني دون تحويل منفصل. |
+| موظف نسي كلمة المرور | — | رابط **نسيت كلمة المرور؟** في صفحة الدخول؛ يصله رمز واتساب. |
+| موظف غادر العمل أو هاتفه سُرق أو يُشك في حسابه | — | المالك: **المشرفون ← إيقاف المشرف** فوراً، ثم راجع **سجل التدقيق** لما فعله الحساب. |
+| المالك فقد رقمه أو لا يستطيع الدخول | — | المطوّر فقط يستطيع نقل الملكية أو إصلاح الحساب، بعد التحقق من هوية المالك. |
+| سعر خاطئ في الموقع | خطأ في سعر الباقة أو في سعر الصرف | صحّحه في **المنتجات** أو **الإعدادات**؛ يظهر التصحيح فوراً. الطلبات التي أُنشئت قبل التصحيح تحتفظ بسعرها؛ ألغِ الطلب أو تواصل مع العميل إن لزم. |
+| فاتورة فيها خطأ | — | القسم 4: إلغاء ثم إصدار فاتورة جديدة. |
+| عميل مسيء أو يعلّق بإساءة | — | أخفِ التعليق أو احذفه، و**احظر** العميل من صفحته في **العملاء**. |
+| الموقع لا يفتح أو تظهر صفحة خطأ | عطل في الاستضافة أو قاعدة البيانات، أو إصدار جديد فيه خطأ | أبلغ المطوّر فوراً مع وقت المشكلة وصورة للشاشة. المطوّر يستطيع إرجاع الإصدار السابق خلال دقائق. |
 
-- Each failed notification is tried 4 times (after 1, 5 and 30 minutes). If it
-  still fails it appears under **WhatsApp messages → Needs follow-up**, on the
-  dashboard card and on the order page.
-- A red banner on every admin page means sending is failing right now (Meta
-  down, token expired, template not approved) or retries are stuck.
-- For each message: **Contact on WhatsApp** opens a chat with the customer;
-  **Try again** sends it once more (after the problem is fixed); **Mark as
-  handled** when the customer was informed another way. Both are recorded in
-  the audit log.
-- Verification codes are never retried (a new code is requested instead) and
-  are not listed for follow-up one by one; many failures show in the banner.
-- Message texts are not stored anywhere in the dashboard, by design; the list
-  shows the type, status, attempts, error and cost.
+**لا تشارك أبداً** كلمات المرور، أو رموز التحقق، أو أي مفتاح من إعدادات Vercel أو Supabase أو Meta، في محادثة أو رسالة، ولا مع المطوّر. المفاتيح تُدخل مباشرة في لوحات الخدمات.
 
-### بالعربية (لطاقم العمل)
+## 7. الحسابات ومن يملكها
 
-- كل إشعار يفشل يُعاد إرساله تلقائياً حتى 4 مرات (بعد دقيقة، ثم 5 دقائق، ثم 30 دقيقة).
-- إذا فشل بعد ذلك يظهر في **رسائل واتساب ← تحتاج متابعة**، وفي بطاقة لوحة التحكم، وفي صفحة الطلب.
-- الشريط الأحمر أعلى صفحات الإدارة يعني أن الإرسال متوقف الآن (مشكلة لدى Meta أو في الإعداد) أو أن إعادة المحاولة متأخرة.
-- **تواصل عبر واتساب** يفتح محادثة مع العميل، و**إعادة المحاولة** ترسل الرسالة مرة أخرى بعد حل المشكلة، و**تمت المتابعة** عندما يُبلَّغ العميل بطريقة أخرى. كل ذلك يُسجَّل في سجل التدقيق.
-- رموز التحقق لا يعاد إرسالها تلقائياً؛ العميل يطلب رمزاً جديداً.
-- نص الرسائل لا يُحفظ في اللوحة عمداً؛ تظهر فقط الحالة والمحاولات والخطأ والتكلفة.
+كل الحسابات باسم صاحب المتجر وبطاقته. المطوّر عضو مدعو فيها، ويمكن إزالته عند انتهاء العمل.
 
-## Invoices
-
-- An invoice is issued automatically when an order is marked **completed**. Numbers
-  run `INV-2026-00001`, `INV-2026-00002`, … per year with no gaps.
-- An issued invoice never changes. To correct one (for example a misspelled
-  customer name): fix the cause, open the invoice, **Void invoice** with a reason,
-  then **Issue new invoice**. The new one gets the next number; the old one stays
-  visible to staff marked VOID. Customers only see the valid one.
-- The business name printed on new invoices is in *Settings → Business name*.
-  Invoices already issued keep the name they were issued with.
-- PDF: open the invoice → **Print / Save as PDF** → choose "Save as PDF" as the
-  printer. The button opens the phone's print screen too; on an iPhone the PDF is
-  saved from the share button of the print preview. (Phone steps to be confirmed
-  on real devices in Phase 10.)
-
-### بالعربية (لطاقم العمل)
-
-- تصدر الفاتورة تلقائياً عند تحويل الطلب إلى **مكتمل**، بأرقام متسلسلة بلا فجوات لكل سنة.
-- الفاتورة الصادرة لا تتغير. للتصحيح (مثل خطأ في اسم العميل): صحّح السبب، ثم افتح الفاتورة واضغط **إلغاء الفاتورة** مع ذكر السبب، ثم **إصدار فاتورة جديدة**. تبقى الملغاة ظاهرة للطاقم فقط.
-- الاسم التجاري المطبوع على الفواتير الجديدة في *الإعدادات*.
-- لحفظ PDF: افتح الفاتورة ← **طباعة / حفظ PDF** ← اختر «حفظ بتنسيق PDF».
-
-## KYC documents awaiting deletion
-
-Identity documents are deleted right after the review. If that deletion fails
-(storage unavailable), the document appears on the KYC page under **Documents
-awaiting deletion**; press **Delete file**. After 24 hours a red banner appears on
-every admin page for KYC staff until it is done.
-- بالعربية: إذا ظهر مستند تحت «مستندات بانتظار الحذف» في صفحة التحقق من الهوية فاضغط **حذف الملف**. بعد 24 ساعة يظهر شريط أحمر في كل صفحات الإدارة حتى يُحذف.
-
-## Staging (faris-digital-staging)
-
-A hosted copy for review with demo data only. It never holds real customers.
-
-- **Supabase:** project `faris-digital-staging` (ref `iojsknoiyewndldggwfo`, free tier).
-  All migrations in `supabase/migrations/` are applied (history versions match the
-  file names), then `supabase/seed.sql`, then `supabase/staging/demo-seed.sql`.
-- **Vercel:** project `faris-digital-staging`, linked to this repository. Every push
-  to the branch deploys; `*.vercel.app` URLs are behind Vercel Authentication
-  (team members only).
-- **WhatsApp:** `WHATSAPP_DRIVER=meta` with no Meta credentials, so every send
-  fails and is shown as failed (OTP screens say the code could not be sent).
-  The production guard is unchanged: the dev driver refuses to start on Vercel.
-- **Expected red banner on staging: "27 messages are waiting longer than
-  expected".** The demo data was created with SQL, so the send that normally
-  follows each staff action never ran, and the retry scheduler has no Vault
-  secrets on staging, so nothing ever picks the messages up. They stay
-  *Waiting to send* forever and the banner stays. This is not a fault and needs
-  no action. In production the same banner means the scheduler is not running
-  (handover step 3 above).
-  Do **not** connect real Meta credentials or the scheduler to staging while
-  those demo messages exist: they are addressed to the demo numbers
-  (+2499000000xx), which could belong to real people.
-  - بالعربية: الشريط الأحمر في staging («27 رسالة تنتظر أكثر من المتوقع») متوقع: البيانات التجريبية أُدخلت بـ SQL، وخدمة إعادة الإرسال غير مفعّلة هناك، وواتساب غير موصول. لا يحتاج أي إجراء. لا توصل بيانات Meta الحقيقية بـ staging لأن الرسائل موجهة لأرقام تجريبية قد تكون لأشخاص حقيقيين.
-- **Demo accounts:** owner, orders-only staff and one customer sign in with phone
-  + password (`+249900000001/2/3`). Passwords are never in the repository;
-  `demo-seed.sql` takes their bcrypt hashes as psql variables. Other demo
-  customers have no password.
-- **Not seeded:** receipt and identity-document images (Storage is written only
-  by the app). Review screens show "no image" for demo rows.
-
-Settings that live only in the dashboards (not in migrations):
-1. Vercel → Project → Settings → Environment Variables: `SUPABASE_SECRET_KEY`
-   (Supabase → Project Settings → API Keys → secret key), type *Sensitive*,
-   Production + Preview. Then redeploy.
-2. Supabase → Authentication → Sign In / Providers: Phone **on**; Email **off**;
-   "Allow new users to sign up" **off**; minimum password length 10.
-3. Supabase → Authentication → Hooks: *Send SMS* → Postgres
-   `private.auth_hook_send_sms`; *Before User Created* → Postgres
-   `private.auth_hook_before_user_created`.
-
-Public sign-up is closed even if (2) is misconfigured: the deferred
-`guard_auth_user_insert` trigger rejects any new `auth.users` row without the
-server's OTP marker at commit (checked on staging: phone, anonymous and email
-sign-ups → `SIGNUP_NOT_ALLOWED`).
+| الخدمة | لماذا | الخطة |
+|---|---|---|
+| Vercel | استضافة الموقع | Pro |
+| Supabase | قاعدة البيانات، والحسابات، والملفات | Pro |
+| Meta (WhatsApp Business) | رسائل واتساب ورموز التحقق | الدفع لكل رسالة |
+| مسجّل النطاق (الدومين) | عنوان الموقع | سنوي |
+| Google Cloud | الدخول بحساب Google (اختياري) | مجاني |
+| GitHub | الشيفرة المصدرية | مجاني |

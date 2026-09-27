@@ -9,12 +9,8 @@ import type { Locale } from "@/i18n/routing";
 import { publicAssetUrl } from "@/lib/assets";
 import { getSiteUrl } from "@/lib/env";
 import { alternates, jsonLd, openGraph } from "@/lib/seo";
-import { listCategories, searchProducts } from "@/server/catalog/queries";
+import { browseProducts, listCategories } from "@/server/catalog/queries";
 import { getSiteSettings, listPublishedFaqs } from "@/server/catalog/site";
-
-// Static, regenerated at most every 5 minutes (ISR). If the database is cold
-// during regeneration, the last good page keeps being served.
-export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -40,7 +36,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const tc = await getTranslations("Catalog");
   const [categories, popular, settings, faqs] = await Promise.all([
     listCategories(),
-    searchProducts({ sort: "popular", limit: 8 }),
+    browseProducts({ limit: 8 }),
     getSiteSettings(),
     listPublishedFaqs(),
   ]);

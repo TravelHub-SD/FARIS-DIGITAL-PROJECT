@@ -34,12 +34,6 @@ const REASONS = [
   "server_error",
 ] as const satisfies readonly PlaceOrderError[];
 
-// Static per product, rendered on first visit and regenerated every 5 min.
-export const revalidate = 300;
-export function generateStaticParams() {
-  return [];
-}
-
 type Props = PageProps<"/[locale]/p/[slug]">;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -278,7 +272,6 @@ export default async function ProductPage({ params }: Props) {
         <div className="max-w-xl">
           <CommentForm
             productId={product.id}
-            slug={product.slug}
             loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
             strings={{
               label: t("comments.label"),

@@ -63,3 +63,18 @@ export async function listFaqs(): Promise<FaqRow[]> {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+/**
+ * Today's OTP count against the daily budget (Khartoum day), for the admin
+ * alert. Settings staff only: the function returns no row for anyone else.
+ */
+export async function otpBudgetToday(): Promise<{
+  used: number;
+  budget: number;
+} | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("otp_budget_today");
+  if (error) throw new Error(error.message);
+  const row = (data as { used: number; budget: number }[] | null)?.[0];
+  return row ?? null;
+}

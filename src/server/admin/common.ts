@@ -1,8 +1,9 @@
 import "server-only";
 
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 
 import { routing, type Locale } from "@/i18n/routing";
+import { CATALOG_TAG } from "@/server/catalog/queries";
 
 // Shared by every admin Server Action. Each action:
 //   1. checks the permission first (actionAdmin/actionOwner) — a static test
@@ -114,10 +115,11 @@ export function formLocale(formData: FormData): Locale {
 }
 
 /**
- * Catalog, prices, banner, FAQs and contacts appear on the static (ISR)
- * public pages. Edits are rare, so every public page is revalidated at once
- * instead of tracking which pages show what.
+ * Catalog, prices, banner, FAQs, contacts and comments shown on public pages
+ * come from the shared catalog cache. Edits are rare, so all of it expires at
+ * once instead of tracking which page shows what. updateTag: the next visitor
+ * (and the admin who just saved) waits for fresh data, never a stale price.
  */
 export function revalidatePublic() {
-  revalidatePath("/", "layout");
+  updateTag(CATALOG_TAG);
 }

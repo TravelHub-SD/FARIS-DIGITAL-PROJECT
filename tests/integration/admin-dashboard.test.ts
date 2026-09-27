@@ -902,6 +902,47 @@ describe("comments: public view shows first names only, never hidden comments", 
     expect(JSON.stringify(data)).not.toContain(author.phone.slice(1));
   });
 
+  it("the table itself is not public: anon is refused, other customers see none (security review F1)", async () => {
+    const author = await createUser({ name: "Huda Kamal" });
+    const product = sql(
+      "select id from public.products where slug = 'pubg-uc'",
+    );
+    const posted = await author.client
+      .from("comments")
+      .insert({ product_id: product, body: "Arrived in minutes" })
+      .select("id")
+      .single();
+    const id = posted.data!.id as string;
+    const { anon } = await import("./helpers");
+
+    // Before the fix both of these returned the row, including user_id.
+    const asAnon = await anon()
+      .from("comments")
+      .select("id, user_id")
+      .eq("id", id);
+    expect(asAnon.error?.message).toMatch(/permission denied/);
+    const other = await createUser();
+    const asOther = await other.client
+      .from("comments")
+      .select("id, user_id")
+      .eq("id", id);
+    expect(asOther.error).toBeNull();
+    expect(asOther.data).toEqual([]);
+
+    // The author and moderators still read it; the public view still shows it.
+    const own = await author.client.from("comments").select("id").eq("id", id);
+    expect(own.data).toEqual([{ id }]);
+    const mod = await users.comments.client
+      .from("comments")
+      .select("id, user_id")
+      .eq("id", id);
+    expect(mod.data).toEqual([{ id, user_id: author.id }]);
+    const { data } = await anon().rpc("product_comments", {
+      p_product_id: product,
+    });
+    expect((data as { id: string }[]).map((c) => c.id)).toContain(id);
+  });
+
   it("a customer cannot post as someone else, nor while blocked", async () => {
     const author = await createUser();
     const product = sql(
@@ -918,5 +959,29 @@ describe("comments: public view shows first names only, never hidden comments", 
       .from("comments")
       .insert({ product_id: product, body: "hi" });
     expect(blocked.error?.message).toMatch(/row-level security/);
+  });
+});
+
+describe("OTP daily budget is visible to settings staff only (security review F4)", () => {
+  it("settings staff get today's count and the budget; nobody else gets a row", async () => {
+    const counted = Number(
+      sql(`select count(*) from private.otp_codes
+            where created_at >= (date_trunc('day', now() at time zone 'Africa/Khartoum') at time zone 'Africa/Khartoum')`),
+    );
+    const budget = Number(
+      sql("select otp_daily_budget from public.security_settings"),
+    );
+    const mine = await users.settings.client.rpc("otp_budget_today");
+    expect(mine.error).toBeNull();
+    expect(mine.data).toEqual([{ used: counted, budget }]);
+
+    for (const role of ["customer", "none", "orders", "kyc"] as const) {
+      const r = await users[role].client.rpc("otp_budget_today");
+      expect(r.error, role).toBeNull();
+      expect(r.data, role).toEqual([]);
+    }
+    const { anon } = await import("./helpers");
+    const a = await anon().rpc("otp_budget_today");
+    expect(a.error?.message).toMatch(/permission denied/);
   });
 });

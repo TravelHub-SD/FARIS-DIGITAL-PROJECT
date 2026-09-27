@@ -4,7 +4,7 @@ import { cache } from "react";
 
 import { createPublicClient } from "@/lib/supabase/public";
 
-import { buildSafe, orThrow } from "./queries";
+import { buildSafe, catalogCache, orThrow } from "./queries";
 
 // Public site content managed from the dashboard (settings, FAQs, comments).
 // Read as anon: only public columns/rows exist here.
@@ -41,18 +41,20 @@ const EMPTY: SiteSettings = {
   logo_path: null,
 };
 
-export const getSiteSettings = cache(() =>
-  buildSafe<SiteSettings>(EMPTY, async () => {
-    const row = orThrow(
-      await createPublicClient()
-        .from("app_settings")
-        .select(
-          "contact_phone, contact_whatsapp, contact_email, address_ar, address_en, social_links, banner_title_ar, banner_title_en, banner_image_path, banner_link, banner_is_active, logo_path",
-        )
-        .maybeSingle(),
-    ) as SiteSettings | null;
-    return row ?? EMPTY;
-  }),
+export const getSiteSettings = cache(
+  catalogCache("settings", () =>
+    buildSafe<SiteSettings>(EMPTY, async () => {
+      const row = orThrow(
+        await createPublicClient()
+          .from("app_settings")
+          .select(
+            "contact_phone, contact_whatsapp, contact_email, address_ar, address_en, social_links, banner_title_ar, banner_title_en, banner_image_path, banner_link, banner_is_active, logo_path",
+          )
+          .maybeSingle(),
+      ) as SiteSettings | null;
+      return row ?? EMPTY;
+    }),
+  ),
 );
 
 export type PublicFaq = {
@@ -64,14 +66,16 @@ export type PublicFaq = {
 };
 
 /** Published FAQs only (RLS). */
-export const listPublishedFaqs = cache(() =>
-  buildSafe<PublicFaq[]>([], async () =>
-    orThrow(
-      await createPublicClient()
-        .from("faqs")
-        .select("id, question_ar, question_en, answer_ar, answer_en")
-        .order("sort_order")
-        .order("created_at"),
+export const listPublishedFaqs = cache(
+  catalogCache("faqs", () =>
+    buildSafe<PublicFaq[]>([], async () =>
+      orThrow(
+        await createPublicClient()
+          .from("faqs")
+          .select("id, question_ar, question_en, answer_ar, answer_en")
+          .order("sort_order")
+          .order("created_at"),
+      ),
     ),
   ),
 );
@@ -83,13 +87,20 @@ export type PublicComment = {
   author: string | null;
 };
 
+export const commentsTag = (productId: string) => `comments:${productId}`;
+
 /** Visible comments of a visible product, first names only. */
-export const listProductComments = cache((productId: string) =>
-  buildSafe<PublicComment[]>([], async () =>
-    orThrow(
-      await createPublicClient().rpc("product_comments", {
-        p_product_id: productId,
-      }),
-    ),
+export const listProductComments = cache(
+  catalogCache(
+    "comments",
+    (productId: string) =>
+      buildSafe<PublicComment[]>([], async () =>
+        orThrow(
+          await createPublicClient().rpc("product_comments", {
+            p_product_id: productId,
+          }),
+        ),
+      ),
+    (productId) => [commentsTag(productId)],
   ),
 );

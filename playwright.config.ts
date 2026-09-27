@@ -43,12 +43,35 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: "mkdir -p .e2e && exec npx next dev -p 3100 > .e2e/dev.log 2>&1",
+      // E2E_SERVER=prod runs the same suite on `next start` (run `next build`
+      // first): the mode that is deployed, with no dev-only CSP allowances.
+      // The suite writes catalog rows with SQL and reads them back, so the
+      // shared catalog cache is off here; catalog-cache.spec.ts checks the
+      // cache itself against the second server below.
+      command:
+        process.env.E2E_SERVER === "prod"
+          ? "mkdir -p .e2e && exec npx next start -p 3100 > .e2e/prod.log 2>&1"
+          : "mkdir -p .e2e && exec npx next dev -p 3100 > .e2e/dev.log 2>&1",
       url: "http://localhost:3100/ar",
       reuseExistingServer: false,
       timeout: 120_000,
       // Real process env wins over .env.local (WHATSAPP_DRIVER=dev there).
-      env: E2E_WHATSAPP,
+      env:
+        process.env.E2E_SERVER === "prod"
+          ? { ...E2E_WHATSAPP, CATALOG_CACHE: "off" }
+          : E2E_WHATSAPP,
     },
+    // Production mode only: the same build with the catalog cache on.
+    ...(process.env.E2E_SERVER === "prod"
+      ? [
+          {
+            command: "exec npx next start -p 3101 > .e2e/prod-cache.log 2>&1",
+            url: "http://localhost:3101/ar",
+            reuseExistingServer: false,
+            timeout: 120_000,
+            env: E2E_WHATSAPP,
+          },
+        ]
+      : []),
   ],
 });

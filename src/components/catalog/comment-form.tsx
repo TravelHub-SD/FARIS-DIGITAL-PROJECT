@@ -18,12 +18,10 @@ import {
 // Public page: strings come from the server as props (no client i18n runtime).
 export function CommentForm({
   productId,
-  slug,
   loginHref,
   strings,
 }: {
   productId: string;
-  slug: string;
   loginHref: string;
   strings: {
     label: string;
@@ -59,7 +57,6 @@ export function CommentForm({
       }}
     >
       <input type="hidden" name="productId" value={productId} />
-      <input type="hidden" name="slug" value={slug} />
       <label htmlFor="comment-body" className={labelClasses}>
         {strings.label}
       </label>

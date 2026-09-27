@@ -11,7 +11,7 @@ Work in supervised phases. Do not attempt to build the whole app in one pass.
 - Next.js (App Router) + TypeScript, Server Components / Server Actions where appropriate
 - Tailwind CSS + shadcn/ui, dark mode, RTL + LTR
 - Supabase: Postgres, Auth, Storage, RLS
-- Zod + React Hook Form (schemas shared between client and server)
+- Zod on the server; validation rules shared between client and server as plain functions (`src/lib/validation/auth-rules.ts`), no form library in the browser (React Hook Form removed in Phase 9, approved; decisions.md 2026-09-26)
 - next-intl with `/ar` and `/en`
 - Vercel + GitHub
 - WhatsApp Cloud API (Meta direct)

@@ -3,9 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { KycDeletionAlert } from "@/components/admin/kyc-deletion";
 import { MessagingAlert } from "@/components/admin/message-list";
+import { OtpBudgetAlert } from "@/components/admin/otp-budget-alert";
 import { ClientMessages } from "@/components/layout/client-messages";
 import type { Locale } from "@/i18n/routing";
 import { messagingHealth } from "@/server/admin/messages-queries";
+import { otpBudgetToday } from "@/server/admin/settings-queries";
 import { getIsOwner, requireAdmin } from "@/server/auth/session";
 import { kycDeletionOverdue } from "@/server/kyc/queries";
 
@@ -25,6 +27,8 @@ export default async function AdminLayout({
   const health = permissions.has("orders") ? await messagingHealth() : null;
   // Identity documents must not linger: reviewers see overdue deletions.
   const kycOverdue = permissions.has("kyc") ? await kycDeletionOverdue() : null;
+  // A used-up OTP budget stops sign-ups: settings staff can raise it.
+  const otpUsage = permissions.has("settings") ? await otpBudgetToday() : null;
 
   const items = [
     { href: base, label: t("dashboard"), exact: true, show: true },
@@ -95,6 +99,7 @@ export default async function AdminLayout({
               />
             )}
             {kycOverdue && <KycDeletionAlert overdue={kycOverdue} />}
+            {otpUsage && <OtpBudgetAlert usage={otpUsage} />}
           </div>
           {children}
         </div>

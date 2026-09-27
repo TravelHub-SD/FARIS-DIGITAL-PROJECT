@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { rateLimitIp } from "@/lib/ip";
 import {
   hashOtp,
   issueOtp,
@@ -149,6 +150,37 @@ describe("OTP brute force is impossible", () => {
     console.log("[demo] 11 phones from one IP ->", outcomes.join(", "));
     expect(outcomes.filter((o) => o === "ok")).toHaveLength(10);
     expect(outcomes[10]).toBe("ip_hourly_limit");
+  });
+
+  it("per IP: an IPv6 /64 is one IP (rotating addresses inside it does not escape the limit)", async () => {
+    const net = `2001:db8:${randomUUID().slice(0, 4)}:${randomUUID().slice(0, 4)}`;
+    const address = (i: number) => `${net}:${i}:0:0:1`;
+    const run = async (key: (raw: string) => string | null) => {
+      const outcomes: string[] = [];
+      for (let i = 0; i < 11; i++) {
+        const r = await issueOtp(
+          {
+            phone: newPhone(),
+            purpose: "register",
+            ip: key(address(i)),
+            locale: "ar",
+          },
+          deps(),
+        );
+        outcomes.push(r.ok ? "ok" : r.reason);
+      }
+      return outcomes;
+    };
+    // Control: keyed by the raw address, 11 addresses of one /64 are 11 "IPs".
+    const raw = await run((a) => a);
+    // As the app keys it (getClientIp → rateLimitIp): one /64, one limit.
+    const keyed = await run(rateLimitIp);
+    console.log(
+      `[demo] 11 phones from 11 addresses in ${net}::/64\n  raw address key -> ${raw.join(", ")}\n  /64 key         -> ${keyed.join(", ")}`,
+    );
+    expect(raw.every((o) => o === "ok")).toBe(true);
+    expect(keyed.filter((o) => o === "ok")).toHaveLength(10);
+    expect(keyed[10]).toBe("ip_hourly_limit");
   });
 
   it("per IP: failed verifications are capped at 30/hour across phones (spraying)", async () => {

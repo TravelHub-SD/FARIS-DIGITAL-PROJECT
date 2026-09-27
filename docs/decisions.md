@@ -472,3 +472,116 @@ more than a skeleton. A test now asserts both the pending dot and the 404.
 **Measured before removing it:** on the production build the skeleton appeared
 79–120 ms after a tap while the server was held for 3 s; the pending dot
 gives the same immediate feedback on admin links.
+
+## 2026-09-26 — Phase 10: nonce CSP on every page (closes the Phase 2 debt)
+
+**What:** `src/proxy.ts` sets a Content-Security-Policy with a fresh 128-bit
+nonce on every page response (`src/lib/csp.ts`): scripts only by nonce +
+`'strict-dynamic'`, no inline or eval (dev adds `'unsafe-eval'` for React's
+error stacks), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`,
+`frame-ancestors 'none'`, images and API calls limited to self + the
+Supabase origin, `upgrade-insecure-requests` on https sites. Styles allow
+inline (React `style={}` attributes cannot carry a nonce; CSS cannot read
+cookies or run code). next-themes' inline script gets the nonce from the
+layout.
+
+**Why a nonce, not hashes:** Next's experimental SRI still left six inline
+scripts unhashed on our pages, so `'unsafe-inline'` would have stayed. The
+Supabase auth cookies are readable by page scripts (the browser client needs
+them for Google linking), so an XSS anywhere, public pages included, could
+take a session: the policy must hold on every page, not just account/admin.
+
+**Cost:** a nonce needs every page rendered per request (Next cannot put a
+fresh nonce into a prebuilt page): home, category and product are no longer
+ISR. To keep the database load and the "DB down, still serve" property of
+ISR, the public catalog reads are cached as data instead (next entry).
+Measured cost, on the production builds (same machine and local database),
+before (Phase 9, ISR) vs after:
+
+| | server time (median of 20) | FCP, Slow 4G + 4× CPU (median of 5) | Lighthouse mobile perf |
+|---|---|---|---|
+| Home `/ar` | 4 → 14 ms | 916 → 940 ms | 96 → 96 |
+| Product | 4 → 13 ms | 912 → 908 ms | 96 → 96 |
+| Login (already per request) | 19 → 14 ms | 800 → 820 ms | 94 → 98 |
+
+TBT, CLS and page bytes unchanged. What this cannot show: before, Vercel's
+CDN served home and product from the edge nearest the visitor; now every
+visit reaches the function in Frankfurt (`vercel.json`), so a visitor in
+Sudan pays roughly one more round trip to Frankfurt. To be measured with
+Lighthouse on the real domain (runbook step 11).
+
+**Enforced directly, not report-only first** (the Phase 2 plan): there is no
+report collector, and the e2e sweep of every page × ar/en × role in dev and
+on the production build reports zero violations, which is what report-only
+would have told us.
+
+**Rejected:** CSP only on account/admin pages (the cookie is exposed on public
+pages too); SRI hashes (above); `'unsafe-inline'` scripts (no protection);
+Partial Prerendering / Cache Components (incompatible with nonces).
+
+## 2026-09-26 — Phase 10: catalog data cache instead of ISR
+
+`catalogCache()` in `src/server/catalog/queries.ts` wraps the public reads
+(categories, category, product, home/category listings, site settings, FAQs,
+product comments) in Next's data cache for 5 minutes, tagged `catalog`
+(comments also per product). Safe to share: every one of them runs as anon
+with no cookies. Dashboard saves call `updateTag("catalog")`, so the next
+request waits for fresh data (an admin never sees their own old price); a
+new comment expires only that product's comments. When an entry is stale and
+the database fails, Next serves the last good value (checked in its source),
+as ISR did. Free-text search is not cached (unbounded keys). Not active in
+development/tests, which write rows with SQL and read them back.
+`unstable_cache` is used although Next 16 suggests `"use cache"`: that needs
+Cache Components, which cannot work with nonces.
+
+The sitemap moved from ISR (1 h) to per-request rendering over the same
+cache: with `revalidatePath("/", "layout")` gone, a static sitemap would have
+shown a new product only after up to an hour (found by running the e2e suite
+on the production build, where the sitemap also turned out to be built empty
+when the database was down during `next build`).
+
+Testing: the suite writes catalog rows with SQL, so on `next start`
+(`E2E_SERVER=prod`) the main server runs with `CATALOG_CACHE=off`; a second
+server with the cache on runs `catalog-cache.spec.ts` (a direct SQL change is
+not seen by new visitors; a dashboard save shows it at once; planted: without
+`updateTag` it fails). Caveat for self-hosting only: Next's local file cache
+keeps tag expiries in the memory of each process, so several `next start`
+processes (or a restart) can serve an entry up to 5 minutes after a save; on
+Vercel the data cache is shared and tag expiry is global.
+
+## 2026-09-26 — Phase 10: security review outcomes
+
+Full report: `docs/security-review.md`. Changes: comments table no longer
+readable through the API except by its author and moderators (public reads
+go through `product_comments()`); per-IP limits key IPv6 by /64; `pg_net`
+recreated in `extensions`; settings staff see the OTP daily budget on every
+admin page from 80 %; explicit HSTS (no `includeSubDomains`); Vercel
+functions pinned to `fra1` next to the Frankfurt database (`vercel.json`;
+staging had run in `iad1`, so every query crossed the Atlantic). New pgTAP
+guards: definer functions pin `search_path`, no RLS-bypassing views, no
+anon writes.
+
+## 2026-09-26 — Phase 10: admin 2FA re-evaluated
+
+The 2026-09-23 deferral was "revisit before launch". Recommendation:
+enforce TOTP (Supabase MFA, free) for all staff before launch through the
+existing `private.admin_assurance_ok()` hook (`aal2`), with an enrolment page,
+a code step after sign-in, and owner/developer recovery. About 1–1.5 days,
+no new dependency. Reasons and rejected alternatives in
+`docs/security-review.md`. **Status: awaiting Hassan's approval**; until then
+the accepted risk stands.
+
+## 2026-09-26 — Phase 10: branches and documents
+
+- `main` is the production branch; the client's Vercel project deploys only
+  from it. Feature work stays on branches and is merged after the full check
+  and test run.
+- `docs/handover.md` is now the client's operations guide in Arabic (daily
+  work, each screen, backups, failures). Everything technical (setup,
+  secrets, WhatsApp configuration, staging notes) moved to
+  `docs/launch-runbook.md`, which also holds the table of client-dependent
+  items.
+- Gap found: spec §3 lists About, Terms and Privacy pages; they were never
+  built and were not on the roadmap. Raised with Hassan rather than built
+  here, because how the texts are maintained (dashboard vs files) is a scope
+  decision.

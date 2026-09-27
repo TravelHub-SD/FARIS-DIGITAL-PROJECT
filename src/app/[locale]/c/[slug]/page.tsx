@@ -10,13 +10,7 @@ import type { Locale } from "@/i18n/routing";
 import { localized } from "@/lib/localized";
 import { getSiteUrl } from "@/lib/env";
 import { alternates, jsonLd, metaDescription, openGraph } from "@/lib/seo";
-import { getCategory, searchProducts } from "@/server/catalog/queries";
-
-// Static per category, rendered on first visit and regenerated every 5 min.
-export const revalidate = 300;
-export function generateStaticParams() {
-  return [];
-}
+import { browseProducts, getCategory } from "@/server/catalog/queries";
 
 type Props = PageProps<"/[locale]/c/[slug]">;
 
@@ -53,7 +47,7 @@ export default async function CategoryPage({ params }: Props) {
   if (!category) notFound(); // hidden, inactive, archived or unknown
   const [t, products] = await Promise.all([
     getTranslations("Catalog"),
-    searchProducts({ category: slug, sort: "popular", limit: 48 }),
+    browseProducts({ category: slug, limit: 48 }),
   ]);
   const name = localized(category.name_ar, category.name_en, locale);
   const total = products[0]?.total_count ?? 0;

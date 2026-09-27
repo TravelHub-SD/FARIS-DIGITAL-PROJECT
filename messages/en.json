@@ -779,6 +779,11 @@
       "history": "All invoices for this order",
       "openOrder": "Open order",
       "orderInvoice": "Invoice"
+    },
+    "otpBudget": {
+      "near": "Verification codes today: {used} of the daily limit {budget}. At the limit, new registrations and password resets stop until midnight.",
+      "exhausted": "The daily limit of verification codes is reached ({used} of {budget}). New registrations and password resets are refused until midnight (Khartoum time). If this is not expected traffic, someone may be trying to spend the WhatsApp budget; raise the limit only if the requests are genuine.",
+      "open": "Open settings"
     }
   },
   "Catalog": {

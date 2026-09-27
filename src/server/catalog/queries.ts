@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { cache } from "react";
 
@@ -70,10 +71,39 @@ export type SearchParams = {
   offset?: number;
 };
 
+export const CATALOG_TAG = "catalog";
+
+/**
+ * Pages render per request (the CSP nonce), so the catalog data is what gets
+ * cached: shared by all visitors for 5 minutes. Safe to share because every
+ * query here runs as anon with no cookies. Dashboard edits expire it at once
+ * (updateTag in revalidatePublic). When an entry is stale and the database
+ * does not answer, Next keeps serving the last good value, as ISR did.
+ * Not in development or tests, which write rows with SQL and read them back;
+ * `CATALOG_CACHE=off` does the same on `next start` (the production-mode e2e
+ * run; never needed on Vercel). Errors are never cached (they propagate).
+ */
+export function catalogCache<A extends unknown[], T>(
+  name: string,
+  run: (...args: A) => Promise<T>,
+  tags: (...args: A) => string[] = () => [],
+): (...args: A) => Promise<T> {
+  if (
+    process.env.NODE_ENV !== "production" ||
+    process.env.CATALOG_CACHE === "off"
+  )
+    return run;
+  return (...args: A) =>
+    unstable_cache(run, ["catalog", name], {
+      revalidate: 300,
+      tags: [CATALOG_TAG, ...tags(...args)],
+    })(...args);
+}
+
 // During `next build` the database may be unreachable (CI, paused free-tier
-// project). Static pages then build with empty catalog sections and fill in
-// on their first revalidation. At runtime errors propagate, so ISR keeps
-// serving the last good page instead of caching an empty one.
+// project). Nothing public is prerendered any more (every page and the
+// sitemap render per request), so this fallback is a safety net only. At
+// runtime errors propagate, so nothing empty is cached.
 export async function buildSafe<T>(
   fallback: T,
   run: () => Promise<T>,
@@ -97,29 +127,32 @@ export function orThrow<T>(res: {
   return res.data as T;
 }
 
-export const listCategories = cache(() =>
-  buildSafe<Category[]>([], async () =>
-    orThrow(
-      await createPublicClient()
-        .from("categories")
-        .select("id, slug, name_ar, name_en, description_ar, description_en")
-        .order("sort_order")
-        .order("slug"),
+export const listCategories = cache(
+  catalogCache("categories", () =>
+    buildSafe<Category[]>([], async () =>
+      orThrow(
+        await createPublicClient()
+          .from("categories")
+          .select("id, slug, name_ar, name_en, description_ar, description_en")
+          .order("sort_order")
+          .order("slug"),
+      ),
     ),
   ),
 );
 
 export const getCategory = cache(
-  async (slug: string): Promise<Category | null> => {
+  catalogCache("category", async (slug: string): Promise<Category | null> => {
     const res = await createPublicClient()
       .from("categories")
       .select("id, slug, name_ar, name_en, description_ar, description_en")
       .eq("slug", slug)
       .maybeSingle();
     return orThrow(res);
-  },
+  }),
 );
 
+/** Visitor-driven search: not cached (unbounded keys). */
 export const searchProducts = cache((params: SearchParams) =>
   buildSafe<ProductSummary[]>([], async () =>
     orThrow(
@@ -136,55 +169,65 @@ export const searchProducts = cache((params: SearchParams) =>
   ),
 );
 
+/** Fixed listings (home, category pages): cached. */
+export const browseProducts = catalogCache(
+  "browse",
+  (params: { category?: string; limit: number }) =>
+    searchProducts({ ...params, sort: "popular" }),
+);
+
 /**
  * A product is reachable only if it, its category and at least one variant
  * are visible. Anything else is a 404, never a partial page.
  */
 export const getProduct = cache(
-  async (slug: string): Promise<ProductDetail | null> => {
-    const res = await createPublicClient()
-      .from("products")
-      .select(
-        `id, slug, name_ar, name_en, description_ar, description_en, image_path, updated_at,
+  catalogCache(
+    "product",
+    async (slug: string): Promise<ProductDetail | null> => {
+      const res = await createPublicClient()
+        .from("products")
+        .select(
+          `id, slug, name_ar, name_en, description_ar, description_en, image_path, updated_at,
        category:categories!inner(id, slug, name_ar, name_en, description_ar, description_en),
        variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, price_sdg_totals, max_quantity, required_fields, sort_order)`,
-      )
-      .eq("slug", slug)
-      .order("sort_order", { referencedTable: "variants" })
-      .maybeSingle();
-    // Untyped client (no generated DB types): a many-to-one embed is an object
-    // at runtime, which the inferred type does not know.
-    const row = orThrow(res) as unknown as
-      | (Omit<ProductDetail, "variants" | "category"> & {
-          category: Category | null;
-          variants: (Omit<Variant, "fields" | "totals_sdg"> & {
-            required_fields: unknown;
-            price_sdg_totals: (number | string)[] | null;
-          })[];
-        })
-      | null;
-    if (!row || !row.category || row.variants.length === 0) return null;
+        )
+        .eq("slug", slug)
+        .order("sort_order", { referencedTable: "variants" })
+        .maybeSingle();
+      // Untyped client (no generated DB types): a many-to-one embed is an object
+      // at runtime, which the inferred type does not know.
+      const row = orThrow(res) as unknown as
+        | (Omit<ProductDetail, "variants" | "category"> & {
+            category: Category | null;
+            variants: (Omit<Variant, "fields" | "totals_sdg"> & {
+              required_fields: unknown;
+              price_sdg_totals: (number | string)[] | null;
+            })[];
+          })
+        | null;
+      if (!row || !row.category || row.variants.length === 0) return null;
 
-    const variants: Variant[] = [];
-    for (const v of row.variants) {
-      const fields = fieldDefinitionsSchema.safeParse(v.required_fields);
-      // The DB CHECK guarantees the shape; a mismatch here means code and
-      // schema drifted, so the variant is hidden rather than rendered wrongly.
-      if (!fields.success) continue;
-      variants.push({
-        id: v.id,
-        name_ar: v.name_ar,
-        name_en: v.name_en,
-        price_usd: Number(v.price_usd),
-        price_sdg: v.price_sdg === null ? null : Number(v.price_sdg),
-        totals_sdg: v.price_sdg_totals?.map(Number) ?? null,
-        max_quantity: v.max_quantity,
-        fields: fields.data,
-      });
-    }
-    if (variants.length === 0) return null;
-    return { ...row, category: row.category, variants };
-  },
+      const variants: Variant[] = [];
+      for (const v of row.variants) {
+        const fields = fieldDefinitionsSchema.safeParse(v.required_fields);
+        // The DB CHECK guarantees the shape; a mismatch here means code and
+        // schema drifted, so the variant is hidden rather than rendered wrongly.
+        if (!fields.success) continue;
+        variants.push({
+          id: v.id,
+          name_ar: v.name_ar,
+          name_en: v.name_en,
+          price_usd: Number(v.price_usd),
+          price_sdg: v.price_sdg === null ? null : Number(v.price_sdg),
+          totals_sdg: v.price_sdg_totals?.map(Number) ?? null,
+          max_quantity: v.max_quantity,
+          fields: fields.data,
+        });
+      }
+      if (variants.length === 0) return null;
+      return { ...row, category: row.category, variants };
+    },
+  ),
 );
 
 export const getVisibleVariant = async (variantId: string) => {
@@ -202,7 +245,7 @@ export const getVisibleVariant = async (variantId: string) => {
  * Sitemap: every visible category and every product with at least one
  * visible variant (RLS already hides products of hidden categories).
  */
-export const listSitemapEntries = () =>
+export const listSitemapEntries = catalogCache("sitemap", () =>
   buildSafe(
     {
       categories: [] as { slug: string }[],
@@ -228,4 +271,5 @@ export const listSitemapEntries = () =>
         })),
       };
     },
-  );
+  ),
+);

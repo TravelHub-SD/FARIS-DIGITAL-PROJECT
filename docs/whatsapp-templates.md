@@ -153,7 +153,7 @@ Each item names what to do and what to look for.
 **Scheduler (retries)**
 15. On the hosted project: `pg_net` and `pg_cron` enabled (the migration
     creates `pg_net`; check it applied), and the two Vault secrets set
-    (docs/handover.md). Queue a message while the site is up, confirm the next
+    (docs/launch-runbook.md, step 6). Queue a message while the site is up, confirm the next
     minute's tick calls `/api/whatsapp/dispatch`
     (`select * from net._http_response order by id desc limit 5` shows 200).
 16. Vercel Deployment Protection must not cover the production domain's

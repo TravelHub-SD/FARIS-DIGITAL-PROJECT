@@ -3,9 +3,12 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-// Baseline headers. A nonce-based Content-Security-Policy is deferred to the
-// Phase 10 security review, once third-party scripts (Turnstile) are known.
+// Headers for every response. The Content-Security-Policy is not here: it
+// carries a fresh nonce per request, so src/proxy.ts sets it (src/lib/csp.ts).
 const securityHeaders = [
+  // HTTPS only for a year once seen (browsers ignore it on http://localhost).
+  // No includeSubDomains: the client's other subdomains are not ours to bind.
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

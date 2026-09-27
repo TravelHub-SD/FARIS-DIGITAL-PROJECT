@@ -4,7 +4,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(7);
+select plan(10);
 
 select is_empty(
   $$ select n.nspname || '.' || c.relname
@@ -28,7 +28,7 @@ select set_eq(
         'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt',
         'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments',
         'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend',
-        'void_invoice', 'reissue_invoice', 'search_invoices'],
+        'void_invoice', 'reissue_invoice', 'search_invoices', 'otp_budget_today'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
@@ -65,6 +65,29 @@ select is_empty(
                               'admin_assurance_ok', 'normalize_ar', 'valid_field_definitions',
                               'can_write_public_asset') $$,
   'only the authorization helpers in private are executable by authenticated');
+
+-- Phase 10 security review additions.
+select is_empty(
+  $$ select p.oid::regprocedure::text from pg_proc p
+      where p.prosecdef
+        and p.pronamespace in ('public'::regnamespace, 'private'::regnamespace)
+        and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c
+                         where c like 'search_path=%') $$,
+  'every SECURITY DEFINER function pins its search_path');
+
+select is_empty(
+  $$ select c.relname from pg_class c
+      where c.relnamespace = 'public'::regnamespace and c.relkind in ('v', 'm')
+        and not coalesce(c.reloptions @> array['security_invoker=true'], false) $$,
+  'no view in public bypasses RLS (none exist; any new one must be security_invoker)');
+
+select is_empty(
+  $$ select c.relname from pg_class c
+      where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p')
+        and (has_any_column_privilege('anon', c.oid, 'insert')
+             or has_any_column_privilege('anon', c.oid, 'update')
+             or has_table_privilege('anon', c.oid, 'delete')) $$,
+  'anon cannot write any table');
 
 select * from finish();
 rollback;
