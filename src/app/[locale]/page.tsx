@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { CategoryGrid } from "@/components/catalog/category-grid";
-import { FaqSection, PromoBanner } from "@/components/catalog/home-extras";
-import { ProductCard, ProductGrid } from "@/components/catalog/product-card";
+import { BannerSlider } from "@/components/catalog/banner-slider";
+import { CategoryTiles } from "@/components/catalog/category-tiles";
+import { FaqSection } from "@/components/catalog/home-extras";
+import { L10n } from "@/components/catalog/l10n";
+import { ProductCard, ProductRail } from "@/components/catalog/product-card";
 import { SearchForm } from "@/components/catalog/search-form";
+import { SectionBar } from "@/components/catalog/section-bar";
 import type { Locale } from "@/i18n/routing";
 import { publicAssetUrl } from "@/lib/assets";
 import { getSiteUrl } from "@/lib/env";
+import { localized } from "@/lib/localized";
 import { alternates, jsonLd, openGraph } from "@/lib/seo";
-import { browseProducts, listCategories } from "@/server/catalog/queries";
+import {
+  browseProducts,
+  listBanners,
+  listSections,
+} from "@/server/catalog/queries";
 import { getSiteSettings, listPublishedFaqs } from "@/server/catalog/site";
 
 export async function generateMetadata({
@@ -34,12 +42,34 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   setRequestLocale(locale as Locale);
   const t = await getTranslations("Home");
   const tc = await getTranslations("Catalog");
-  const [categories, popular, settings, faqs] = await Promise.all([
-    listCategories(),
-    browseProducts({ limit: 8 }),
-    getSiteSettings(),
-    listPublishedFaqs(),
-  ]);
+  const [{ sections, unsectioned }, banners, popular, settings, faqs] =
+    await Promise.all([
+      listSections(),
+      listBanners(),
+      browseProducts({ limit: 8 }),
+      getSiteSettings(),
+      listPublishedFaqs(),
+    ]);
+  const groups = [
+    ...sections.map((s) => ({
+      id: s.id,
+      name: localized(s.name_ar, s.name_en, locale as Locale),
+      categories: s.categories,
+    })),
+    ...(unsectioned.length
+      ? [
+          {
+            id: "more",
+            name: {
+              text: sections.length ? tc("moreCategories") : tc("categories"),
+              lang: locale as Locale,
+              fallback: false,
+            },
+            categories: unsectioned,
+          },
+        ]
+      : []),
+  ];
 
   const tm = await getTranslations("Metadata");
   const home = new URL(`/${locale}`, getSiteUrl()).toString();
@@ -97,44 +127,55 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(structured) }}
       />
-      <PromoBanner settings={settings} locale={locale as Locale} />
-      <section className="relative overflow-hidden border-b">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute start-1/2 -top-24 size-[36rem] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl rtl:translate-x-1/2"
-        />
-        <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
-          <h1 className="max-w-2xl text-3xl leading-tight font-bold text-balance sm:text-5xl">
-            {t("title")}
-          </h1>
-          <p className="mt-5 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
-            {t("subtitle")}
-          </p>
-          <div className="mt-8 max-w-xl">
-            <SearchForm locale={locale as Locale} />
-          </div>
+      <h1 className="sr-only">{t("title")}</h1>
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-3 pt-3">
+        <div className="px-4">
+          <SearchForm locale={locale as Locale} compact />
         </div>
-      </section>
-
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 py-10">
-        {categories.length > 0 && (
-          <section aria-labelledby="categories" className="grid gap-4">
-            <h2 id="categories" className="text-xl font-bold">
-              {tc("categories")}
-            </h2>
-            <CategoryGrid categories={categories} locale={locale as Locale} />
-          </section>
+        <BannerSlider
+          banners={banners}
+          locale={locale as Locale}
+          label={t("offers")}
+        />
+      </div>
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-7 px-4 pb-10">
+        {groups.length > 1 && (
+          <SectionBar
+            label={tc("categories")}
+            sections={groups.map((g) => ({
+              id: g.id,
+              label: g.name?.text ?? "",
+            }))}
+          />
         )}
+        {groups.map((g) => (
+          <section
+            key={g.id}
+            id={`section-${g.id}`}
+            data-section-anchor
+            aria-labelledby={`h-${g.id}`}
+            className="grid gap-3 first:pt-4"
+            data-testid="home-section"
+          >
+            <h2 id={`h-${g.id}`} className="text-lg font-bold">
+              <L10n value={g.name} />
+            </h2>
+            <CategoryTiles
+              categories={g.categories}
+              locale={locale as Locale}
+            />
+          </section>
+        ))}
         {popular.length > 0 && (
-          <section aria-labelledby="popular" className="grid gap-4">
-            <h2 id="popular" className="text-xl font-bold">
+          <section aria-labelledby="popular" className="grid gap-3">
+            <h2 id="popular" className="text-lg font-bold">
               {tc("popular")}
             </h2>
-            <ProductGrid>
+            <ProductRail>
               {popular.map((p) => (
                 <ProductCard key={p.id} product={p} locale={locale as Locale} />
               ))}
-            </ProductGrid>
+            </ProductRail>
           </section>
         )}
         <FaqSection faqs={faqs} locale={locale as Locale} />

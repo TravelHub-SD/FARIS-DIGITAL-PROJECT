@@ -76,7 +76,7 @@ export default async function SearchPage({
   };
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8">
+    <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-6 px-4 py-8">
       <h1 className="text-2xl font-bold">
         {query ? t("resultsFor", { query }) : t("searchTitle")}
       </h1>

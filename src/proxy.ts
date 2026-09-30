@@ -20,6 +20,8 @@ export async function proxy(request: NextRequest) {
   // next-intl forwards the request headers to the page render.
   request.headers.set("content-security-policy", csp);
   request.headers.set("x-nonce", nonce);
+  // The bottom navigation marks the current tab on the server (no client JS).
+  request.headers.set("x-pathname", request.nextUrl.pathname);
   const response = await refreshSession(request, () => handleI18n(request));
   response.headers.set("Content-Security-Policy", csp);
   return response;

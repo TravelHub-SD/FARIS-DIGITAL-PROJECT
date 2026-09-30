@@ -5,8 +5,10 @@ import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { localeDirection, routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/env";
@@ -67,7 +69,7 @@ export default async function LocaleLayout({
       className={plexArabic.variable}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col font-sans">
+      <body className="flex min-h-dvh flex-col pb-16 font-sans md:pb-0">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -81,6 +83,8 @@ export default async function LocaleLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <BottomNav />
+          <WhatsAppButton />
         </ThemeProvider>
       </body>
     </html>

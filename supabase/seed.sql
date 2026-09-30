@@ -48,3 +48,22 @@ insert into public.product_variants (id, product_id, name_ar, name_en, price_usd
    '[{"key":"target_phone","type":"phone","label_ar":"الرقم المراد شحنه","required":true}]'),
   ('00000000-0000-4000-c000-000000000006', '00000000-0000-4000-b000-000000000005', null, '$25 card', 27.00, 2, 1,
    '[{"key":"delivery_email","type":"email","label_en":"Email for the code","required":true}]');
+
+-- Storefront (Stage 3): sections, a "New" product, a compare-at price, slides.
+insert into public.category_sections (id, name_ar, name_en, sort_order) values
+  ('00000000-0000-4000-e000-000000000001', 'شحن الألعاب', 'Game top-ups', 1),
+  ('00000000-0000-4000-e000-000000000002', 'ستارلينك والرصيد', 'Starlink and airtime', 2),
+  ('00000000-0000-4000-e000-000000000003', 'الاشتراكات', 'Subscriptions', 3);
+update public.categories set section_id = '00000000-0000-4000-e000-000000000001'
+ where id = '00000000-0000-4000-a000-000000000001';
+update public.categories set section_id = '00000000-0000-4000-e000-000000000002'
+ where id in ('00000000-0000-4000-a000-000000000002', '00000000-0000-4000-a000-000000000003');
+update public.categories set section_id = '00000000-0000-4000-e000-000000000003'
+ where id = '00000000-0000-4000-a000-000000000004';
+update public.products set is_new = true where id = '00000000-0000-4000-b000-000000000003';
+update public.product_variants set compare_at_price_usd = 5.90
+ where id = '00000000-0000-4000-c000-000000000003';
+insert into public.promo_banners (title_ar, title_en, subtitle_ar, subtitle_en, link, sort_order) values
+  ('اشحن ببجي في دقائق', 'Top up PUBG in minutes', 'أدخل معرّف اللاعب وحوّل من بنكك', 'Enter your player ID and pay by bank transfer', '/p/pubg-uc', 1),
+  ('ستارلينك', 'Starlink', 'تجديد الاشتراك الشهري', 'Monthly subscription renewal', '/c/starlink', 2);
+update public.app_settings set contact_whatsapp = '+249900000100' where id;

@@ -722,29 +722,27 @@ test("content: FAQ and banner appear on the home page; a comment is moderated of
   await form.getByRole("button").click();
   await expect(form.locator('[data-result="ok"]')).toBeVisible();
 
-  await page.goto("/ar/admin/settings");
-  await page.fill("#banner_title_ar", `عرض خاص ${t}`);
-  await page.fill("#banner_title_en", `Special offer ${t}`);
-  await page.fill("#banner_link", "/c/games");
-  await page.getByTestId("banner-settings").getByLabel("إظهار البانر").check();
-  await page
-    .getByTestId("banner-settings")
-    .getByRole("button", { name: "حفظ" })
-    .first()
-    .click();
-  await expect(
-    page.getByTestId("banner-settings").locator('[data-result="ok"]'),
-  ).toBeVisible();
-  await page.screenshot({ path: ".e2e/admin-settings-ar.png", fullPage: true });
+  await page.goto("/ar/admin/banners");
+  const slide = page.getByTestId("new-banner-form");
+  await slide.locator("input[name=title_ar]").fill(`عرض خاص ${t}`);
+  await slide.locator("input[name=title_en]").fill(`Special offer ${t}`);
+  await slide.locator("input[name=link]").fill("/c/games");
+  // Shown first in the slider.
+  await slide.locator("input[name=sort_order]").fill("-999");
+  await slide.getByRole("button").click();
+  await expect(slide.locator('[data-result="ok"]')).toBeVisible();
+  await page.screenshot({ path: ".e2e/admin-banners-ar.png", fullPage: true });
 
   const visitor = await (await contextFor(browser, null)).newPage();
   await visitor.goto("/ar");
-  await expect(visitor.getByTestId("promo-banner")).toContainText(
-    `عرض خاص ${t}`,
+  const shown = visitor
+    .getByTestId("promo-banner")
+    .filter({ hasText: `عرض خاص ${t}` });
+  await expect(shown).toBeVisible();
+  await expect(shown.locator("a").first()).toHaveAttribute(
+    "href",
+    "/ar/c/games",
   );
-  await expect(
-    visitor.getByTestId("promo-banner").locator("a"),
-  ).toHaveAttribute("href", "/ar/c/games");
   await expect(visitor.getByTestId("faq-section")).toContainText(
     `كم يستغرق التنفيذ؟ ${t}`,
   );

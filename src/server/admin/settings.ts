@@ -86,37 +86,9 @@ export async function saveGeneralSettings(
   return result;
 }
 
-const bannerSchema = z.object({
-  banner_title_ar: optionalText(200),
-  banner_title_en: optionalText(200),
-  banner_link: z
-    .string()
-    .trim()
-    .max(300)
-    .refine((v) => v === "" || /^(\/[^\s]*|https:\/\/[^\s]+)$/.test(v))
-    .transform((v) => v || null),
-  banner_is_active: checkbox,
-});
+const imageKind = z.enum(["logo"]);
 
-export async function saveBanner(formData: FormData): Promise<ActionResult> {
-  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
-  const input = bannerSchema.safeParse(fields(formData));
-  if (!input.success) return INVALID;
-  const supabase = await createClient();
-  const res = await supabase
-    .from("app_settings")
-    .update(input.data)
-    .eq("id", true)
-    .select("id");
-  const result = affected(res);
-  if (result.ok) revalidatePublic();
-  return result;
-}
-
-const imageKind = z.enum(["banner", "logo"]);
-const COLUMN = { banner: "banner_image_path", logo: "logo_path" } as const;
-
-/** Banner or logo: validated, re-encoded to WebP, stored under site/. */
+/** Logo: validated, re-encoded to WebP, stored under site/. */
 export async function uploadSiteImage(
   formData: FormData,
 ): Promise<ActionResult> {
@@ -130,17 +102,17 @@ export async function uploadSiteImage(
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("app_settings")
-    .select("banner_image_path, logo_path")
+    .select("logo_path")
     .maybeSingle();
   const uploaded = await uploadPublicImage(
     file,
-    PUBLIC_IMAGE_PROFILES[kind.data],
-    `site/${kind.data}`,
+    PUBLIC_IMAGE_PROFILES.logo,
+    "site/logo",
   );
   if (!uploaded.ok) return { ok: false, error: uploaded.error };
   const res = await supabase
     .from("app_settings")
-    .update({ [COLUMN[kind.data]]: uploaded.path })
+    .update({ logo_path: uploaded.path })
     .eq("id", true)
     .select("id");
   const result = affected(res);
@@ -148,7 +120,7 @@ export async function uploadSiteImage(
     await removePublicImage(uploaded.path);
     return result;
   }
-  await removePublicImage(current?.[COLUMN[kind.data]] as string | null);
+  await removePublicImage(current?.logo_path);
   revalidatePublic();
   return { ok: true };
 }
@@ -162,16 +134,143 @@ export async function removeSiteImage(
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("app_settings")
-    .select("banner_image_path, logo_path")
+    .select("logo_path")
     .maybeSingle();
   const res = await supabase
     .from("app_settings")
-    .update({ [COLUMN[kind.data]]: null })
+    .update({ logo_path: null })
     .eq("id", true)
     .select("id");
   const result = affected(res);
   if (result.ok) {
-    await removePublicImage(current?.[COLUMN[kind.data]] as string | null);
+    await removePublicImage(current?.logo_path);
+    revalidatePublic();
+  }
+  return result;
+}
+
+// Home slider (promo_banners): several slides, each with an optional image.
+const siteLink = z
+  .string()
+  .trim()
+  .max(300)
+  .refine((v) => v === "" || /^(\/[^\s]*|https:\/\/[^\s]+)$/.test(v))
+  .transform((v) => v || null);
+
+const bannerSchema = z.object({
+  id: z.guid().optional(),
+  title_ar: optionalText(120),
+  title_en: optionalText(120),
+  subtitle_ar: optionalText(200),
+  subtitle_en: optionalText(200),
+  link: siteLink,
+  sort_order: z.coerce.number().int().min(-1000).max(1000).default(0),
+  is_active: checkbox,
+});
+
+export async function saveBanner(formData: FormData): Promise<ActionResult> {
+  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
+  const input = bannerSchema.safeParse(fields(formData));
+  if (!input.success) return INVALID;
+  const { id, ...row } = input.data;
+  const supabase = await createClient();
+  if (id) {
+    const result = affected(
+      await supabase
+        .from("promo_banners")
+        .update(row)
+        .eq("id", id)
+        .select("id"),
+    );
+    if (result.ok) revalidatePublic();
+    return result;
+  }
+  // A new slide starts with a title; its image is added afterwards.
+  if (!row.title_ar && !row.title_en) return INVALID;
+  const { error } = await supabase.from("promo_banners").insert(row);
+  if (error) return dbError(error);
+  revalidatePublic();
+  return { ok: true };
+}
+
+export async function deleteBanner(formData: FormData): Promise<ActionResult> {
+  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
+  const id = z.guid().safeParse(formData.get("id"));
+  if (!id.success) return INVALID;
+  const supabase = await createClient();
+  const { data: removed, error } = await supabase
+    .from("promo_banners")
+    .delete()
+    .eq("id", id.data)
+    .select("image_path");
+  if (error) return dbError(error);
+  if (!removed?.length) return { ok: false, error: "not_found" };
+  await removePublicImage(removed[0].image_path);
+  revalidatePublic();
+  return { ok: true };
+}
+
+/** A slide's image: banner profile, stored under site/banners/. */
+export async function uploadBannerImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
+  const id = z.guid().safeParse(formData.get("id"));
+  const file = formData.get("file");
+  if (!id.success) return INVALID;
+  if (!(file instanceof File) || file.size === 0)
+    return { ok: false, error: "empty" };
+  const supabase = await createClient();
+  const { data: banner } = await supabase
+    .from("promo_banners")
+    .select("id, image_path")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (!banner) return { ok: false, error: "not_found" };
+  const uploaded = await uploadPublicImage(
+    file,
+    PUBLIC_IMAGE_PROFILES.banner,
+    "site/banners",
+  );
+  if (!uploaded.ok) return { ok: false, error: uploaded.error };
+  const result = affected(
+    await supabase
+      .from("promo_banners")
+      .update({ image_path: uploaded.path })
+      .eq("id", banner.id)
+      .select("id"),
+  );
+  if (!result.ok) {
+    await removePublicImage(uploaded.path);
+    return result;
+  }
+  await removePublicImage(banner.image_path);
+  revalidatePublic();
+  return { ok: true };
+}
+
+export async function removeBannerImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
+  const id = z.guid().safeParse(formData.get("id"));
+  if (!id.success) return INVALID;
+  const supabase = await createClient();
+  const { data: banner } = await supabase
+    .from("promo_banners")
+    .select("id, image_path")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (!banner) return { ok: false, error: "not_found" };
+  // The table CHECK refuses a slide left with neither a title nor an image.
+  const res = await supabase
+    .from("promo_banners")
+    .update({ image_path: null })
+    .eq("id", banner.id)
+    .select("id");
+  const result = affected(res);
+  if (result.ok) {
+    await removePublicImage(banner.image_path);
     revalidatePublic();
   }
   return result;

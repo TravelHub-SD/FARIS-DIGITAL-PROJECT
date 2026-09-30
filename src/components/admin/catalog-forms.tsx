@@ -3,8 +3,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { inputClasses, selectClasses } from "@/components/ui/styles";
 import {
+  deleteSection,
   saveCategory,
   saveProduct,
+  saveSection,
   saveVariant,
   setCategoryArchived,
   setProductArchived,
@@ -65,8 +67,105 @@ function BilingualText({
   );
 }
 
+export async function SectionForm({
+  section,
+}: {
+  section?: {
+    id: string;
+    name_ar: string | null;
+    name_en: string | null;
+    sort_order: number;
+    is_active: boolean;
+  };
+}) {
+  const t = await getTranslations("Admin");
+  const p = section?.id ?? "new";
+  return (
+    <div className="grid gap-2">
+      <ActionForm
+        action={saveSection}
+        resetOnSuccess={!section}
+        testId={section ? "section-form" : "new-section-form"}
+      >
+        {section && <input type="hidden" name="id" value={section.id} />}
+        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_6rem]">
+          <Field
+            label={`${t("catalog.sectionName")} — ${t("lang.ar")}`}
+            htmlFor={`sec-ar-${p}`}
+          >
+            <input
+              id={`sec-ar-${p}`}
+              name="name_ar"
+              defaultValue={section?.name_ar ?? ""}
+              maxLength={80}
+              dir="rtl"
+              lang="ar"
+              className={inputClasses}
+            />
+          </Field>
+          <Field
+            label={`${t("catalog.sectionName")} — ${t("lang.en")}`}
+            htmlFor={`sec-en-${p}`}
+          >
+            <input
+              id={`sec-en-${p}`}
+              name="name_en"
+              defaultValue={section?.name_en ?? ""}
+              maxLength={80}
+              dir="ltr"
+              lang="en"
+              className={inputClasses}
+            />
+          </Field>
+          <Field label={t("catalog.sortOrder")} htmlFor={`sec-sort-${p}`}>
+            <input
+              id={`sec-sort-${p}`}
+              name="sort_order"
+              type="number"
+              defaultValue={section?.sort_order ?? 0}
+              className={inputClasses}
+            />
+          </Field>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <CheckboxField
+            id={`sec-active-${p}`}
+            name="is_active"
+            label={t("catalog.visible")}
+            defaultChecked={section?.is_active ?? true}
+          />
+          <button
+            type="submit"
+            className={buttonVariants({
+              variant: section ? "outline" : "default",
+              size: "sm",
+            })}
+          >
+            {section ? t("save") : t("catalog.addSection")}
+          </button>
+        </div>
+      </ActionForm>
+      {section && (
+        <ActionForm
+          action={deleteSection}
+          confirmMessage={t("catalog.deleteSectionConfirm")}
+        >
+          <input type="hidden" name="id" value={section.id} />
+          <button
+            type="submit"
+            className={`${buttonVariants({ variant: "ghost", size: "sm" })} justify-self-start text-destructive`}
+          >
+            {t("catalog.deleteSection")}
+          </button>
+        </ActionForm>
+      )}
+    </div>
+  );
+}
+
 export async function CategoryForm({
   category,
+  sections,
 }: {
   category?: {
     id: string;
@@ -75,9 +174,11 @@ export async function CategoryForm({
     name_en: string | null;
     description_ar: string | null;
     description_en: string | null;
+    section_id: string | null;
     sort_order: number;
     is_active: boolean;
   };
+  sections: { id: string; name: string }[];
 }) {
   const t = await getTranslations("Admin");
   const locale = await getLocale();
@@ -104,7 +205,26 @@ export async function CategoryForm({
         multiline
         labels={langs}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field
+          label={t("catalog.section")}
+          htmlFor="section_id"
+          hint={t("catalog.sectionHint")}
+        >
+          <select
+            id="section_id"
+            name="section_id"
+            defaultValue={category?.section_id ?? ""}
+            className={selectClasses}
+          >
+            <option value="">{t("catalog.noSection")}</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field
           label={t("catalog.slug")}
           htmlFor="slug"
@@ -164,6 +284,7 @@ export async function ProductForm({
     description_en: string | null;
     sort_order: number;
     is_active: boolean;
+    is_new: boolean;
   };
   categories: { id: string; name: string }[];
 }) {
@@ -235,11 +356,18 @@ export async function ProductForm({
           />
         </Field>
       </div>
-      <CheckboxField
-        name="is_active"
-        label={t("catalog.visible")}
-        defaultChecked={product?.is_active ?? true}
-      />
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <CheckboxField
+          name="is_active"
+          label={t("catalog.visible")}
+          defaultChecked={product?.is_active ?? true}
+        />
+        <CheckboxField
+          name="is_new"
+          label={t("catalog.isNew")}
+          defaultChecked={product?.is_new ?? false}
+        />
+      </div>
       <button
         type="submit"
         className={`${buttonVariants()} justify-self-start`}
@@ -261,6 +389,7 @@ export async function VariantForm({
     name_ar: string | null;
     name_en: string | null;
     price_usd: number;
+    compare_at_price_usd: number | null;
     max_quantity: number;
     sort_order: number;
     is_active: boolean;
@@ -283,7 +412,7 @@ export async function VariantForm({
         max={120}
         labels={langs}
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label={t("catalog.priceUsd")}
           htmlFor="price_usd"
@@ -300,6 +429,21 @@ export async function VariantForm({
             inputMode="decimal"
             pattern="\d{1,8}(\.\d{1,2})?"
             defaultValue={variant ? variant.price_usd.toFixed(2) : ""}
+            dir="ltr"
+            className={inputClasses}
+          />
+        </Field>
+        <Field
+          label={t("catalog.compareAtUsd")}
+          htmlFor="compare_at_price_usd"
+          hint={t("catalog.compareAtHint")}
+        >
+          <input
+            id="compare_at_price_usd"
+            name="compare_at_price_usd"
+            inputMode="decimal"
+            pattern="\d{1,8}(\.\d{1,2})?"
+            defaultValue={variant?.compare_at_price_usd?.toFixed(2) ?? ""}
             dir="ltr"
             className={inputClasses}
           />

@@ -25,6 +25,7 @@ const PAGE_GUARD: [RegExp, string][] = [
   [/^kyc\//, 'requireAdmin(locale, "kyc")'],
   [/^comments\//, 'requireAdmin(locale, "comments")'],
   [/^faqs\//, 'requireAdmin(locale, "settings")'],
+  [/^banners\//, 'requireAdmin(locale, "settings")'],
   [/^pages\//, 'requireAdmin(locale, "settings")'],
   // Every staff member manages their own authenticators.
   [/^security\//, "requireAdmin(locale)"],

@@ -6,10 +6,12 @@ import { Breadcrumbs } from "@/components/catalog/breadcrumbs";
 import { CommentForm } from "@/components/catalog/comment-form";
 import { L10n } from "@/components/catalog/l10n";
 import {
+  AddToCartForm,
   type FormVariant,
-  OrderDetailsForm,
-} from "@/components/catalog/order-details-form";
+} from "@/components/catalog/add-to-cart-form";
+import { toFormFields } from "@/components/catalog/fulfillment-fields";
 import { ProductVisual } from "@/components/catalog/product-visual";
+import { InfoIcon } from "@/components/icons";
 import type { Locale } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/env";
 import { formatDateTime, formatSdg } from "@/lib/format";
@@ -18,21 +20,20 @@ import { publicAssetUrl } from "@/lib/assets";
 import { alternates, jsonLd, metaDescription, openGraph } from "@/lib/seo";
 import { getProduct } from "@/server/catalog/queries";
 import { listProductComments } from "@/server/catalog/site";
-import type { PlaceOrderError } from "@/server/orders/actions";
+import type { CartError } from "@/server/cart/actions";
 
 const REASONS = [
   "sign_in",
   "incomplete_account",
-  "kyc_required",
-  "phone_not_verified",
   "customer_blocked",
   "variant_unavailable",
   "invalid_quantity",
   "fulfillment_invalid",
-  "rate_limited",
+  "cart_full",
+  "not_found",
   "invalid_input",
   "server_error",
-] as const satisfies readonly PlaceOrderError[];
+] as const satisfies readonly CartError[];
 
 type Props = PageProps<"/[locale]/p/[slug]">;
 
@@ -88,19 +89,9 @@ export default async function ProductPage({ params }: Props) {
     id: v.id,
     name: localized(v.name_ar, v.name_en, locale),
     price: formatSdg(v.price_sdg, locale),
-    totals: v.totals_sdg,
-    fields: v.fields.map((f) => ({
-      key: f.key,
-      type: f.type,
-      label: localized(f.label_ar, f.label_en, locale),
-      required: f.required,
-      minLength: f.min_length,
-      maxLength: f.max_length,
-      options: f.options?.map((o) => ({
-        value: o.value,
-        label: localized(o.label_ar, o.label_en, locale),
-      })),
-    })),
+    was: formatSdg(v.compare_at_sdg, locale),
+    totals: v.totals_sdg?.map((n) => formatSdg(n, locale)!) ?? null,
+    fields: toFormFields(v.fields, locale),
   }));
 
   const prices = product.variants
@@ -156,64 +147,79 @@ export default async function ProductPage({ params }: Props) {
   ];
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8">
+    <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-5 px-4 pt-3 pb-28 sm:py-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(structured) }}
       />
-      <Breadcrumbs
-        items={[
-          { href: "/", label: t("home") },
-          {
-            href: `/c/${product.category.slug}`,
-            label: <L10n value={categoryName} />,
-          },
-          { label: <L10n value={name} /> },
-        ]}
-      />
-      <header className="grid gap-1">
-        <L10n value={name} as="h1" className="text-2xl font-bold sm:text-3xl" />
-        <p className="font-medium text-primary" dir="auto">
-          {prices.length
-            ? t("from", { price: formatSdg(Math.min(...prices), locale)! })
-            : t("priceUnavailable")}
-        </p>
-      </header>
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="grid content-start gap-4">
-          <ProductVisual
-            name={name?.text ?? product.slug}
-            imagePath={product.image_path}
-            size="full"
-            priority
-            className="max-h-72 md:max-h-80"
+      <div className="grid gap-5 md:grid-cols-2 md:gap-8">
+        <div className="grid content-start gap-3">
+          <div className="relative overflow-hidden rounded-2xl">
+            <ProductVisual
+              name={name?.text ?? product.slug}
+              imagePath={product.image_path}
+              size="full"
+              priority
+              className="aspect-[16/10] text-5xl md:aspect-square"
+            />
+            {product.is_new && (
+              <span
+                className="absolute start-3 top-3 rounded-full bg-highlight px-2.5 text-xs leading-6 font-bold text-highlight-foreground"
+                data-testid="badge-new"
+              >
+                {t("new")}
+              </span>
+            )}
+          </div>
+          <Breadcrumbs
+            items={[
+              { href: "/", label: t("home") },
+              {
+                href: `/c/${product.category.slug}`,
+                label: <L10n value={categoryName} />,
+              },
+              { label: <L10n value={name} /> },
+            ]}
           />
+          <header className="grid gap-1">
+            <L10n
+              value={name}
+              as="h1"
+              className="text-2xl font-bold sm:text-3xl"
+            />
+            <p className="text-sm font-bold text-primary-text" dir="auto">
+              {prices.length
+                ? t("from", { price: formatSdg(Math.min(...prices), locale)! })
+                : t("priceUnavailable")}
+            </p>
+          </header>
           <L10n
             value={description}
             as="p"
-            className="leading-relaxed text-muted-foreground"
+            className="text-sm leading-relaxed text-muted-foreground"
           />
         </div>
-        <div className="grid content-start gap-6">
-          <OrderDetailsForm
+        <div className="grid content-start gap-4">
+          <AddToCartForm
             variants={variants}
-            locale={locale}
             loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
+            cartHref={`/${locale}/cart`}
             strings={{
               chooseOption: t("chooseOption"),
               details: t("details"),
-              placeOrder: t("placeOrder"),
+              addToCart: t("addToCart"),
+              added: t("added"),
+              viewCart: t("viewCart"),
               quantity: t("quantity"),
+              increase: t("increase"),
+              decrease: t("decrease"),
               total: t("total"),
-              // Filled in on the client with the formatted new total.
-              priceChanged: t("priceChanged", { price: "{price}" }),
               signInAction: t("signInAction"),
-              kycAction: t("kycAction"),
-              completeAction: t("completeAction"),
               required: t("required"),
               optional: t("optional"),
               select: t("select"),
               priceUnavailable: t("priceUnavailable"),
+              wasPrice: t("wasPrice"),
               errors: {
                 missing: t("errors.missing"),
                 unknown: t("errors.unknown"),
@@ -224,11 +230,14 @@ export default async function ProductPage({ params }: Props) {
                 unavailable: t("errors.unavailable"),
               },
               reasons: Object.fromEntries(
-                REASONS.map((r) => [r, t(`reasons.${r}`)]),
+                REASONS.map((r) => [r, t(`cartReasons.${r}`)]),
               ),
             }}
           />
-          <p className="text-xs text-muted-foreground">{t("priceNote")}</p>
+          <p className="flex gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-text">
+            <InfoIcon className="mt-0.5 size-4 shrink-0" />
+            {t("priceNote")}
+          </p>
         </div>
       </div>
       <section

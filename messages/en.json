@@ -20,7 +20,8 @@
   "Home": {
     "title": "Digital products and services, simple and secure",
     "subtitle": "Game top-ups, Starlink, mobile airtime and app subscriptions, paid by bank transfer, with order updates on WhatsApp.",
-    "faq": "Frequently asked questions"
+    "faq": "Frequently asked questions",
+    "offers": "Offers"
   },
   "Footer": {
     "followUs": "Follow us",
@@ -261,7 +262,8 @@
       "messages": "WhatsApp messages",
       "invoices": "Invoices",
       "security": "Security",
-      "pages": "Pages"
+      "pages": "Pages",
+      "banners": "Promo slides"
     },
     "permissions": {
       "orders": "Orders",
@@ -434,7 +436,21 @@
       "archivedNote": "Archived: not shown on the site.",
       "archive": "Archive",
       "restore": "Restore",
-      "archiveConfirm": "Archive this item? It will disappear from the site."
+      "archiveConfirm": "Archive this item? It will disappear from the site.",
+      "sections": "Home page sections",
+      "sectionsHint": "Sections group categories on the home page (e.g. Game top-ups, Subscriptions). Lower sort order shows first. Deleting a section keeps its categories; they appear under “More categories”.",
+      "sectionName": "Section name",
+      "addSection": "Add section",
+      "deleteSection": "Delete section",
+      "deleteSectionConfirm": "Delete this section? Its categories stay, without a section.",
+      "section": "Section",
+      "sectionHint": "Where the category appears on the home page.",
+      "noSection": "No section",
+      "icon": "Icon",
+      "iconHint": "A square image shown on the home page tiles. Resize before uploading: roughly square, at least 200×200 px, up to 2 MB. Re-encoded to WebP.",
+      "isNew": "“New” badge",
+      "compareAtUsd": "Compare-at price (USD)",
+      "compareAtHint": "Display only: shown struck through next to the price when higher. Never charged. Leave empty to hide it."
     },
     "fields": {
       "none": "No details asked. The customer only chooses the option.",
@@ -546,14 +562,6 @@
         "x": "X (Twitter)",
         "telegram": "Telegram"
       },
-      "banner": "Promo banner",
-      "bannerHint": "Shown at the top of the home page when active.",
-      "bannerTitle": "Banner text",
-      "bannerLink": "Banner link",
-      "bannerLinkHint": "A site path such as /c/games, or a full https:// address.",
-      "bannerActive": "Show the banner",
-      "bannerImage": "Banner image",
-      "bannerImageHint": "Resize before uploading: wide image, at least 800×200 px, at most 6000 px wide, up to 2 MB. Re-encoded to WebP.",
       "logo": "Logo",
       "logoHint": "Replaces the text logo in the header when set.",
       "logoImage": "Logo image",
@@ -844,6 +852,23 @@
         "terms": "Terms of use",
         "privacy": "Privacy policy"
       }
+    },
+    "banners": {
+      "title": "Promo slides",
+      "intro": "The sliding banners at the top of the home page. Active slides show in sort order.",
+      "add": "Add slide",
+      "addHint": "Enter a title first, then add the image after saving.",
+      "subtitle": "Subtitle",
+      "link": "Link",
+      "linkHint": "A site path such as /c/games, or a full https:// address.",
+      "active": "Active",
+      "hidden": "Hidden",
+      "untitled": "Untitled slide",
+      "image": "Slide image",
+      "imageHint": "Resize before uploading: wide image, at least 800×200 px, at most 6000 px wide, up to 2 MB. Re-encoded to WebP.",
+      "delete": "Delete slide",
+      "deleteConfirm": "Delete this slide and its image?",
+      "slideTitle": "Title"
     }
   },
   "Catalog": {
@@ -884,7 +909,7 @@
     "required": "Required",
     "optional": "Optional",
     "select": "Select…",
-    "priceNote": "Prices are shown in Sudanese pounds at today's rate; the amount to pay is fixed when you place the order.",
+    "priceNote": "Prices are in Sudanese pounds at today's rate. The final amount is calculated when you confirm the order, and you will be asked to agree if it changed.",
     "errors": {
       "missing": "This field is required.",
       "unknown": "Unexpected field.",
@@ -932,6 +957,28 @@
         "invalid_input": "Write between 1 and 1000 characters.",
         "server_error": "Something went wrong. Try again."
       }
+    },
+    "moreCategories": "More categories",
+    "new": "New",
+    "fromShort": "From",
+    "wasPrice": "Was",
+    "choosePackage": "Choose a package",
+    "addToCart": "Add to cart",
+    "added": "Added to your cart.",
+    "viewCart": "View cart",
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "cartReasons": {
+      "sign_in": "Sign in to add to your cart.",
+      "incomplete_account": "Complete your account first.",
+      "customer_blocked": "Your account is suspended. Please contact us.",
+      "variant_unavailable": "This package is no longer available.",
+      "invalid_quantity": "This quantity is not available for this package.",
+      "fulfillment_invalid": "Please check the details.",
+      "cart_full": "Your cart is full (20 items at most). Check out or remove an item.",
+      "not_found": "This item is no longer in your cart.",
+      "invalid_input": "Something was wrong with the form. Please try again.",
+      "server_error": "Could not save right now. Please try again shortly."
     }
   },
   "Orders": {
@@ -1003,7 +1050,18 @@
       "upload_failed": "Upload failed. Try again.",
       "server_error": "Something went wrong. Try again."
     },
-    "moreItems": "{count, plural, one {+ # more item} other {+ # more items}}"
+    "moreItems": "{count, plural, one {+ # more item} other {+ # more items}}",
+    "copy": "Copy",
+    "copied": "Copied",
+    "steps": {
+      "placed": "Placed",
+      "payment": "Payment",
+      "processing": "Processing",
+      "completed": "Completed"
+    },
+    "placedTitle": "Your order is received.",
+    "placedNext": "Transfer the amount to one of the accounts below, then upload the receipt.",
+    "amountToPay": "Amount to transfer"
   },
   "Invoices": {
     "title": "Invoices",
@@ -1050,6 +1108,46 @@
       "voidStamp": "VOID",
       "voidNotice": "This invoice was voided on {at}. Reason: {reason}",
       "footer": "Issued electronically by {seller}. Amounts were fixed when the order was placed and do not change afterwards."
+    }
+  },
+  "Nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "categories": "Categories",
+    "cart": "Cart",
+    "orders": "My orders",
+    "account": "Account",
+    "cartCount": "{count, plural, one {# item in the cart} other {# items in the cart}}",
+    "whatsapp": "Chat with us on WhatsApp"
+  },
+  "Cart": {
+    "title": "Cart",
+    "signInTitle": "Sign in to see your cart",
+    "signInHint": "Your cart is saved to your account, so it follows you on any device.",
+    "empty": "Your cart is empty",
+    "emptyHint": "Choose a package on any product and add it to your cart.",
+    "browse": "Browse products",
+    "edit": "Edit details",
+    "save": "Save",
+    "remove": "Remove",
+    "unavailable": "Unavailable",
+    "kycNote": "Your order total is above the verification limit, so we need to verify your identity before you order. Splitting the cart into several orders does not change this.",
+    "unavailableNote": "{count, plural, one {An item in your cart is no longer available and is not in the total. Remove it to continue.} other {# items in your cart are no longer available and are not in the total. Remove them to continue.}}",
+    "subtotal": "{count, plural, =0 {Subtotal} one {Subtotal (1 item)} other {Subtotal (# items)}}",
+    "rateNote": "In Sudanese pounds at the current rate. The amount is fixed when you confirm the order.",
+    "checkout": "Continue to checkout",
+    "backToCart": "Back to cart",
+    "checkoutTitle": "Confirm your order",
+    "items": "Items",
+    "howToPay": "How to pay",
+    "payNote": "After you confirm, you get one order number and our bank accounts. Transfer the amount, then upload the receipt on the order page.",
+    "consentNote": "By pressing “Confirm order” you agree to the total shown. If the price changed since this page was opened, we show the new total for you to accept first.",
+    "confirm": "Confirm order",
+    "priceChanged": "The price changed since this page was opened. The total is now {price}. Press “Confirm order” again to accept it.",
+    "reasons": {
+      "variant_unavailable": "An item in your cart is no longer available. Review your cart.",
+      "fulfillment_invalid": "The details of an item are incomplete. Check them in your cart.",
+      "cart_empty": "Your cart is empty."
     }
   }
 }

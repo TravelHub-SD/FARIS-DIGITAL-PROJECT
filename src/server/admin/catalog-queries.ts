@@ -16,18 +16,39 @@ export type AdminCategory = {
   name_en: string | null;
   description_ar: string | null;
   description_en: string | null;
+  image_path: string | null;
+  section_id: string | null;
   sort_order: number;
   is_active: boolean;
   archived_at: string | null;
   product_count: number;
 };
 
+export type AdminSection = {
+  id: string;
+  name_ar: string | null;
+  name_en: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export async function listAdminSections(): Promise<AdminSection[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("category_sections")
+    .select("id, name_ar, name_en, sort_order, is_active")
+    .order("sort_order")
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function listAdminCategories(): Promise<AdminCategory[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("categories")
     .select(
-      "id, slug, name_ar, name_en, description_ar, description_en, sort_order, is_active, archived_at, products(count)",
+      "id, slug, name_ar, name_en, description_ar, description_en, image_path, section_id, sort_order, is_active, archived_at, products(count)",
     )
     .order("sort_order")
     .order("slug");
@@ -56,6 +77,7 @@ export type AdminProductRow = {
   name_en: string | null;
   image_path: string | null;
   is_active: boolean;
+  is_new: boolean;
   archived_at: string | null;
   completed_orders_count: number;
   category: { name_ar: string | null; name_en: string | null } | null;
@@ -75,7 +97,7 @@ export async function listAdminProducts(filters: {
   let query = supabase
     .from("products")
     .select(
-      "id, slug, name_ar, name_en, image_path, is_active, archived_at, completed_orders_count, category:categories(name_ar, name_en), variants:product_variants(price_usd, is_active, archived_at)",
+      "id, slug, name_ar, name_en, image_path, is_active, is_new, archived_at, completed_orders_count, category:categories(name_ar, name_en), variants:product_variants(price_usd, is_active, archived_at)",
     )
     .order("sort_order")
     .order("slug")
@@ -107,6 +129,7 @@ export type AdminVariant = {
   name_ar: string | null;
   name_en: string | null;
   price_usd: number;
+  compare_at_price_usd: number | null;
   max_quantity: number;
   sort_order: number;
   is_active: boolean;
@@ -119,7 +142,7 @@ export async function getAdminProduct(id: string) {
   const { data } = await supabase
     .from("products")
     .select(
-      "id, category_id, slug, name_ar, name_en, description_ar, description_en, image_path, sort_order, is_active, archived_at, completed_orders_count, variants:product_variants(id, product_id, name_ar, name_en, price_usd, max_quantity, sort_order, is_active, archived_at, required_fields)",
+      "id, category_id, slug, name_ar, name_en, description_ar, description_en, image_path, sort_order, is_active, is_new, archived_at, completed_orders_count, variants:product_variants(id, product_id, name_ar, name_en, price_usd, compare_at_price_usd, max_quantity, sort_order, is_active, archived_at, required_fields)",
     )
     .eq("id", id)
     .order("sort_order", { referencedTable: "variants" })
@@ -130,6 +153,8 @@ export async function getAdminProduct(id: string) {
     return {
       ...v,
       price_usd: Number(v.price_usd),
+      compare_at_price_usd:
+        v.compare_at_price_usd == null ? null : Number(v.compare_at_price_usd),
       required_fields: defs.success ? defs.data : [],
     };
   });
@@ -141,7 +166,7 @@ export async function getAdminVariant(id: string) {
   const { data } = await supabase
     .from("product_variants")
     .select(
-      "id, product_id, name_ar, name_en, price_usd, max_quantity, sort_order, is_active, archived_at, required_fields, product:products(id, slug, name_ar, name_en)",
+      "id, product_id, name_ar, name_en, price_usd, compare_at_price_usd, max_quantity, sort_order, is_active, archived_at, required_fields, product:products(id, slug, name_ar, name_en)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -150,6 +175,10 @@ export async function getAdminVariant(id: string) {
   return {
     ...data,
     price_usd: Number(data.price_usd),
+    compare_at_price_usd:
+      data.compare_at_price_usd == null
+        ? null
+        : Number(data.compare_at_price_usd),
     required_fields: defs.success ? defs.data : [],
     product: data.product as unknown as {
       id: string;

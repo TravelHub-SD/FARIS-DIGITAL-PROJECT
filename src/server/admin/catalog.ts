@@ -37,6 +37,63 @@ const checkbox = z
   .optional()
   .transform((v) => v === "on");
 const sortOrder = z.coerce.number().int().min(-100000).max(100000).default(0);
+const optionalId = z
+  .string()
+  .optional()
+  .transform((v) => v || null)
+  .pipe(z.guid().nullable());
+
+const sectionSchema = z
+  .object({
+    id: z.guid().optional(),
+    name_ar: optionalText(80),
+    name_en: optionalText(80),
+    sort_order: sortOrder,
+    is_active: checkbox,
+  })
+  .refine((s) => s.name_ar || s.name_en);
+
+/** Home page sections ("Game top-ups", "Subscriptions", …). */
+export async function saveSection(formData: FormData): Promise<ActionResult> {
+  if (!(await actionAdmin("products"))) return NOT_ALLOWED;
+  const input = sectionSchema.safeParse(fields(formData));
+  if (!input.success) return INVALID;
+  const { id, ...row } = input.data;
+  const supabase = await createClient();
+  const result = id
+    ? affected(
+        await supabase
+          .from("category_sections")
+          .update(row)
+          .eq("id", id)
+          .select("id"),
+      )
+    : await supabase
+        .from("category_sections")
+        .insert(row)
+        .then(({ error }) =>
+          error ? dbError(error) : ({ ok: true } as const),
+        );
+  if (result.ok) revalidatePublic();
+  return result;
+}
+
+/** Its categories stay, unassigned (listed under "More categories"). */
+export async function deleteSection(formData: FormData): Promise<ActionResult> {
+  if (!(await actionAdmin("products"))) return NOT_ALLOWED;
+  const id = z.guid().safeParse(formData.get("id"));
+  if (!id.success) return INVALID;
+  const supabase = await createClient();
+  const result = affected(
+    await supabase
+      .from("category_sections")
+      .delete()
+      .eq("id", id.data)
+      .select("id"),
+  );
+  if (result.ok) revalidatePublic();
+  return result;
+}
 
 const categorySchema = z
   .object({
@@ -46,6 +103,7 @@ const categorySchema = z
     name_en: optionalText(120),
     description_ar: optionalText(2000),
     description_en: optionalText(2000),
+    section_id: optionalId,
     sort_order: sortOrder,
     is_active: checkbox,
   })
@@ -117,6 +175,7 @@ const productSchema = z
     description_en: optionalText(8000),
     sort_order: sortOrder,
     is_active: checkbox,
+    is_new: checkbox,
   })
   .refine((p) => p.name_ar || p.name_en);
 
@@ -154,71 +213,116 @@ export async function setProductArchived(
   return setArchived("products", formData);
 }
 
-/** Validate + re-encode (WebP, 1000 px + 400 px thumbnail), then swap. */
-export async function uploadProductImage(
+type ImageTarget = {
+  table: "products" | "categories";
+  idField: "productId" | "categoryId";
+  profile: keyof typeof PUBLIC_IMAGE_PROFILES;
+};
+const PRODUCT_IMAGE: ImageTarget = {
+  table: "products",
+  idField: "productId",
+  profile: "product",
+};
+const CATEGORY_ICON: ImageTarget = {
+  table: "categories",
+  idField: "categoryId",
+  profile: "icon",
+};
+
+/** Validate + re-encode (WebP, full size + thumbnail), then swap. */
+async function uploadImage(
+  target: ImageTarget,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (!(await actionAdmin("products"))) return NOT_ALLOWED;
-  const productId = z.guid().safeParse(formData.get("productId"));
+  const rowId = z.guid().safeParse(formData.get(target.idField));
   const file = formData.get("file");
-  if (!productId.success) return INVALID;
+  if (!rowId.success) return INVALID;
   if (!(file instanceof File) || file.size === 0)
     return { ok: false, error: "empty" };
 
   const supabase = await createClient();
-  const { data: product } = await supabase
-    .from("products")
+  const { data: row } = await supabase
+    .from(target.table)
     .select("id, image_path")
-    .eq("id", productId.data)
+    .eq("id", rowId.data)
     .maybeSingle();
-  if (!product) return { ok: false, error: "not_found" };
+  if (!row) return { ok: false, error: "not_found" };
 
   const uploaded = await uploadPublicImage(
     file,
-    PUBLIC_IMAGE_PROFILES.product,
-    `products/${product.id}`,
+    PUBLIC_IMAGE_PROFILES[target.profile],
+    `${target.table}/${row.id}`,
   );
   if (!uploaded.ok) return { ok: false, error: uploaded.error };
 
   const res = await supabase
-    .from("products")
+    .from(target.table)
     .update({ image_path: uploaded.path })
-    .eq("id", product.id)
+    .eq("id", row.id)
     .select("id");
   const result = affected(res);
   if (!result.ok) {
     await removePublicImage(uploaded.path);
     return result;
   }
-  await removePublicImage(product.image_path);
+  await removePublicImage(row.image_path);
   revalidatePublic();
   return { ok: true };
+}
+
+async function removeImage(
+  target: ImageTarget,
+  formData: FormData,
+): Promise<ActionResult> {
+  const rowId = z.guid().safeParse(formData.get(target.idField));
+  if (!rowId.success) return INVALID;
+  const supabase = await createClient();
+  const { data: row } = await supabase
+    .from(target.table)
+    .select("id, image_path")
+    .eq("id", rowId.data)
+    .maybeSingle();
+  if (!row) return { ok: false, error: "not_found" };
+  const res = await supabase
+    .from(target.table)
+    .update({ image_path: null })
+    .eq("id", row.id)
+    .select("id");
+  const result = affected(res);
+  if (result.ok) {
+    await removePublicImage(row.image_path);
+    revalidatePublic();
+  }
+  return result;
+}
+
+export async function uploadProductImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await actionAdmin("products"))) return NOT_ALLOWED;
+  return uploadImage(PRODUCT_IMAGE, formData);
 }
 
 export async function removeProductImage(
   formData: FormData,
 ): Promise<ActionResult> {
   if (!(await actionAdmin("products"))) return NOT_ALLOWED;
-  const productId = z.guid().safeParse(formData.get("productId"));
-  if (!productId.success) return INVALID;
-  const supabase = await createClient();
-  const { data: product } = await supabase
-    .from("products")
-    .select("id, image_path")
-    .eq("id", productId.data)
-    .maybeSingle();
-  if (!product) return { ok: false, error: "not_found" };
-  const res = await supabase
-    .from("products")
-    .update({ image_path: null })
-    .eq("id", product.id)
-    .select("id");
-  const result = affected(res);
-  if (result.ok) {
-    await removePublicImage(product.image_path);
-    revalidatePublic();
-  }
-  return result;
+  return removeImage(PRODUCT_IMAGE, formData);
+}
+
+/** The square icon shown on the home page tiles. */
+export async function uploadCategoryImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await actionAdmin("products"))) return NOT_ALLOWED;
+  return uploadImage(CATEGORY_ICON, formData);
+}
+
+export async function removeCategoryImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await actionAdmin("products"))) return NOT_ALLOWED;
+  return removeImage(CATEGORY_ICON, formData);
 }
 
 const variantSchema = z
@@ -234,6 +338,14 @@ const variantSchema = z
       .regex(/^\d{1,8}(\.\d{1,2})?$/)
       .transform(Number)
       .refine((n) => n > 0),
+    // The struck-through "was" price. Display only: never charged, and shown
+    // only while it is above the price (public.compare_at_sdg).
+    compare_at_price_usd: z
+      .string()
+      .trim()
+      .regex(/^(\d{1,8}(\.\d{1,2})?)?$/)
+      .transform((v) => (v ? Number(v) : null))
+      .refine((n) => n === null || n > 0),
     max_quantity: z.coerce.number().int().min(1).max(10),
     sort_order: sortOrder,
     is_active: checkbox,

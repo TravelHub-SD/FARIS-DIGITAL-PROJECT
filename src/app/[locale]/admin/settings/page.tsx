@@ -16,7 +16,6 @@ import { publicAssetUrl } from "@/lib/assets";
 import {
   removeSiteImage,
   saveBankAccount,
-  saveBanner,
   saveGeneralSettings,
   saveLimits,
   uploadSiteImage,
@@ -147,7 +146,7 @@ async function SiteImage({
   kind,
   path,
 }: {
-  kind: "banner" | "logo";
+  kind: "logo";
   path: string | null;
 }) {
   const t = await getTranslations("Admin");
@@ -390,73 +389,6 @@ export default async function SettingsPage({
             {t("save")}
           </button>
         </ActionForm>
-      </Section>
-
-      <Section
-        title={t("settings.banner")}
-        description={t("settings.bannerHint")}
-        testId="banner-settings"
-      >
-        <ActionForm action={saveBanner}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label={`${t("settings.bannerTitle")} — ${t("lang.ar")}`}
-              htmlFor="banner_title_ar"
-            >
-              <input
-                id="banner_title_ar"
-                name="banner_title_ar"
-                defaultValue={s("banner_title_ar")}
-                maxLength={200}
-                dir="rtl"
-                className={inputClasses}
-              />
-            </Field>
-            <Field
-              label={`${t("settings.bannerTitle")} — ${t("lang.en")}`}
-              htmlFor="banner_title_en"
-            >
-              <input
-                id="banner_title_en"
-                name="banner_title_en"
-                defaultValue={s("banner_title_en")}
-                maxLength={200}
-                dir="ltr"
-                className={inputClasses}
-              />
-            </Field>
-            <Field
-              label={t("settings.bannerLink")}
-              htmlFor="banner_link"
-              hint={t("settings.bannerLinkHint")}
-              className="sm:col-span-2"
-            >
-              <input
-                id="banner_link"
-                name="banner_link"
-                defaultValue={s("banner_link")}
-                maxLength={300}
-                dir="ltr"
-                className={inputClasses}
-              />
-            </Field>
-          </div>
-          <CheckboxField
-            name="banner_is_active"
-            label={t("settings.bannerActive")}
-            defaultChecked={!!app.banner_is_active}
-          />
-          <button
-            type="submit"
-            className={`${buttonVariants()} justify-self-start`}
-          >
-            {t("save")}
-          </button>
-        </ActionForm>
-        <SiteImage
-          kind="banner"
-          path={(app.banner_image_path as string | null) ?? null}
-        />
       </Section>
 
       <Section title={t("settings.logo")} description={t("settings.logoHint")}>

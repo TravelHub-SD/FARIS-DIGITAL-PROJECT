@@ -20,6 +20,30 @@ export type Category = {
   name_en: string | null;
   description_ar: string | null;
   description_en: string | null;
+  image_path: string | null;
+};
+
+/** A home tile: a category and where it leads. */
+export type CategoryTile = Category & {
+  /** The product's slug when the category has exactly one: the tile opens it. */
+  only_product: string | null;
+};
+
+export type Section = {
+  id: string;
+  name_ar: string | null;
+  name_en: string | null;
+  categories: CategoryTile[];
+};
+
+export type Banner = {
+  id: string;
+  title_ar: string | null;
+  title_en: string | null;
+  subtitle_ar: string | null;
+  subtitle_en: string | null;
+  image_path: string | null;
+  link: string | null;
 };
 
 export type ProductSummary = {
@@ -30,9 +54,14 @@ export type ProductSummary = {
   category_name_en: string | null;
   name_ar: string | null;
   name_en: string | null;
+  description_ar: string | null;
+  description_en: string | null;
   image_path: string | null;
+  is_new: boolean;
   min_price_usd: number;
   min_price_sdg: number | null;
+  /** The cheapest package's "was" price, only when above its price. */
+  compare_at_sdg: number | null;
   total_count: number;
 };
 
@@ -42,6 +71,8 @@ export type Variant = {
   name_en: string | null;
   price_usd: number;
   price_sdg: number | null;
+  /** Display only ("was"), shown when above the price; never charged. */
+  compare_at_sdg: number | null;
   /** SDG total for quantity 1..max_quantity, computed by the database. */
   totals_sdg: number[] | null;
   max_quantity: number;
@@ -56,6 +87,7 @@ export type ProductDetail = {
   description_ar: string | null;
   description_en: string | null;
   image_path: string | null;
+  is_new: boolean;
   updated_at: string;
   category: Category;
   variants: Variant[];
@@ -133,7 +165,9 @@ export const listCategories = cache(
       orThrow(
         await createPublicClient()
           .from("categories")
-          .select("id, slug, name_ar, name_en, description_ar, description_en")
+          .select(
+            "id, slug, name_ar, name_en, description_ar, description_en, image_path",
+          )
           .order("sort_order")
           .order("slug"),
       ),
@@ -145,7 +179,9 @@ export const getCategory = cache(
   catalogCache("category", async (slug: string): Promise<Category | null> => {
     const res = await createPublicClient()
       .from("categories")
-      .select("id, slug, name_ar, name_en, description_ar, description_en")
+      .select(
+        "id, slug, name_ar, name_en, description_ar, description_en, image_path",
+      )
       .eq("slug", slug)
       .maybeSingle();
     return orThrow(res);
@@ -172,8 +208,11 @@ export const searchProducts = cache((params: SearchParams) =>
 /** Fixed listings (home, category pages): cached. */
 export const browseProducts = catalogCache(
   "browse",
-  (params: { category?: string; limit: number }) =>
-    searchProducts({ ...params, sort: "popular" }),
+  (params: {
+    category?: string;
+    limit: number;
+    sort?: "popular" | "price_asc" | "price_desc";
+  }) => searchProducts({ ...params, sort: params.sort ?? "popular" }),
 );
 
 /**
@@ -187,9 +226,9 @@ export const getProduct = cache(
       const res = await createPublicClient()
         .from("products")
         .select(
-          `id, slug, name_ar, name_en, description_ar, description_en, image_path, updated_at,
-       category:categories!inner(id, slug, name_ar, name_en, description_ar, description_en),
-       variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, price_sdg_totals, max_quantity, required_fields, sort_order)`,
+          `id, slug, name_ar, name_en, description_ar, description_en, image_path, is_new, updated_at,
+       category:categories!inner(id, slug, name_ar, name_en, description_ar, description_en, image_path),
+       variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, compare_at_sdg, price_sdg_totals, max_quantity, required_fields, sort_order)`,
         )
         .eq("slug", slug)
         .order("sort_order", { referencedTable: "variants" })
@@ -200,6 +239,7 @@ export const getProduct = cache(
         | (Omit<ProductDetail, "variants" | "category"> & {
             category: Category | null;
             variants: (Omit<Variant, "fields" | "totals_sdg"> & {
+              compare_at_sdg: number | string | null;
               required_fields: unknown;
               price_sdg_totals: (number | string)[] | null;
             })[];
@@ -219,6 +259,8 @@ export const getProduct = cache(
           name_en: v.name_en,
           price_usd: Number(v.price_usd),
           price_sdg: v.price_sdg === null ? null : Number(v.price_sdg),
+          compare_at_sdg:
+            v.compare_at_sdg === null ? null : Number(v.compare_at_sdg),
           totals_sdg: v.price_sdg_totals?.map(Number) ?? null,
           max_quantity: v.max_quantity,
           fields: fields.data,
@@ -271,5 +313,80 @@ export const listSitemapEntries = catalogCache("sitemap", () =>
         })),
       };
     },
+  ),
+);
+
+type TileRow = Category & {
+  section_id: string | null;
+  products: { slug: string }[];
+};
+
+/**
+ * Home sections in order, each with its visible categories that have at
+ * least one orderable product (a product with a visible package). Categories
+ * without a section are returned separately, under "All categories".
+ */
+export const listSections = cache(
+  catalogCache("sections", () =>
+    buildSafe<{ sections: Section[]; unsectioned: CategoryTile[] }>(
+      { sections: [], unsectioned: [] },
+      async () => {
+        const db = createPublicClient();
+        const [sections, categories] = await Promise.all([
+          db
+            .from("category_sections")
+            .select("id, name_ar, name_en")
+            .order("sort_order")
+            .order("created_at"),
+          db
+            .from("categories")
+            .select(
+              "id, slug, name_ar, name_en, description_ar, description_en, image_path, section_id, products!inner(slug, product_variants!inner(id))",
+            )
+            .order("sort_order")
+            .order("slug"),
+        ]);
+        const rows = orThrow(categories) as unknown as TileRow[];
+        const tile = ({ products, section_id: _s, ...c }: TileRow) => {
+          void _s;
+          return {
+            ...c,
+            only_product: products.length === 1 ? products[0].slug : null,
+          };
+        };
+        const bySection = new Map<string, CategoryTile[]>();
+        const unsectioned: CategoryTile[] = [];
+        for (const row of rows) {
+          if (row.section_id) {
+            const list = bySection.get(row.section_id) ?? [];
+            list.push(tile(row));
+            bySection.set(row.section_id, list);
+          } else unsectioned.push(tile(row));
+        }
+        const list = (orThrow(sections) as Omit<Section, "categories">[]).map(
+          (s) => ({ ...s, categories: bySection.get(s.id) ?? [] }),
+        );
+        return {
+          sections: list.filter((s) => s.categories.length > 0),
+          unsectioned,
+        };
+      },
+    ),
+  ),
+);
+
+export const listBanners = cache(
+  catalogCache("banners", () =>
+    buildSafe<Banner[]>([], async () =>
+      orThrow(
+        await createPublicClient()
+          .from("promo_banners")
+          .select(
+            "id, title_ar, title_en, subtitle_ar, subtitle_en, image_path, link",
+          )
+          .order("sort_order")
+          .order("created_at"),
+      ),
+    ),
   ),
 );

@@ -1,5 +1,8 @@
 import "server-only";
 
+import { cookies } from "next/headers";
+import { cache } from "react";
+
 import {
   type FieldDefinition,
   fieldDefinitionsSchema,
@@ -71,13 +74,17 @@ export async function getMyCart(): Promise<Cart> {
   };
 }
 
-/** Number of lines, for the cart badge. 0 when signed out. */
-export async function cartCount(userId: string | null): Promise<number> {
-  if (!userId) return 0;
+/**
+ * Number of lines, for the cart badge on every page. No session cookie: 0,
+ * without any request. Otherwise one count under RLS (the caller's own
+ * lines); an expired or invalid session simply counts 0.
+ */
+export const cartCount = cache(async (): Promise<number> => {
+  const jar = await cookies();
+  if (!jar.getAll().some((c) => c.name.includes("-auth-token"))) return 0;
   const supabase = await createClient();
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from("cart_items")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-  return count ?? 0;
-}
+    .select("id", { count: "exact", head: true });
+  return error ? 0 : (count ?? 0);
+});

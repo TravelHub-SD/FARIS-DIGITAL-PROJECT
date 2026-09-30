@@ -155,6 +155,17 @@ export const PUBLIC_IMAGE_PROFILES = {
       { name: "thumb", box: 400, quality: 75 },
     ],
   },
+  // Category icons: square tiles on the home page (4 per row on phones).
+  icon: {
+    minWidth: 200,
+    minHeight: 200,
+    maxEdge: 4000,
+    aspect: [0.8, 1.25],
+    sizes: [
+      { name: "full", box: 512, quality: 85 },
+      { name: "thumb", box: 256, quality: 80 },
+    ],
+  },
   banner: {
     minWidth: 800,
     minHeight: 200,

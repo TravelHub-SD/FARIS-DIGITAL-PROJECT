@@ -104,3 +104,28 @@ export async function otpBudgetToday(): Promise<{
   const row = (data as { used: number; budget: number }[] | null)?.[0];
   return row ?? null;
 }
+
+export type BannerRow = {
+  id: string;
+  title_ar: string | null;
+  title_en: string | null;
+  subtitle_ar: string | null;
+  subtitle_en: string | null;
+  image_path: string | null;
+  link: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export async function listAdminBanners(): Promise<BannerRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("promo_banners")
+    .select(
+      "id, title_ar, title_en, subtitle_ar, subtitle_en, image_path, link, sort_order, is_active",
+    )
+    .order("sort_order")
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

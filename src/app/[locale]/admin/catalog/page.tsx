@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { SectionForm } from "@/components/admin/catalog-forms";
 import {
   Badge,
   Empty,
@@ -21,6 +22,7 @@ import { localized } from "@/lib/localized";
 import {
   listAdminCategories,
   listAdminProducts,
+  listAdminSections,
 } from "@/server/admin/catalog-queries";
 import { requireAdmin } from "@/server/auth/session";
 
@@ -43,14 +45,31 @@ export default async function CatalogPage({
       : undefined;
   const state = STATES.find((s) => s === sp.state);
   const t = await getTranslations("Admin");
-  const [categories, products] = await Promise.all([
+  const [sections, categories, products] = await Promise.all([
+    listAdminSections(),
     listAdminCategories(),
     listAdminProducts({ q, category, state }),
   ]);
+  const sectionName = new Map(
+    sections.map((s) => [s.id, localized(s.name_ar, s.name_en, locale)]),
+  );
 
   return (
     <>
       <PageHeader title={t("catalog.title")} description={t("catalog.intro")} />
+
+      <Section
+        title={t("catalog.sections")}
+        description={t("catalog.sectionsHint")}
+        testId="admin-sections"
+      >
+        {sections.map((s) => (
+          <div key={s.id} className="rounded-lg border p-3">
+            <SectionForm section={s} />
+          </div>
+        ))}
+        <SectionForm />
+      </Section>
 
       <Section
         title={t("catalog.categories")}
@@ -69,7 +88,9 @@ export default async function CatalogPage({
           <TableWrap>
             <thead>
               <tr>
+                <th className="w-16">{t("catalog.icon")}</th>
                 <th>{t("catalog.name")}</th>
+                <th>{t("catalog.section")}</th>
                 <th>{t("catalog.slug")}</th>
                 <th>{t("catalog.products")}</th>
                 <th>{t("catalog.state")}</th>
@@ -79,12 +100,36 @@ export default async function CatalogPage({
               {categories.map((c) => (
                 <tr key={c.id}>
                   <td>
+                    {c.image_path ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={publicAssetUrl(thumbPath(c.image_path))}
+                        alt=""
+                        width={40}
+                        height={40}
+                        loading="lazy"
+                        className="size-10 rounded-lg border object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-10 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
+                        —
+                      </span>
+                    )}
+                  </td>
+                  <td>
                     <Link
                       href={`/admin/catalog/categories/${c.id}`}
                       className="font-medium text-primary hover:underline"
                     >
                       <L10n value={localized(c.name_ar, c.name_en, locale)} />
                     </Link>
+                  </td>
+                  <td>
+                    {c.section_id ? (
+                      <L10n value={sectionName.get(c.section_id) ?? null} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td dir="ltr" className="text-muted-foreground">
                     {c.slug}
@@ -209,6 +254,9 @@ export default async function CatalogPage({
                       <div className="text-xs text-muted-foreground" dir="ltr">
                         {p.slug}
                       </div>
+                      {p.is_new && (
+                        <Badge tone="info">{t("catalog.isNew")}</Badge>
+                      )}
                     </td>
                     <td>
                       <L10n

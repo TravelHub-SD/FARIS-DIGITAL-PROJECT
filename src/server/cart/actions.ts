@@ -238,5 +238,5 @@ export async function checkoutCart(
   // "Order received" was queued with the order (outbox).
   dispatchSoon();
   refresh();
-  redirect(`/${locale}/account/orders/${result.reference}`);
+  redirect(`/${locale}/account/orders/${result.reference}?placed=1`);
 }

@@ -18,11 +18,6 @@ export type SiteSettings = {
   social_links: Partial<
     Record<"facebook" | "instagram" | "x" | "telegram", string>
   >;
-  banner_title_ar: string | null;
-  banner_title_en: string | null;
-  banner_image_path: string | null;
-  banner_link: string | null;
-  banner_is_active: boolean;
   logo_path: string | null;
 };
 
@@ -33,11 +28,6 @@ const EMPTY: SiteSettings = {
   address_ar: null,
   address_en: null,
   social_links: {},
-  banner_title_ar: null,
-  banner_title_en: null,
-  banner_image_path: null,
-  banner_link: null,
-  banner_is_active: false,
   logo_path: null,
 };
 
@@ -48,7 +38,7 @@ export const getSiteSettings = cache(
         await createPublicClient()
           .from("app_settings")
           .select(
-            "contact_phone, contact_whatsapp, contact_email, address_ar, address_en, social_links, banner_title_ar, banner_title_en, banner_image_path, banner_link, banner_is_active, logo_path",
+            "contact_phone, contact_whatsapp, contact_email, address_ar, address_en, social_links, logo_path",
           )
           .maybeSingle(),
       ) as SiteSettings | null;

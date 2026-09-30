@@ -17,7 +17,7 @@ select set_eq(
   $$ select p.proname::text from pg_proc p
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('anon', p.oid, 'execute') $$,
-  array['search_products', 'price_sdg', 'price_sdg_totals', 'product_comments'],
+  array['search_products', 'price_sdg', 'price_sdg_totals', 'compare_at_sdg', 'product_comments'],
   'anon can execute exactly the public catalog functions (product_comments is definer: visible comments, first names only)');
 
 select set_eq(
@@ -25,7 +25,7 @@ select set_eq(
       where p.pronamespace = 'public'::regnamespace
         and has_function_privilege('authenticated', p.oid, 'execute') $$,
   array['change_order_status', 'submit_kyc', 'kyc_open_document', 'review_kyc', 'kyc_mark_file_deleted',
-        'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt',
+        'search_products', 'price_sdg', 'price_sdg_totals', 'compare_at_sdg', 'create_order', 'submit_receipt', 'review_receipt',
         'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments',
         'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend',
         'void_invoice', 'reissue_invoice', 'search_invoices', 'otp_budget_today',

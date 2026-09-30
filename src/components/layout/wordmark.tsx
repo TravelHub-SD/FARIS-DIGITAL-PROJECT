@@ -12,7 +12,7 @@ export async function Wordmark() {
   return (
     <Link
       href="/"
-      className="flex items-center text-lg font-bold tracking-tight text-foreground"
+      className="flex shrink-0 items-center text-lg font-bold tracking-tight whitespace-nowrap text-foreground"
     >
       {settings.logo_path ? (
         // eslint-disable-next-line @next/next/no-img-element

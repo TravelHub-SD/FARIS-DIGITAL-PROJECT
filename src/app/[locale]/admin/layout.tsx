@@ -65,6 +65,11 @@ export default async function AdminLayout({
       badge: health?.attention ?? null,
     },
     {
+      href: `${base}/banners`,
+      label: t("banners"),
+      show: permissions.has("settings"),
+    },
+    {
       href: `${base}/faqs`,
       label: t("faqs"),
       show: permissions.has("settings"),
