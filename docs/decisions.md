@@ -631,7 +631,10 @@ needs the password first.
 (the site signs the person out on the next page), but an already issued
 access token stays valid at PostgREST until it expires (1 hour,
 `jwt_expiry`). Shortening `jwt_expiry` would narrow that window at the cost
-of more token refreshes; not changed.
+of more token refreshes; not changed. Hassan (2026-09-30): acceptable for
+now; the runbook (section 3) recommends 900 s on the production project,
+with the trade-off. The `<phone>@staff.invalid` label was approved as a
+label only, never a login method.
 Authenticator secrets are stored by GoTrue in `auth.mfa_factors` and are
 therefore in database dumps: backups must stay encrypted (runbook step 12).
 

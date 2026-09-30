@@ -80,6 +80,25 @@ Authentication → Sign In / Providers:
 | Multi-Factor → Authenticator app (TOTP) | **Enabled** (the default on hosted projects; staff cannot open the dashboard without it) |
 | Allow new users to sign up | **On only if Google sign-in is enabled** (step 7); otherwise off. Registration by phone should not need it: the server creates the account through the admin API after the OTP, which this toggle does not govern. Not yet exercised with the toggle off (local runs keep it on; staging accounts were seeded); the owner's registration in step 8 is the check. If it is refused, turn it on: the hook and trigger keep every other path closed. |
 
+**Recommended: lower the access-token (JWT) expiry to 900 s (15 min)**
+(Project Settings → JWT Keys → access token expiry; older dashboards:
+Settings → API → JWT expiry; the default is 3600 s, as in
+`supabase/config.toml`).
+
+- *Why.* A token already issued stays valid at the API until it expires,
+  even after the owner resets a staff member's 2FA (the site signs them out
+  at once; the database API accepts the old token until it expires). The
+  same holds for a stolen token. Deactivating a staff member is not affected:
+  the database checks `is_active` on every call. 15 minutes instead of an hour
+  shortens that window by three quarters.
+- *Cost.* The site renews the token four times as often: one extra request
+  to Supabase Auth per signed-in visitor every 15 minutes (well inside the
+  plan's limits at this scale), and on a weak connection a renewal can fail
+  and cost one retry or, rarely, a fresh sign-in. Customers keep their long
+  sign-in (the refresh token is unchanged); only the short token rotates.
+- Accepted for now at 3600 s (decisions.md 2026-09-28); lower it before the
+  client's staff start working. Do not go below 300 s.
+
 Authentication → Hooks: *Send SMS* → Postgres `private.auth_hook_send_sms`;
 *Before User Created* → Postgres `private.auth_hook_before_user_created`.
 
