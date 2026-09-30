@@ -87,7 +87,7 @@ settings staff only, allowlisted in pgTAP). Everything else unchanged.
 
 | Decision (decisions.md) | Then | Now |
 |---|---|---|
-| Admin 2FA deferred (2026-09-23) | Accepted until launch. | **Recommend enforcing TOTP before launch** (below). |
+| Admin 2FA deferred (2026-09-23) | Accepted until launch. | **Closed (Phase 10b, 2026-09-28):** TOTP enforced by the database for every staff account (decisions.md 2026-09-28). |
 | CSP as debt (2026-09-23) | Open. | Closed (F5). Enforced directly rather than report-only first: every page in both modes was checked with zero violations. |
 | Account existence probing, 30 lookups/h per IP (2026-09-24) | Accepted. | Still accepted; the IPv6 hole is closed (F2). A distributed attacker (many IPv4 addresses) can still probe; the answer only reveals that a number is registered. If abuse shows up, add a challenge (Turnstile) to the registration step. |
 | OTP global daily budget | Stops spending at 300/day. | Still right, and now visible (F4). An attacker with many IPs and numbers can still use it up and pause sign-ups for the day; that is the chosen trade-off (money over availability). |
@@ -98,7 +98,7 @@ settings staff only, allowlisted in pgTAP). Everything else unchanged.
 | Free tiers (no backups, pausing) | Development only. | Launch blocker: production needs Supabase Pro and Vercel Pro (runbook, client table). |
 | Supabase cookies readable by scripts | Implicit. | Mitigated by the CSP (F5); required by the browser client for Google linking. |
 
-## Admin 2FA: recommendation
+## Admin 2FA: recommendation (approved and implemented 2026-09-28)
 
 **Enforce TOTP (authenticator app) for every staff account before launch.**
 
@@ -126,3 +126,20 @@ settings staff only, allowlisted in pgTAP). Everything else unchanged.
   becomes real the day the client's staff start working).
 - It depends on nothing from the client, so it can be done right after
   approval.
+
+### As implemented (Phase 10b)
+
+- `admin_assurance_ok()` requires `aal = aal2`. Proof (integration test, real
+  GoTrue + PostgREST): the same staff session reads 0 orders, 0 settings and
+  0 customer profiles and gets `FORBIDDEN` from `admin_orders` with a
+  password only, and everything its permissions allow after an
+  authenticator code. Planted: the gate set back to `true` fails 4 pgTAP
+  tests.
+- Phone-only staff need an email label for Supabase TOTP; they get
+  `<phone>@staff.invalid` (never deliverable, not a login).
+- Wrong codes: 5 per 15 minutes per staff member, then even the right code
+  is refused.
+- Recovery: backup authenticator; owner reset (also ends that person's
+  sessions); break-glass SQL for the owner (Supabase SQL editor only).
+- Residual: an access token issued before a reset stays valid at PostgREST
+  for up to 1 hour; the site itself signs the person out at once.

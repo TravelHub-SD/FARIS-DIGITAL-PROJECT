@@ -1,7 +1,14 @@
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { L10n } from "@/components/catalog/l10n";
+import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
-import { getSiteSettings } from "@/server/catalog/site";
+import { localized } from "@/lib/localized";
+import {
+  getSiteSettings,
+  listPublishedPages,
+  SITE_PAGE_SLUGS,
+} from "@/server/catalog/site";
 
 // Contacts and social accounts are edited in the dashboard (Settings).
 const NETWORKS = [
@@ -13,10 +20,18 @@ const NETWORKS = [
 
 export async function SiteFooter() {
   const t = await getTranslations("Footer");
-  const [locale, settings] = await Promise.all([
+  const [locale, settings, pages] = await Promise.all([
     getLocale(),
     getSiteSettings(),
+    listPublishedPages(),
   ]);
+  // About / Terms / Privacy, in that order, once published in the dashboard.
+  const pageLinks = SITE_PAGE_SLUGS.flatMap((slug) => {
+    const page = pages.find((p) => p.slug === slug);
+    const title =
+      page && localized(page.title_ar, page.title_en, locale as Locale);
+    return title ? [{ slug, title }] : [];
+  });
   const year = new Date().getFullYear();
   const social = NETWORKS.filter(([key]) => settings.social_links?.[key]);
   const address =
@@ -70,6 +85,22 @@ export async function SiteFooter() {
             )}
           </ul>
           {address && <p>{address}</p>}
+          {pageLinks.length > 0 && (
+            <nav aria-label={t("pages")} data-testid="footer-pages">
+              <ul className="flex flex-wrap gap-x-4 gap-y-1">
+                {pageLinks.map(({ slug, title }) => (
+                  <li key={slug}>
+                    <Link
+                      href={`/${slug}`}
+                      className="underline-offset-4 hover:text-foreground hover:underline"
+                    >
+                      <L10n value={title} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
           <p>{t("rights", { year })}</p>
         </div>
         {social.length > 0 && (

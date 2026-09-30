@@ -22,9 +22,9 @@ Never copy data from staging: production starts from migrations only.
 | 11 | Exchange rate and KYC threshold | C | **Yes** | Orders are refused until both are set (Settings). |
 | 12 | Confirm the three bank accounts and the Arabic branch names | C | **Yes** | Created by migration from the spec; branch names were translated by us. |
 | 13 | Business name (ar/en), contacts, address, social links | C | No (invoices print the business name: set before the first sale) | Settings. |
-| 14 | About, Terms and Privacy texts (and a refund policy) | C | Recommended (D decides with Hassan) | Spec §3 (Static pages) lists them with client-supplied texts. **The pages are not built yet** (gap found in the Phase 10 review; not on the roadmap). |
+| 14 | About, Terms and Privacy texts (the terms should cover refunds) | C writes, staff enter them in *Pages* | **Yes** (signed scope) | The pages are built and editable (Phase 10b); each stays hidden until its text is published. |
 | 15 | Owner registers on the live site with their phone | C | **Yes** | Then D runs the owner bootstrap (step 8). |
-| 16 | Staff phones with an authenticator app | C | Only if admin 2FA is approved | docs/security-review.md. |
+| 16 | An authenticator app on every staff phone (Google or Microsoft Authenticator), and a second phone for the owner's backup | C | **Yes** | The dashboard opens only with a code (Phase 10b). |
 
 ## 1. Code (D)
 
@@ -77,6 +77,7 @@ Authentication → Sign In / Providers:
 | Manual linking | **On** (a Google user links their phone) |
 | Minimum password length | **10** |
 | Leaked password protection | **On** (Pro) |
+| Multi-Factor → Authenticator app (TOTP) | **Enabled** (the default on hosted projects; staff cannot open the dashboard without it) |
 | Allow new users to sign up | **On only if Google sign-in is enabled** (step 7); otherwise off. Registration by phone should not need it: the server creates the account through the admin API after the OTP, which this toggle does not govern. Not yet exercised with the toggle off (local runs keep it on; staging accounts were seeded); the owner's registration in step 8 is the check. If it is refused, turn it on: the hook and trigger keep every other path closed. |
 
 Authentication → Hooks: *Send SMS* → Postgres `private.auth_hook_send_sms`;
@@ -180,15 +181,30 @@ New values for production; never reuse staging's.
    insert into public.admins (user_id, is_owner)
    select id, true from auth.users where phone = '2499XXXXXXXX';  -- without '+'
    ```
-3. C signs in: *My account* shows the dashboard card. The owner then adds
-   staff in *Admins* (each staff member first registers normally).
+3. C signs in: *My account* shows the dashboard card. The first click on it
+   opens *Set up two-step sign-in*: scan the QR code with an authenticator
+   app, enter the code. Then, straight away, *Security → Add another
+   authenticator* on a second phone (the owner's only way back in without
+   the database).
+4. The owner adds staff in *Admins* (each staff member first registers
+   normally, then sets up their own authenticator at their first dashboard
+   visit).
+5. Owner lost every authenticator (break glass, whoever holds the Supabase
+   account, after confirming it is really the owner):
+   ```sql
+   select private.break_glass_reset_mfa('2499XXXXXXXX');  -- the owner's phone
+   ```
+   It removes the owner's authenticators and signs them out everywhere
+   (audited); the next sign-in sets up a new one. Staff who lose their phone
+   ask the owner: *Admins → Reset two-step sign-in*.
 
 ## 9. Before opening (C, in the dashboard)
 
 Settings: exchange rate, KYC threshold, business name (ar/en), contacts,
 address, social links, logo, banner; confirm the bank accounts; review the
 limits and the OTP daily budget. Catalog: categories, products, images,
-packages. FAQs. Then one real order end to end with a small amount (register,
+packages. FAQs. *Pages*: About, Terms and Privacy texts in Arabic (and
+English), then *Published*. Then one real order end to end with a small amount (register,
 order, transfer, receipt, accept, complete, invoice, WhatsApp messages).
 
 ## 10. Demo accounts and seed data
@@ -233,8 +249,9 @@ refers to them.
   The `kyc-documents` bucket is **not** exported: identity documents are
   deleted after review and must not live in backups. Keep exports encrypted
   (they hold customer names and phones) in the client's storage, not the
-  developer's. Vault secrets are not in the dump; re-create them (step 6.3)
-  after a restore.
+  developer's. The dump also holds the staff authenticator secrets
+  (`auth.mfa_factors`), one more reason to keep it encrypted. Vault secrets
+  are not in the dump; re-create them (step 6.3) after a restore.
   Verified on the local stack: the three dumps cover `auth`, `public`,
   `private` and storage metadata; the file export copied 27 of 27 objects
   (20 receipts, 7 public images).
@@ -282,6 +299,10 @@ A hosted copy for review with demo data only. It never holds real customers.
   those demo messages exist: they are addressed to the demo numbers
   (+2499000000xx), which could belong to real people.
   - بالعربية: الشريط الأحمر في staging («27 رسالة تنتظر أكثر من المتوقع») متوقع: البيانات التجريبية أُدخلت بـ SQL، وخدمة إعادة الإرسال غير مفعّلة هناك، وواتساب غير موصول. لا يحتاج أي إجراء. لا توصل بيانات Meta الحقيقية بـ staging لأن الرسائل موجهة لأرقام تجريبية قد تكون لأشخاص حقيقيين.
+- **Two-step sign-in on staging:** since Phase 10b the demo owner and the
+  demo orders staff are asked to set up an authenticator at their next
+  dashboard visit (any authenticator app works; the account label is
+  `2499000000xx@staff.invalid`). The demo customer is not affected.
 - **Demo accounts:** owner, orders-only staff and one customer sign in with phone
   + password (`+249900000001/2/3`). Passwords are never in the repository;
   `demo-seed.sql` takes their bcrypt hashes as psql variables. Other demo

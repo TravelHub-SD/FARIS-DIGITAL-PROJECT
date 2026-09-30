@@ -317,9 +317,11 @@ auth_token = "placeholder-not-a-secret"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# Staff only: every admin policy requires aal2 (private.admin_assurance_ok,
+# decisions.md 2026-09-28). Customers are never offered enrolment.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

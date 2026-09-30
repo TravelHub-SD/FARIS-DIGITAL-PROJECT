@@ -160,7 +160,7 @@ select is((select status::text || '/' || needs_attention::text || '/' || error_c
 
 -- Staff actions: orders permission only; audited.
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000051","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000051","role":"authenticated","aal":"aal2"}';
 select is((select count(*)::int from message_logs), 0, 'customer cannot read message_logs');
 select throws_ok($$ select whatsapp_retry((select id from n)) $$, '42501', 'FORBIDDEN',
                  'customer cannot retry a message');
@@ -168,7 +168,7 @@ select throws_ok($$ select whatsapp_mark_handled((select id from n)) $$, '42501'
                  'customer cannot mark a message handled');
 select throws_ok($$ select * from whatsapp_spend(current_date, current_date) $$, '42501', 'FORBIDDEN',
                  'customer cannot read spend');
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000052","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000052","role":"authenticated","aal":"aal2"}';
 select throws_ok($$ select * from whatsapp_spend(current_date, current_date) $$, '42501', 'FORBIDDEN',
                  'orders staff without settings cannot read spend');
 select lives_ok($$ select whatsapp_retry((select id from n)) $$, 'orders staff can retry a failed message');

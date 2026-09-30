@@ -64,6 +64,31 @@ export async function listFaqs(): Promise<FaqRow[]> {
   return data ?? [];
 }
 
+export type SitePageRow = {
+  slug: "about" | "terms" | "privacy";
+  title_ar: string | null;
+  title_en: string | null;
+  body_ar: string | null;
+  body_en: string | null;
+  is_published: boolean;
+  updated_at: string;
+};
+
+/** About / Terms / Privacy, drafts included (settings staff, RLS). */
+export async function listSitePages(): Promise<SitePageRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("site_pages")
+    .select(
+      "slug, title_ar, title_en, body_ar, body_en, is_published, updated_at",
+    );
+  if (error) throw new Error(error.message);
+  const order = ["about", "terms", "privacy"];
+  return ((data ?? []) as SitePageRow[]).sort(
+    (a, b) => order.indexOf(a.slug) - order.indexOf(b.slug),
+  );
+}
+
 /**
  * Today's OTP count against the daily budget (Khartoum day), for the admin
  * alert. Settings staff only: the function returns no row for anyone else.

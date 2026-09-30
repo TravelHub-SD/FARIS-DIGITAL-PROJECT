@@ -48,7 +48,9 @@ export type AdminErrorKey =
   | "too_big_dimensions"
   | "not_retryable"
   | "delete_failed"
-  | "already_issued";
+  | "already_issued"
+  | "cannot_reset_self"
+  | "page_incomplete";
 
 export const NOT_ALLOWED: ActionResult = { ok: false, error: "not_allowed" };
 export const INVALID: ActionResult = { ok: false, error: "invalid_input" };
@@ -69,11 +71,14 @@ const DB_ERRORS: [RegExp, AdminErrorKey][] = [
   [/admins_pkey/, "already_admin"],
   [/_slug_key/, "slug_taken"],
   [/foreign key/i, "in_use"],
+  [/site_pages_check/, "page_incomplete"],
   [/check constraint|invalid input/i, "invalid_input"],
   [/MESSAGE_NOT_RETRYABLE/, "not_retryable"],
   [/KYC_FILE_STILL_PRESENT/, "delete_failed"],
   [/VOID_REASON_REQUIRED/, "reason_required"],
   [/INVOICE_ALREADY_ISSUED/, "already_issued"],
+  [/CANNOT_RESET_SELF/, "cannot_reset_self"],
+  [/NOT_STAFF/, "not_found"],
   [/_NOT_FOUND/, "not_found"],
 ];
 

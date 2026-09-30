@@ -25,6 +25,9 @@ const PAGE_GUARD: [RegExp, string][] = [
   [/^kyc\//, 'requireAdmin(locale, "kyc")'],
   [/^comments\//, 'requireAdmin(locale, "comments")'],
   [/^faqs\//, 'requireAdmin(locale, "settings")'],
+  [/^pages\//, 'requireAdmin(locale, "settings")'],
+  // Every staff member manages their own authenticators.
+  [/^security\//, "requireAdmin(locale)"],
   [/^settings\//, 'requireAdmin(locale, "settings")'],
   [/^messages\//, 'requireAdmin(locale, "orders")'],
   [/^invoices\//, 'requireAdmin(locale, "invoices")'],
@@ -61,6 +64,7 @@ const ACTION_GUARD: Record<string, Record<string, string>> = {
     addAdmin: "actionOwner()",
     setAdminPermission: "actionOwner()",
     setAdminActive: "actionOwner()",
+    resetAdminMfa: "actionOwner()",
   },
 };
 

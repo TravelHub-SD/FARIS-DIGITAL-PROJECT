@@ -10,6 +10,7 @@ import { formatPhone } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 import {
   addAdmin,
+  resetAdminMfa,
   setAdminActive,
   setAdminPermission,
 } from "@/server/admin/people";
@@ -160,6 +161,20 @@ export default async function AdminsPage({
                       {a.is_active
                         ? t("admins.deactivate")
                         : t("admins.reactivate")}
+                    </button>
+                  </ActionForm>
+                  <ActionForm
+                    action={resetAdminMfa}
+                    confirmMessage={t("admins.resetMfaConfirm")}
+                    successMessage={t("admins.resetMfaDone")}
+                    testId="admin-reset-mfa"
+                  >
+                    <input type="hidden" name="adminId" value={a.user_id} />
+                    <button
+                      type="submit"
+                      className={`${buttonVariants({ variant: "outline", size: "sm" })} justify-self-start`}
+                    >
+                      {t("admins.resetMfa")}
                     </button>
                   </ActionForm>
                 </>

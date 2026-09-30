@@ -3,6 +3,8 @@ import { createHmac, randomBytes, randomUUID } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { enrolTotp, totp } from "./totp";
+
 export const url = () => process.env.TEST_SUPABASE_URL!;
 export const anonKey = () => process.env.TEST_ANON_KEY!;
 
@@ -41,13 +43,46 @@ export type TestUser = {
 
 type AdminSpec = { owner?: boolean; permissions?: string[] };
 
+// Staff authenticator secrets created in this process (the tests' "phones").
+const totpSecrets = new Map<string, { secret: string; factorId: string }>();
+
+/**
+ * Staff sessions must be aal2 (admin_assurance_ok). Upgrades the signed-in
+ * `client` with the staff member's authenticator, enrolling one first if this
+ * process does not know it (a staff member created by another test file).
+ * Returns the aal2 access token.
+ */
+export async function elevate(
+  client: SupabaseClient,
+  userId: string,
+): Promise<string> {
+  const known = totpSecrets.get(userId);
+  if (known) {
+    const r = await client.auth.mfa.challengeAndVerify({
+      factorId: known.factorId,
+      code: totp(known.secret),
+    });
+    if (!r.error) return r.data.access_token;
+  }
+  const sb = service();
+  const { data: factors } = await sb.auth.admin.mfa.listFactors({ userId });
+  for (const f of factors?.factors ?? [])
+    await sb.auth.admin.mfa.deleteFactor({ id: f.id, userId });
+  const e = await enrolTotp(client);
+  totpSecrets.set(userId, { secret: e.secret, factorId: e.factorId });
+  return e.accessToken;
+}
+
+/** The authenticator secret of a staff member created in this process. */
+export const totpSecretOf = (userId: string) => totpSecrets.get(userId)?.secret;
+
 /**
  * Creates a user the way the server does after OTP verification
  * (service role + `signup_verified: 'otp'` marker), then signs in as them
  * with phone + password and the public anon key (email login is disabled).
  */
 export async function createUser(
-  opts: { admin?: AdminSpec; name?: string } = {},
+  opts: { admin?: AdminSpec; name?: string; mfa?: boolean } = {},
 ): Promise<TestUser> {
   const sb = service();
   const phoneDigits = randomPhoneDigits();
@@ -82,13 +117,13 @@ export async function createUser(
     password,
   });
   if (signIn.error) throw new Error(`signIn: ${signIn.error.message}`);
-  return {
-    id,
-    phone: `+${phoneDigits}`,
-    password,
-    client,
-    accessToken: signIn.data.session!.access_token,
-  };
+  // Staff: enrol an authenticator and upgrade the session (aal2), unless the
+  // test wants a password-only staff session (mfa: false).
+  const accessToken =
+    opts.admin && opts.mfa !== false
+      ? await elevate(client, id)
+      : signIn.data.session!.access_token;
+  return { id, phone: `+${phoneDigits}`, password, client, accessToken };
 }
 
 /**
@@ -120,7 +155,7 @@ export async function ownerUser(): Promise<TestUser> {
     phone,
     password,
     client,
-    accessToken: signIn.data.session!.access_token,
+    accessToken: await elevate(client, existing.user_id),
   };
 }
 

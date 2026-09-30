@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { BrowserContext } from "@playwright/test";
 
-import { anonKey, url } from "../integration/helpers";
+import { anonKey, elevate, url } from "../integration/helpers";
 
 export * from "../integration/helpers";
 
@@ -59,6 +59,9 @@ export async function signInCookies(
   context: BrowserContext,
   phone: string,
   password: string,
+  // Staff get an aal2 session (authenticator code), as after the sign-in
+  // step on /two-factor; false leaves a password-only staff session.
+  opts: { mfa?: boolean } = {},
 ) {
   const jar = new Map<string, string>();
   const client = createServerClient(url(), anonKey(), {
@@ -67,16 +70,29 @@ export async function signInCookies(
       setAll: (list) => list.forEach(({ name, value }) => jar.set(name, value)),
     },
   });
-  const { error } = await client.auth.signInWithPassword({ phone, password });
+  const { data, error } = await client.auth.signInWithPassword({
+    phone,
+    password,
+  });
   if (error) throw new Error(`signIn: ${error.message}`);
+  if (opts.mfa !== false) {
+    const { data: staff } = await client
+      .from("admins")
+      .select("is_active")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+    if (staff?.is_active) await elevate(client, data.user.id);
+  }
   await context.addCookies(
-    [...jar].map(([name, value]) => ({
-      name,
-      value,
-      domain: "localhost",
-      path: "/",
-      sameSite: "Lax" as const,
-    })),
+    [...jar]
+      .filter(([, value]) => value)
+      .map(([name, value]) => ({
+        name,
+        value,
+        domain: "localhost",
+        path: "/",
+        sameSite: "Lax" as const,
+      })),
   );
 }
 

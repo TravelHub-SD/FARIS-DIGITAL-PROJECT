@@ -26,7 +26,8 @@
     "followUs": "Follow us",
     "rights": "© {year} Faris Digital. All rights reserved.",
     "contactUs": "Contact us",
-    "whatsapp": "WhatsApp"
+    "whatsapp": "WhatsApp",
+    "pages": "Site information"
   },
   "Errors": {
     "unavailableTitle": "Temporarily unavailable",
@@ -110,7 +111,41 @@
       "name_too_short": "Enter your full name.",
       "name_too_long": "Name is too long.",
       "invalid_code_format": "Enter the 6-digit code.",
-      "password_required": "Enter your password."
+      "password_required": "Enter your password.",
+      "not_allowed": "This is not available for your account.",
+      "last_factor": "You cannot remove your only authenticator. Add another one first.",
+      "totp_invalid": "Wrong code. Use the newest code in the app; if it keeps failing, check that your phone's time is set automatically."
+    },
+    "twoFactor": {
+      "setupTitle": "Set up two-step sign-in",
+      "setupDescription": "Staff accounts need a code from an authenticator app on your phone as well as your password. This protects customers' data and payments if a password is ever stolen.",
+      "verifyTitle": "Enter your authenticator code",
+      "verifyDescription": "Open the authenticator app on your phone and enter the 6-digit code shown for Faris Digital.",
+      "whyRequired": "Required for every staff account. It takes about two minutes.",
+      "lostPhone": "Lost or changed your phone? Use a backup authenticator if you added one. Otherwise ask the owner to reset your two-step sign-in (Admins page).",
+      "signOut": "Sign out",
+      "start": "Set up authenticator app",
+      "addBackup": "Add another authenticator",
+      "step1": "Install an authenticator app on your phone (Google Authenticator or Microsoft Authenticator).",
+      "step2": "In the app, add an account and scan this QR code, or type the key below.",
+      "step3": "Enter the 6-digit code the app shows.",
+      "qrAlt": "QR code to add Faris Digital to your authenticator app",
+      "manualKey": "Or type this key in the app:",
+      "code": "6-digit code",
+      "codeHint": "The code changes every 30 seconds.",
+      "confirm": "Confirm and continue",
+      "verify": "Continue",
+      "remove": "Remove",
+      "removeConfirm": "Remove this authenticator? Codes from that phone will stop working.",
+      "securityTitle": "Two-step sign-in",
+      "securityIntro": "The authenticator apps that can give you a sign-in code.",
+      "backupAdvice": "Add a second authenticator on another phone, so a lost phone does not lock you out. Otherwise the owner has to reset your two-step sign-in.",
+      "backupAdviceOwner": "Add a second authenticator on another phone (or a trusted person's). As the owner, if you lose your only one, the reset has to be done in the database by whoever holds the Supabase account.",
+      "yourAuthenticators": "Your authenticators",
+      "authenticatorN": "Authenticator {n}",
+      "added": "added {at}",
+      "addBackupTitle": "Add a backup authenticator",
+      "addBackupHint": "Scan the new QR code on the other phone, then enter a code from it."
     }
   },
   "Account": {
@@ -224,7 +259,9 @@
       "admins": "Admins",
       "audit": "Audit log",
       "messages": "WhatsApp messages",
-      "invoices": "Invoices"
+      "invoices": "Invoices",
+      "security": "Security",
+      "pages": "Pages"
     },
     "permissions": {
       "orders": "Orders",
@@ -564,7 +601,10 @@
       "revoke": "Revoke",
       "deactivate": "Deactivate admin",
       "reactivate": "Reactivate",
-      "deactivateConfirm": "Deactivate this admin? They lose access to the dashboard immediately."
+      "deactivateConfirm": "Deactivate this admin? They lose access to the dashboard immediately.",
+      "resetMfa": "Reset two-step sign-in",
+      "resetMfaConfirm": "Reset this person's two-step sign-in? Their authenticator apps stop working and they are signed out everywhere. They set up a new one at their next sign-in.",
+      "resetMfaDone": "Reset. They will set up a new authenticator at their next sign-in."
     },
     "audit": {
       "title": "Audit log",
@@ -641,7 +681,9 @@
       "too_big_dimensions": "The image dimensions are too large. Resize it before uploading (see the limits above).",
       "not_retryable": "This message cannot be retried.",
       "delete_failed": "The file could not be deleted from storage. Try again; if it keeps failing, report it.",
-      "already_issued": "This order already has a valid invoice."
+      "already_issued": "This order already has a valid invoice.",
+      "cannot_reset_self": "Reset your own authenticators on the Security page.",
+      "page_incomplete": "A published page needs a title and a text in at least one language."
     },
     "messages": {
       "title": "WhatsApp messages",
@@ -784,6 +826,20 @@
       "near": "Verification codes today: {used} of the daily limit {budget}. At the limit, new registrations and password resets stop until midnight.",
       "exhausted": "The daily limit of verification codes is reached ({used} of {budget}). New registrations and password resets are refused until midnight (Khartoum time). If this is not expected traffic, someone may be trying to spend the WhatsApp budget; raise the limit only if the requests are genuine.",
       "open": "Open settings"
+    },
+    "pages": {
+      "title": "Pages",
+      "intro": "About us, Terms and Privacy, in Arabic and English. A published page appears in the site footer and at its address; a draft is visible only here. Plain text: leave an empty line between paragraphs.",
+      "pageTitle": "Title",
+      "body": "Text",
+      "published": "Published",
+      "draft": "Draft",
+      "updated": "Last saved {at}",
+      "names": {
+        "about": "About us",
+        "terms": "Terms of use",
+        "privacy": "Privacy policy"
+      }
     }
   },
   "Catalog": {

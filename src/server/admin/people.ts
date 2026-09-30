@@ -151,3 +151,19 @@ export async function setAdminActive(
     .select("user_id");
   return affected(res);
 }
+
+/**
+ * Owner: a staff member lost or replaced their phone. Removes all their
+ * authenticators and signs them out everywhere; they set up a new one at the
+ * next sign-in. Audited by the database function.
+ */
+export async function resetAdminMfa(formData: FormData): Promise<ActionResult> {
+  if (!(await actionOwner())) return NOT_ALLOWED;
+  const input = z.object({ adminId: z.guid() }).safeParse(fields(formData));
+  if (!input.success) return INVALID;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_reset_mfa", {
+    p_user_id: input.data.adminId,
+  });
+  return error ? dbError(error) : { ok: true };
+}

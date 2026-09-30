@@ -7,6 +7,8 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 
+import { currentAal } from "./mfa";
+
 export type AppPermission =
   | "orders"
   | "products"
@@ -110,12 +112,19 @@ export const getIsOwner = cache(async (userId: string): Promise<boolean> => {
   return !!data?.is_active && !!data.is_owner;
 });
 
-/** Non-admins get a 404: the admin area does not reveal that it exists. */
+/**
+ * Non-admins get a 404: the admin area does not reveal that it exists.
+ * Staff signed in with a password only are sent to the authenticator step
+ * first; the database refuses them anyway (admin_assurance_ok needs aal2).
+ */
 export async function requireAdmin(locale: Locale, permission?: AppPermission) {
   const user = await requireCompleteUser(locale);
   const permissions = await getAdminPermissions(user.id);
-  if (!permissions || (permission && !permissions.has(permission))) notFound();
-  return { user, permissions };
+  if (!permissions) notFound();
+  if ((await currentAal()) !== "aal2")
+    redirect({ href: "/two-factor", locale });
+  if (permission && !permissions!.has(permission)) notFound();
+  return { user, permissions: permissions! };
 }
 
 /** Owner-only areas (admins, audit log): 404 for every other admin. */
@@ -136,14 +145,14 @@ export async function actionAdmin(
   permission: AppPermission,
 ): Promise<SessionUser | null> {
   const user = await actionCompleteUser();
-  if (!user) return null;
+  if (!user || (await currentAal()) !== "aal2") return null;
   const permissions = await getAdminPermissions(user.id);
   return permissions?.has(permission) ? user : null;
 }
 
 export async function actionOwner(): Promise<SessionUser | null> {
   const user = await actionCompleteUser();
-  if (!user) return null;
+  if (!user || (await currentAal()) !== "aal2") return null;
   return (await getIsOwner(user.id)) ? user : null;
 }
 

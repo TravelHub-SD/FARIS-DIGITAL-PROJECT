@@ -102,15 +102,15 @@ Done without the client (2026-09-26):
 - [x] Content-Security-Policy with a per-request nonce on every page; injected inline script proven blocked on public, customer and admin pages; every page × ar/en × role has zero violations, in dev and on the production build (decisions.md 2026-09-26)
 - [x] Security review: RLS, authorization, file access, server-side validation, accepted risks re-evaluated (docs/security-review.md); fixed F1 comments table public, F2 IPv6 /64 rate-limit bypass, F3 pg_net schema, F4 silent OTP budget exhaustion, HSTS; new pgTAP guards
 - [x] `pg_graphql` confirmed absent on the hosted staging project (production: runbook step 2.3)
-- [x] Revisit admin 2FA: recommendation is TOTP for all staff before launch (security-review.md) — **awaiting Hassan's approval**
-- [ ] Admin TOTP (enrolment, sign-in step, `aal2` in `admin_assurance_ok()`, recovery, tests) — if approved
+- [x] Revisit admin 2FA: recommendation is TOTP for all staff before launch (security-review.md) — approved by Hassan 2026-09-28
+- [x] Admin TOTP (Phase 10b): `aal2` required by `admin_assurance_ok()`, proven by a direct PostgREST call with a password-only staff session; set-up and code screens in Arabic and English; backup authenticator; owner reset; break-glass SQL for the owner; wrong-code limit
 - [x] Vercel functions pinned to `fra1`, next to the Frankfurt database (`vercel.json`; staging ran in `iad1`)
 - [x] `main` branch for production deployments
 - [x] Launch runbook (docs/launch-runbook.md): client-owned Supabase + Vercel, migrations only, auth settings, secrets, WhatsApp + scheduler, Google OAuth, owner bootstrap, demo-data proof, backups, rollback
 - [x] Manual backup procedure (DB dump + storage export), commands run on the local stack
 - [x] Arabic operations guide for the client (docs/handover.md): daily work, every admin screen, backups, what to do when something fails
 - [x] Full test run (unit + integration, pgTAP, e2e on dev and on the production build)
-- [ ] About / Terms / Privacy pages (spec §3 "Static pages"): not built, found missing in this review — **decision needed**
+- [x] About / Terms / Privacy pages (spec §3, Phase 10b): editable in the dashboard (settings permission, as FAQs), bilingual with fallback, plain text, footer + sitemap when published
 - [ ] Lighthouse mobile on staging: blocked here (the container cannot reach `*.vercel.app`, and staging is behind Vercel Authentication); measured on the local production build instead
 - [ ] Revisit `experimental.prefetchInlining: false` when Next fixes per-locale segment inlining upstream (decisions.md 2026-09-26)
 - [ ] Restore drill of a backup into an empty hosted project (runbook step 12)
@@ -124,6 +124,8 @@ Depends on the client (runbook §0):
 - [ ] Production secrets generated (`OTP_HMAC_PEPPER`, `WHATSAPP_DISPATCH_SECRET`), `WHATSAPP_DRIVER=meta`
 - [ ] WhatsApp against the real Meta API: the 17-point checklist in docs/whatsapp-templates.md (templates approved in ar/en, button format, API version, error codes, webhook signature and pricing fields, rates, scheduler)
 - [ ] WhatsApp setup on the hosted project (runbook step 6): Vercel variables, webhook subscription then `WHATSAPP_VERIFY_TOKEN` removed, the two Vault secrets, Sudan rates
-- [ ] Real content: catalog, rate, KYC threshold, bank branch names confirmed, business name, logo, texts for About/Terms/Privacy
+- [ ] Real content: catalog, rate, KYC threshold, bank branch names confirmed, business name, logo, texts for About/Terms/Privacy (entered in *Pages*)
+- [ ] Authenticator app on every staff phone; the owner adds a backup authenticator on a second phone
+- [ ] Staging: the demo owner and orders staff set up an authenticator at their next dashboard visit
 - [ ] Real phones (Hassan): invoice "Save as PDF" on Android Chrome (and iPhone Safari, Firefox desktop); a full customer order on a Sudanese mobile network
 - [ ] Source handover via GitHub (client-owned repository or transfer) + archive

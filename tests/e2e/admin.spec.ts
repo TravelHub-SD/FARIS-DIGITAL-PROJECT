@@ -833,7 +833,12 @@ test("admins: the owner adds an admin and grants one area; the audit log shows w
   const newAdmin = await (await contextFor(browser, person)).newPage();
   await newAdmin.goto("/ar/admin");
   const nav = newAdmin.getByRole("navigation", { name: "أقسام لوحة التحكم" });
-  await expect(nav.getByRole("link")).toHaveText(["نظرة عامة", "التعليقات"]);
+  // Their own area plus Security (every staff member manages their 2FA).
+  await expect(nav.getByRole("link")).toHaveText([
+    "نظرة عامة",
+    "التعليقات",
+    "أمان الحساب",
+  ]);
   expect((await newAdmin.goto("/ar/admin/comments"))!.status()).toBe(200);
   expect((await newAdmin.goto("/ar/admin/orders"))!.status()).toBe(404);
 

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { actionAdmin } from "@/server/auth/session";
+import { SITE_PAGE_SLUGS } from "@/server/catalog/site";
 import { PUBLIC_IMAGE_PROFILES } from "@/server/files/image";
 
 import {
@@ -276,6 +277,48 @@ export async function deleteFaq(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
   const result = affected(
     await supabase.from("faqs").delete().eq("id", id.data).select("id"),
+  );
+  if (result.ok) revalidatePublic();
+  return result;
+}
+
+// Forms submit textarea line breaks as CRLF; stored text uses "\n" so the
+// length limit matches the database and paragraphs split the same way.
+const pageText = (max: number) =>
+  z
+    .string()
+    .transform((v) => v.replace(/\r\n?/g, "\n").trim())
+    .pipe(z.string().max(max))
+    .transform((v) => v || null);
+
+const pageSchema = z.object({
+  slug: z.enum(SITE_PAGE_SLUGS),
+  title_ar: pageText(150),
+  title_en: pageText(150),
+  body_ar: pageText(30000),
+  body_en: pageText(30000),
+  is_published: checkbox,
+});
+
+/** About / Terms / Privacy text (settings permission, like the FAQs). */
+export async function savePage(formData: FormData): Promise<ActionResult> {
+  if (!(await actionAdmin("settings"))) return NOT_ALLOWED;
+  const input = pageSchema.safeParse(fields(formData));
+  if (!input.success) return INVALID;
+  const { slug, ...row } = input.data;
+  // Same rule as the table's CHECK: live pages need a title and a text.
+  if (
+    row.is_published &&
+    (!(row.title_ar || row.title_en) || !(row.body_ar || row.body_en))
+  )
+    return { ok: false, error: "page_incomplete" };
+  const supabase = await createClient();
+  const result = affected(
+    await supabase
+      .from("site_pages")
+      .update(row)
+      .eq("slug", slug)
+      .select("slug"),
   );
   if (result.ok) revalidatePublic();
   return result;

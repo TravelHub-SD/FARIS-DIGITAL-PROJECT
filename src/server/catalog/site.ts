@@ -80,6 +80,31 @@ export const listPublishedFaqs = cache(
   ),
 );
 
+export const SITE_PAGE_SLUGS = ["about", "terms", "privacy"] as const;
+export type SitePageSlug = (typeof SITE_PAGE_SLUGS)[number];
+
+export type PublicSitePage = {
+  slug: SitePageSlug;
+  title_ar: string | null;
+  title_en: string | null;
+  body_ar: string | null;
+  body_en: string | null;
+  updated_at: string;
+};
+
+/** Published About / Terms / Privacy pages (RLS: published rows only). */
+export const listPublishedPages = cache(
+  catalogCache("pages", () =>
+    buildSafe<PublicSitePage[]>([], async () =>
+      orThrow(
+        await createPublicClient()
+          .from("site_pages")
+          .select("slug, title_ar, title_en, body_ar, body_en, updated_at"),
+      ),
+    ),
+  ),
+);
+
 export type PublicComment = {
   id: string;
   body: string;

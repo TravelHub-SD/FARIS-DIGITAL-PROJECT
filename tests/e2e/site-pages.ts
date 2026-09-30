@@ -16,7 +16,14 @@ import {
 // Phase 9 sweeps (360 px overflow, accessibility). Seed catalog ids come from
 // supabase/seed.sql.
 
-export type Role = "guest" | "incomplete" | "customer" | "fresh" | "owner";
+export type Role =
+  | "guest"
+  | "incomplete"
+  | "customer"
+  | "fresh"
+  | "owner"
+  // Staff signed in with a password only: the authenticator step.
+  | "stepup";
 export type SitePage = { role: Role; path: string; main?: boolean };
 
 const SEED = {
@@ -42,11 +49,24 @@ export async function buildSite() {
   sql(`insert into comments (product_id, user_id, body)
          values ('${SEED.product}', '${customer.id}', repeat('ش', 300))`);
   const incomplete = await createUser();
+  const stepup = await createUser({
+    admin: { permissions: ["orders"] },
+    mfa: false,
+    name: "Staff Before Code",
+  });
+  // A published About page with worst-case text: a long unbroken word and
+  // many paragraphs (Terms and Privacy stay drafts: their URLs are 404s).
+  sql(`update site_pages set title_ar = 'من نحن', title_en = 'About us',
+         body_ar = 'نبيع شحن الألعاب والبطاقات الرقمية في السودان.' || E'\n\n' || repeat('ش', 200)
+                   || E'\n\n' || repeat('فقرة عن المتجر وطريقة الدفع. ', 40),
+         body_en = 'We sell game top-ups and digital cards in Sudan.',
+         is_published = true where slug = 'about'`);
   const users: Record<Exclude<Role, "guest">, TestUser> = {
     customer,
     fresh,
     owner,
     incomplete,
+    stepup,
   };
   const ref = (o: { id: string }) =>
     sql(`select reference from orders where id = '${o.id}'`);
@@ -61,6 +81,8 @@ export async function buildSite() {
     { role: "guest", path: "/register", main: true },
     { role: "guest", path: "/reset-password" },
     { role: "guest", path: "/no-such-page" },
+    { role: "guest", path: "/about", main: true },
+    { role: "stepup", path: "/two-factor", main: true },
     { role: "incomplete", path: "/complete-account" },
     { role: "customer", path: "/account", main: true },
     { role: "customer", path: "/account/orders", main: true },
@@ -98,6 +120,8 @@ export async function buildSite() {
     { role: "owner", path: `/admin/invoices/${invoice.invoice_number}` },
     { role: "owner", path: "/admin/messages", main: true },
     { role: "owner", path: "/admin/faqs" },
+    { role: "owner", path: "/admin/pages", main: true },
+    { role: "owner", path: "/admin/security", main: true },
     { role: "owner", path: "/admin/settings", main: true },
     { role: "owner", path: "/admin/admins" },
     { role: "owner", path: "/admin/audit" },
@@ -136,7 +160,7 @@ export async function roleContext(
   if (role === "incomplete") await ctx.addCookies(incompleteCookies);
   else if (role !== "guest") {
     const u = site.users[role];
-    await signInCookies(ctx, u.phone, u.password);
+    await signInCookies(ctx, u.phone, u.password, { mfa: role !== "stepup" });
   }
   return ctx;
 }

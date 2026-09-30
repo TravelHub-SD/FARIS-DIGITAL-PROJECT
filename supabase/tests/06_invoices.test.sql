@@ -109,17 +109,17 @@ select is((select row_to_json(i)::text from invoices i where id = (select id fro
 
 -- Void and re-issue: invoices permission only; reason required; audited.
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000061","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000061","role":"authenticated","aal":"aal2"}';
 select throws_ok($$ select void_invoice((select id from inv1), 'x') $$, '42501', 'FORBIDDEN', 'customer cannot void');
 select throws_ok($$ select reissue_invoice((select id from o where n = 1)) $$, '42501', 'FORBIDDEN', 'customer cannot re-issue');
 select throws_ok($$ insert into invoices (order_id) values ((select id from o where n = 4)) $$, '42501', null,
                  'customer cannot insert invoices');
 select throws_ok($$ update invoices set status = 'void', void_reason = 'x' $$, '42501', null,
                  'customer cannot update invoices');
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000064","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000064","role":"authenticated","aal":"aal2"}';
 select throws_ok($$ select void_invoice((select id from inv1), 'x') $$, '42501', 'FORBIDDEN', 'orders-only staff cannot void');
 select is((select count(*)::int from invoices), 0, 'orders-only staff cannot read invoices');
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000063","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000063","role":"authenticated","aal":"aal2"}';
 select throws_ok($$ select void_invoice((select id from inv1), '   ') $$, 'P0001', 'VOID_REASON_REQUIRED', 'reason required');
 select lives_ok($$ select void_invoice((select id from inv1), 'اسم العميل خاطئ') $$, 'invoices staff can void');
 select throws_ok($$ select void_invoice((select id from inv1), 'again') $$, 'P0002', 'INVOICE_NOT_FOUND', 'cannot void twice');
@@ -140,7 +140,7 @@ select is((select count(*)::int from audit_logs where entity_type = 'invoices'
 
 -- History and search (SECURITY INVOKER: RLS decides what each caller sees).
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000061","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000061","role":"authenticated","aal":"aal2"}';
 select results_eq(
   $$ select count(*)::int from search_invoices() $$, $$ values (2) $$,
   'customer A lists their 2 issued invoices (the void one is hidden)');
@@ -149,7 +149,7 @@ select is((select count(*)::int from search_invoices((select invoice_number from
 select is((select count(*)::int from search_invoices('Sara')), 0, 'customer A cannot find customer B by name');
 select is((select count(*)::int from invoices where order_id in (select id from o where n in (3, 4))), 0,
           'customer A cannot read B''s invoices from the table');
-set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000063","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000063","role":"authenticated","aal":"aal2"}';
 select is((select count(*)::int from search_invoices(p_status => 'void')), 1, 'staff: filter by status');
 select is((select count(*)::int from search_invoices(p_mine => true)), 0,
           'staff: "my invoices" lists only their own (none), not everyone''s');

@@ -70,12 +70,18 @@ export default async function AdminLayout({
       show: permissions.has("settings"),
     },
     {
+      href: `${base}/pages`,
+      label: t("pages"),
+      show: permissions.has("settings"),
+    },
+    {
       href: `${base}/settings`,
       label: t("settings"),
       show: permissions.has("settings"),
     },
     { href: `${base}/admins`, label: t("admins"), show: owner },
     { href: `${base}/audit`, label: t("audit"), show: owner },
+    { href: `${base}/security`, label: t("security"), show: true },
   ]
     .filter((i) => i.show)
     .map(({ show: _show, ...i }) => {

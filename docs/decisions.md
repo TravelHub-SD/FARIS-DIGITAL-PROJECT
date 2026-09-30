@@ -585,3 +585,66 @@ the accepted risk stands.
   built and were not on the roadmap. Raised with Hassan rather than built
   here, because how the texts are maintained (dashboard vs files) is a scope
   decision.
+
+## 2026-09-28 — Phase 10b: admin two-step sign-in (TOTP), approved by Hassan
+
+**What:** every staff account needs an authenticator-app code on top of the
+password. Enforced by the database: `private.admin_assurance_ok()` now
+returns true only when the JWT carries `aal = aal2`, and every admin policy
+and function already goes through it, so a password-only staff session gets
+nothing from PostgREST (0 rows, `FORBIDDEN`), from Storage, or from the site.
+The app mirrors it: `requireAdmin` sends aal1 staff to `/two-factor` (set up
+on the first visit, code on later ones) and `actionAdmin`/`actionOwner`
+refuse aal1. Customers are untouched and never see these screens.
+
+**Supabase limitation and the label:** GoTrue labels a TOTP factor with the
+user's email and refuses to enrol a user without one (`AccountName:
+user.GetEmail()` in supabase/auth v2.196.0 and on main). Staff sign in by
+phone. Before enrolling, `staff_totp_label()` (definer, active staff only,
+own account only) sets the account's email to `<phone>@staff.invalid`: the
+`.invalid` TLD is reserved (RFC 2606) and can never receive mail, and the
+email provider is off, so it is not a login (tested: "Email logins are
+disabled"). The service-role allowlist stayed closed.
+Rejected: our own TOTP (would not give `aal2`, so the database could not
+enforce it); WhatsApp/SMS as the second factor (cost per sign-in, Meta
+dependency; our Send SMS hook refuses everything by design); asking staff
+for a real email (friction and an unverified field). Switching to real
+emails later needs only a different label value.
+
+**Guessing:** GoTrue accepts a code again within its window and has no
+per-user lockout, so the app counts wrong codes per staff member: after 5 in
+15 minutes even the right code is refused (e2e). A direct attack on GoTrue
+needs the password first.
+
+**Recovery, so nobody is locked out for good:**
+1. A backup authenticator on a second phone (Security page; the owner is
+   urged to add one).
+2. The owner resets a staff member (Admins page, `admin_reset_mfa`):
+   removes their authenticators and deletes their sessions, so a stolen
+   phone or open browser stops working; they set up again at the next
+   sign-in. Audited.
+3. Owner lost every authenticator: `private.break_glass_reset_mfa('<phone>')`
+   in the Supabase SQL editor (not callable through the API; audited). The
+   client owns the Supabase account, so the owner can always get back in.
+
+**Residual:** after a reset, the Auth server refuses the old session at once
+(the site signs the person out on the next page), but an already issued
+access token stays valid at PostgREST until it expires (1 hour,
+`jwt_expiry`). Shortening `jwt_expiry` would narrow that window at the cost
+of more token refreshes; not changed.
+Authenticator secrets are stored by GoTrue in `auth.mfa_factors` and are
+therefore in database dumps: backups must stay encrypted (runbook step 12).
+
+## 2026-09-28 — Phase 10b: About / Terms / Privacy editable in the dashboard
+
+`site_pages` holds exactly three rows (about, terms, privacy), created by the
+migration; nobody adds or deletes pages. Permission model of FAQs: anyone
+reads published rows, `settings` staff (with their code) read and edit all,
+edits are audited (the audit row is keyed by slug). Texts are plain text:
+blank lines separate paragraphs, nothing is rendered as HTML or Markdown
+(pasted `<script>` is shown as text; e2e). A page can go live only with a
+title and a text in at least one language (the other falls back and is
+marked with its own `lang`/`dir`); enforced by the action and a table CHECK.
+Published pages appear in the footer and the sitemap and are cached with
+the catalog (a save expires them at once). Rejected: MDX files in the repo
+(every text change would need a developer and a deploy).

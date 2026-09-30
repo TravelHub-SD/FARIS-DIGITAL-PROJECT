@@ -28,7 +28,8 @@ select set_eq(
         'search_products', 'price_sdg', 'price_sdg_totals', 'create_order', 'submit_receipt', 'review_receipt',
         'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments',
         'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend',
-        'void_invoice', 'reissue_invoice', 'search_invoices', 'otp_budget_today'],
+        'void_invoice', 'reissue_invoice', 'search_invoices', 'otp_budget_today',
+        'admin_reset_mfa', 'staff_totp_label'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
