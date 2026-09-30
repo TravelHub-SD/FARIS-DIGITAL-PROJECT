@@ -229,8 +229,9 @@ export default async function AdminOrdersPage({
                         o.variant_name_en,
                         locale,
                       )}
-                    />{" "}
-                    ×{o.quantity}
+                    />
+                    {o.item_count > 1 &&
+                      ` ${t("orders.moreItems", { count: o.item_count - 1 })}`}
                   </td>
                   <td className="font-medium whitespace-nowrap" dir="auto">
                     {formatSdg(o.total_sdg, locale)}

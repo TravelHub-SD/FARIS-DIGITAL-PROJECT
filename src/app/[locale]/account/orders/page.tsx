@@ -50,12 +50,15 @@ export default async function OrdersPage({
                     <span className="text-sm text-muted-foreground">
                       <L10n
                         value={localized(
-                          o.product_name_ar,
-                          o.product_name_en,
+                          o.items[0]?.product_name_ar ?? null,
+                          o.items[0]?.product_name_en ?? null,
                           locale,
                         )}
                       />{" "}
-                      ×{o.quantity} · {formatDateTime(o.created_at, locale)}
+                      ×{o.items[0]?.quantity}
+                      {o.items.length > 1 &&
+                        ` ${t("moreItems", { count: o.items.length - 1 })}`}{" "}
+                      · {formatDateTime(o.created_at, locale)}
                     </span>
                   </span>
                   <span className="grid justify-items-end gap-0.5 text-sm">

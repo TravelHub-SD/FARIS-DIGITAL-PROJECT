@@ -31,9 +31,9 @@ insert into admin_permissions (admin_id, permission) values
 update app_settings set usd_sdg_rate = 2600, kyc_threshold_usd = 100 where id;
 
 create function pg_temp.new_order(p_user uuid) returns uuid language sql as $$
-  insert into public.orders (user_id, variant_id, quantity, idempotency_key, fulfillment_data)
-  values (p_user, '00000000-0000-4000-c000-000000000001', 3, gen_random_uuid(), '{"player_id":"123456"}')
-  returning id;
+  select (private.insert_order(p_user, jsonb_build_array(jsonb_build_object(
+    'variant_id', '00000000-0000-4000-c000-000000000001', 'quantity', 3,
+    'fulfillment_data', '{"player_id":"123456"}'::jsonb)), gen_random_uuid())).id;
 $$;
 create function pg_temp.pay(p_order uuid, p_ref text) returns void language plpgsql as $$
 begin
@@ -93,7 +93,7 @@ select is((select snapshot #>> '{customer,phone}' from inv1), '+249911000061', '
 select is((select snapshot #>> '{seller,name_ar}' from inv1), 'فارس ديجيتال', 'seller name copied');
 select is((select snapshot #>> '{payment,transaction_ref}' from inv1), 'INVTX1', 'accepted payment copied');
 select results_eq(
-  $$ select total_usd, usd_sdg_rate, total_sdg, (snapshot #>> '{order,quantity}')::int from inv1 $$,
+  $$ select total_usd, usd_sdg_rate, total_sdg, (snapshot #>> '{items,0,quantity}')::int from inv1 $$,
   $$ values (3.30::numeric, 2600::numeric, 8580::numeric, 3) $$,
   'money and quantity from the order snapshot');
 

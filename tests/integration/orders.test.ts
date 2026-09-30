@@ -100,15 +100,16 @@ describe("server-side pricing: an order is only ever created at the database's p
     expect(res.reference).toMatch(/^FD-\d{7}$/);
     const { data: order } = await buyer.client
       .from("orders")
-      .select("unit_price_usd, total_usd, usd_sdg_rate, total_sdg, quantity")
+      .select(
+        "total_usd, usd_sdg_rate, total_sdg, items:order_items(unit_price_usd, quantity, line_total_sdg)",
+      )
       .eq("id", res.id!)
       .single();
     expect(order).toEqual({
-      unit_price_usd: 1.1,
       total_usd: 3.3,
       usd_sdg_rate: 2600,
       total_sdg: 8580,
-      quantity: 3,
+      items: [{ unit_price_usd: 1.1, quantity: 3, line_total_sdg: 8580 }],
     });
   });
 
@@ -124,17 +125,20 @@ describe("server-side pricing: an order is only ever created at the database's p
   it("forged price: writing the order row directly is not possible for a customer", async () => {
     const { error } = await buyer.client.from("orders").insert({
       user_id: buyer.id,
-      variant_id: VARIANT_CHEAP,
-      quantity: 1,
-      unit_price_usd: 0.01,
       total_usd: 0.01,
       usd_sdg_rate: 1,
       total_sdg: 1,
       kyc_required: false,
       idempotency_key: randomUUID(),
-      fulfillment_data: CHEAP_FIELDS,
     });
     expect(error?.message).toMatch(/permission denied/);
+    const line = await buyer.client.from("order_items").insert({
+      variant_id: VARIANT_CHEAP,
+      quantity: 1,
+      unit_price_usd: 0.01,
+      fulfillment_data: CHEAP_FIELDS,
+    });
+    expect(line.error?.message).toMatch(/permission denied/);
   });
 
   it("stale price from a cached page: the rate changed after the page was rendered", async () => {
@@ -312,21 +316,22 @@ describe("KYC threshold is enforced by the database at order time", () => {
   it("…nor through a direct insert, even with the service role", async () => {
     const direct = await unverified.client.from("orders").insert({
       user_id: unverified.id,
-      variant_id: VARIANT_STARLINK,
-      quantity: 1,
       idempotency_key: randomUUID(),
-      fulfillment_data: STARLINK_FIELDS,
       kyc_required: false,
     });
     expect(direct.error?.message).toMatch(/permission denied/);
 
-    const svc = await service().from("orders").insert({
-      user_id: unverified.id,
-      variant_id: VARIANT_STARLINK,
-      quantity: 1,
-      idempotency_key: randomUUID(),
-      fulfillment_data: STARLINK_FIELDS,
-      kyc_required: false,
+    const svc = await service().rpc("service_create_order", {
+      p_user_id: unverified.id,
+      p_items: [
+        {
+          variant_id: VARIANT_STARLINK,
+          quantity: 1,
+          fulfillment_data: STARLINK_FIELDS,
+          kyc_required: false,
+        },
+      ],
+      p_idempotency_key: randomUUID(),
     });
     expect(svc.error?.message).toBe("KYC_REQUIRED");
     expect(orderCount(unverified.id)).toBe(0);
@@ -1030,7 +1035,7 @@ describe("sensitive fulfillment fields are purged when the order closes", () => 
     expect(res.status).toBe("created");
     const read = () =>
       sql(
-        `select fulfillment_data::text from public.orders where id = '${res.id}'`,
+        `select fulfillment_data::text from public.order_items where order_id = '${res.id}'`,
       );
     expect(JSON.parse(read())).toEqual({
       email: "a@example.com",
@@ -1047,6 +1052,11 @@ describe("sensitive fulfillment fields are purged when the order closes", () => 
     ).toBeNull();
     expect(JSON.parse(read())).toEqual({ email: "a@example.com" });
     expect(JSON.stringify(audit(res.id!))).not.toContain("hunter22");
+    const lineAudit = sql(
+      `select coalesce(json_agg(a), '[]') from public.audit_logs a where a.entity_type = 'order_items' and a.entity_id in (select id::text from public.order_items where order_id = '${res.id}')`,
+    );
+    expect(JSON.parse(lineAudit)).toHaveLength(1); // the line's creation
+    expect(lineAudit).not.toContain("hunter22");
   });
 });
 

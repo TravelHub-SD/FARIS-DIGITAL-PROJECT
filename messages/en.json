@@ -368,7 +368,9 @@
       "moreFilters": "More filters: dates and amounts",
       "notifications": "Customer notifications (WhatsApp)",
       "notificationsHint": "Messages sent to the customer about this order, with delivery status.",
-      "noNotifications": "No notifications for this order."
+      "noNotifications": "No notifications for this order.",
+      "moreItems": "{count, plural, one {+ # more item} other {+ # more items}}",
+      "lineCount": "Items"
     },
     "catalog": {
       "title": "Products",
@@ -582,7 +584,9 @@
       "otpAlways": "Yes (password + code)",
       "businessNameAr": "Business name (Arabic)",
       "businessNameEn": "Business name (English)",
-      "businessNameHint": "Printed on new invoices. Invoices already issued keep the name they were issued with."
+      "businessNameHint": "Printed on new invoices. Invoices already issued keep the name they were issued with.",
+      "kycWindow": "Identity check window (hours)",
+      "kycWindowHint": "A customer's non-cancelled orders from these hours are added to a new order when comparing it with the verification threshold, so splitting a purchase does not avoid it. 0 compares each order on its own."
     },
     "admins": {
       "title": "Admins",
@@ -998,7 +1002,8 @@
       "duplicate_file": "This receipt image has already been used for another payment.",
       "upload_failed": "Upload failed. Try again.",
       "server_error": "Something went wrong. Try again."
-    }
+    },
+    "moreItems": "{count, plural, one {+ # more item} other {+ # more items}}"
   },
   "Invoices": {
     "title": "Invoices",
@@ -1033,7 +1038,7 @@
       "item": "Description",
       "qty": "Qty",
       "unitPrice": "Unit price",
-      "amount": "Amount",
+      "amount": "Amount (SDG)",
       "subtotal": "Total (USD)",
       "rate": "Exchange rate",
       "rateValue": "1 USD = {rate} SDG",

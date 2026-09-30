@@ -12,28 +12,81 @@ import { createClient } from "@/lib/supabase/server";
 
 export type OrderStatus = "new" | "processing" | "completed" | "cancelled";
 
-export type OrderSummary = {
-  id: string;
-  reference: string;
-  status: OrderStatus;
+/** One line of an order: its own product, package, quantity, price and details. */
+export type OrderLine = {
+  line_no: number;
   product_name_ar: string | null;
   product_name_en: string | null;
   variant_name_ar: string | null;
   variant_name_en: string | null;
   quantity: number;
+  unit_price_usd: number;
+  line_total_usd: number;
+  line_total_sdg: number;
+  fulfillment_fields: FieldDefinition[];
+  fulfillment_data: Record<string, string>;
+};
+
+export type OrderSummary = {
+  id: string;
+  reference: string;
+  status: OrderStatus;
+  /** Lines in order (names and quantities only in lists). */
+  items: Pick<
+    OrderLine,
+    | "line_no"
+    | "product_name_ar"
+    | "product_name_en"
+    | "variant_name_ar"
+    | "variant_name_en"
+    | "quantity"
+  >[];
   total_sdg: number;
   created_at: string;
 };
 
-export type OrderDetail = OrderSummary & {
-  unit_price_usd: number;
+export type OrderDetail = Omit<OrderSummary, "items"> & {
+  items: OrderLine[];
   total_usd: number;
   usd_sdg_rate: number;
-  fulfillment_fields: FieldDefinition[];
-  fulfillment_data: Record<string, string>;
   completed_at: string | null;
   cancelled_at: string | null;
 };
+
+export const LINE_COLUMNS =
+  "line_no, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity, unit_price_usd, line_total_usd, line_total_sdg, fulfillment_fields, fulfillment_data";
+
+type RawLine = Omit<
+  OrderLine,
+  | "unit_price_usd"
+  | "line_total_usd"
+  | "line_total_sdg"
+  | "fulfillment_fields"
+  | "fulfillment_data"
+> & {
+  unit_price_usd: number | string;
+  line_total_usd: number | string;
+  line_total_sdg: number | string;
+  fulfillment_fields: unknown;
+  fulfillment_data: unknown;
+};
+
+/** Lines as stored, sorted, with numbers and field definitions parsed. */
+export function parseLines(rows: RawLine[] | null | undefined): OrderLine[] {
+  return [...(rows ?? [])]
+    .sort((a, b) => a.line_no - b.line_no)
+    .map((l) => {
+      const fields = fieldDefinitionsSchema.safeParse(l.fulfillment_fields);
+      return {
+        ...l,
+        unit_price_usd: Number(l.unit_price_usd),
+        line_total_usd: Number(l.line_total_usd),
+        line_total_sdg: Number(l.line_total_sdg),
+        fulfillment_fields: fields.success ? fields.data : [],
+        fulfillment_data: (l.fulfillment_data ?? {}) as Record<string, string>,
+      };
+    });
+}
 
 export type ReceiptRow = {
   id: string;
@@ -62,7 +115,7 @@ export type BankAccount = {
 };
 
 const SUMMARY =
-  "id, reference, status, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity, total_sdg, created_at";
+  "id, reference, status, total_sdg, created_at, items:order_items(line_no, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity)";
 
 export async function listMyOrders(userId: string): Promise<OrderSummary[]> {
   const supabase = await createClient();
@@ -73,7 +126,11 @@ export async function listMyOrders(userId: string): Promise<OrderSummary[]> {
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw new Error(`orders query failed: ${error.message}`);
-  return (data ?? []).map((o) => ({ ...o, total_sdg: Number(o.total_sdg) }));
+  return (data ?? []).map((o) => ({
+    ...o,
+    items: [...(o.items ?? [])].sort((a, b) => a.line_no - b.line_no),
+    total_sdg: Number(o.total_sdg),
+  })) as OrderSummary[];
 }
 
 /** Null for a reference that does not exist or belongs to someone else. */
@@ -83,7 +140,7 @@ export async function getMyOrder(userId: string, reference: string) {
   const { data: row, error } = await supabase
     .from("orders")
     .select(
-      `${SUMMARY}, unit_price_usd, total_usd, usd_sdg_rate, fulfillment_fields, fulfillment_data, completed_at, cancelled_at`,
+      `id, reference, status, total_sdg, created_at, total_usd, usd_sdg_rate, completed_at, cancelled_at, items:order_items(${LINE_COLUMNS})`,
     )
     .eq("reference", reference)
     .eq("user_id", userId)
@@ -117,15 +174,13 @@ export async function getMyOrder(userId: string, reference: string) {
     if (r.error) throw new Error(`order query failed: ${r.error.message}`);
   }
 
-  const fields = fieldDefinitionsSchema.safeParse(row.fulfillment_fields);
   const order: OrderDetail = {
     ...row,
+    status: row.status as OrderStatus,
+    items: parseLines(row.items as RawLine[]),
     total_sdg: Number(row.total_sdg),
-    unit_price_usd: Number(row.unit_price_usd),
     total_usd: Number(row.total_usd),
     usd_sdg_rate: Number(row.usd_sdg_rate),
-    fulfillment_fields: fields.success ? fields.data : [],
-    fulfillment_data: row.fulfillment_data as Record<string, string>,
   };
   return {
     order,

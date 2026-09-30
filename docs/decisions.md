@@ -651,3 +651,72 @@ marked with its own `lang`/`dir`); enforced by the action and a table CHECK.
 Published pages appear in the footer and the sitemap and are cached with
 the catalog (a save expires them at once). Rejected: MDX files in the repo
 (every text change would need a developer and a deploy).
+
+## 2026-09-30 — Redesign Stage 2: cart and orders with line items (approved by Hassan)
+
+**Cart: a server table, signed-in customers only.** `cart_items` (RLS: the
+customer's own lines; staff and anon have no access) holds a variant, a
+quantity (1 to the variant's maximum) and the fulfillment data, **never a
+price**. A trigger re-checks each line when written (orderable variant, valid
+data, at most 20 lines, customer not blocked). Rejected: browser storage (a
+player ID or account email left on shared phones, readable by any script,
+JavaScript needed on every page for the badge) and a guest cart merged at
+login (both costs plus merge rules; ordering needs an account anyway). Cost
+accepted: a guest who adds to the cart signs in first and types the details
+again (they are never put in the URL).
+
+**One checkout = one order.** `checkout_cart(key, expected_total)` turns the
+whole cart into one order (one reference, one receipt, one invoice) in one
+transaction and empties the cart. The page sends only the total it showed
+(consent); every line is re-read, re-priced and re-validated. A different
+total creates nothing and returns the current one; a hidden variant, invalid
+details or KYC are refused with the line named where it applies; the same key
+returns the same order.
+
+**Data model.** `orders` is now the header (customer, reference, status, rate,
+totals, kyc_required); `order_items` holds each line's snapshot (names,
+quantity, unit price, line totals, fulfillment fields and data). Lines are
+derived by a trigger from the variant (any value the caller sends is
+replaced), can only be added in the order's own creating transaction, and are
+immutable (the sensitive-field purge on a final status is the only change,
+and only removes keys). The header's totals are recomputed from the lines
+(never taken from a caller), and a deferred constraint trigger checks at
+commit, for every insert path, that the order has lines, that the totals
+match and that the KYC rule holds. The creation is audited once at commit with
+the final totals; each line is audited without its fulfillment data.
+
+**Money.** Each line is rounded up on its own:
+`line_total_sdg = ceil(line_total_usd × rate)` (a CHECK), and the order total
+is the sum of its lines, so invoice lines always add up to the total. A
+single-line order is charged exactly what the old formula charged. On a
+multi-line order the customer pays at most 1 SDG more per line than with a
+single rounding.
+
+**KYC.** Judged on the order total plus the customer's other non-cancelled
+orders created in the last `kyc_window_hours` (default 24, 0 = off), so
+splitting a purchase, inside one cart or across orders, does not avoid it.
+Orders from one customer are created one at a time (advisory lock), so two
+racing checkouts both see the other. The window is in `security_settings`:
+settings staff only, bounded 0–720, audited, not public (splitters are not
+told the exact window). `my_cart()` tells the cart page when the total will
+need verification.
+
+**Existing data.** The migration copies each order's stored snapshot into one
+line (never re-derived from today's prices). Proven on the local database
+with 31 existing orders and 7 invoices: header plus line, column by column,
+byte-identical before and after; invoices untouched. Invoices issued from now
+on carry `items`; older snapshots keep their single-line shape and the site
+reads both. The invoice's amount column is now each line's SDG amount (so the
+lines add up to the total).
+
+**Trusted path.** `service_create_order()` (service role only) creates an
+order for a given customer through the same triggers; used by tests and seed
+scripts. Customers keep only `create_order` (single item, current product page)
+and `checkout_cart`.
+
+**Planted violations (each fails, then passes after reset):** a line trigger
+that trusts a caller's price (11 pgTAP failures); KYC judged per line instead
+of on the total (3 pgTAP + 1 integration); the rolling window ignored
+(exactly the split-order tests); a hidden variant: with only the line trigger
+weakened, checkout's own check still refuses; with both weakened, the cart
+tests fail.

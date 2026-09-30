@@ -149,9 +149,9 @@ begin
   select id into v_bank from public.bank_accounts where is_active order by sort_order limit 1;
   for r in select * from demo_orders order by n loop
     perform set_config('request.jwt.claims', '', true);
-    insert into public.orders (user_id, variant_id, quantity, fulfillment_data, idempotency_key)
-    values (r.user_id, r.variant, r.qty, r.data, gen_random_uuid())
-    returning id into v_id;
+    v_id := (private.insert_order(r.user_id, jsonb_build_array(jsonb_build_object(
+               'variant_id', r.variant, 'quantity', r.qty, 'fulfillment_data', r.data)),
+             gen_random_uuid())).id;
     if r.target <> 'new' and r.target <> 'cancelled' then
       insert into public.payment_receipts (order_id, bank_account_id, transaction_ref, storage_path, file_sha256)
       values (v_id, v_bank, 'DEMO' || lpad(r.n::text, 6, '0'),

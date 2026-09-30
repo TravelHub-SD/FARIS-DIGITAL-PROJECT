@@ -182,6 +182,7 @@ const limitsSchema = z.object({
   receipts_per_order_limit: z.coerce.number().int().min(1).max(50),
   comment_rate_limit_per_hour: z.coerce.number().int().min(1).max(100),
   otp_daily_budget: z.coerce.number().int().min(0).max(100000),
+  kyc_window_hours: z.coerce.number().int().min(0).max(720),
   otp_login_policy: z.enum(["never", "always"]),
 });
 

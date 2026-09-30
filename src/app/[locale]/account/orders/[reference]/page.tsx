@@ -3,13 +3,12 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { ReceiptForm } from "@/components/account/receipt-form";
-import { L10n } from "@/components/catalog/l10n";
 import { Link } from "@/components/link";
+import { OrderLines } from "@/components/orders/order-lines";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Locale } from "@/i18n/routing";
 import { formatDateTime, formatSdg, formatUsd } from "@/lib/format";
-import { localized } from "@/lib/localized";
 import { buttonVariants } from "@/components/ui/button";
 import { requireCompleteUser } from "@/server/auth/session";
 import { invoicesForOrder } from "@/server/invoices/queries";
@@ -75,28 +74,14 @@ export default async function OrderPage({
           <CardTitle>{t("summary")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm">
-          <p>
-            <L10n
-              value={localized(
-                order.product_name_ar,
-                order.product_name_en,
-                locale,
-              )}
-              className="font-medium"
-            />{" "}
-            —{" "}
-            <L10n
-              value={localized(
-                order.variant_name_ar,
-                order.variant_name_en,
-                locale,
-              )}
-            />
-          </p>
-          <p>
-            {t("quantity")}: {order.quantity}
-          </p>
-          <p className="text-base font-bold" dir="auto">
+          <OrderLines
+            items={order.items}
+            locale={locale}
+            closed={
+              order.status === "completed" || order.status === "cancelled"
+            }
+          />
+          <p className="border-t pt-3 text-base font-bold" dir="auto">
             {t("total")}: <span data-testid="order-total">{amount}</span>
           </p>
           <p className="text-muted-foreground">
@@ -120,34 +105,6 @@ export default async function OrderPage({
           )}
         </CardContent>
       </Card>
-
-      {order.fulfillment_fields.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("fulfillment")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-2 text-sm">
-              {order.fulfillment_fields.map((f) => {
-                const value = order.fulfillment_data[f.key];
-                const closed =
-                  order.status === "completed" || order.status === "cancelled";
-                if (value === undefined && !(closed && f.sensitive))
-                  return null;
-                return (
-                  <div key={f.key} className="flex flex-wrap gap-2">
-                    <dt className="text-muted-foreground">
-                      <L10n value={localized(f.label_ar, f.label_en, locale)} />
-                      :
-                    </dt>
-                    <dd dir="auto">{value ?? t("removed")}</dd>
-                  </div>
-                );
-              })}
-            </dl>
-          </CardContent>
-        </Card>
-      )}
 
       {pendingReceipt && order.status === "new" && (
         <Alert data-testid="receipt-pending">{t("pendingNote")}</Alert>

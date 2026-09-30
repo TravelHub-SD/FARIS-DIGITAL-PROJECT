@@ -41,9 +41,9 @@ delete from message_logs;
 
 -- Enqueue: creating an order records its status and queues a notification
 -- in the same transaction, with references only.
-insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
-values ('20000000-0000-4000-8000-000000000051', '10000000-0000-4000-8000-000000000051',
-        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}');
+select private.insert_order('10000000-0000-4000-8000-000000000051',
+  '[{"variant_id":"00000000-0000-4000-c000-000000000001","quantity":1,"fulfillment_data":{"player_id":"123456"}}]',
+  gen_random_uuid(), '20000000-0000-4000-8000-000000000051');
 
 create temp table n on commit drop as
   select id from message_logs where order_id = '20000000-0000-4000-8000-000000000051';

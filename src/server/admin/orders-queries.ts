@@ -1,11 +1,12 @@
 import "server-only";
 
-import {
-  fieldDefinitionsSchema,
-  type FieldDefinition,
-} from "@/lib/fulfillment";
 import { createClient } from "@/lib/supabase/server";
-import type { OrderStatus } from "@/server/orders/queries";
+import {
+  LINE_COLUMNS,
+  type OrderLine,
+  type OrderStatus,
+  parseLines,
+} from "@/server/orders/queries";
 
 // Reads for the orders area. They run with the admin's session: RLS returns
 // rows only to admins with the `orders` permission (pages also check first).
@@ -30,7 +31,8 @@ export type AdminOrderRow = {
   status: OrderStatus;
   created_at: string;
   total_sdg: number;
-  quantity: number;
+  /** Number of lines; the names are the first line's. */
+  item_count: number;
   product_name_ar: string | null;
   product_name_en: string | null;
   variant_name_ar: string | null;
@@ -71,18 +73,11 @@ export type AdminOrder = {
   reference: string;
   user_id: string;
   status: OrderStatus;
-  product_name_ar: string | null;
-  product_name_en: string | null;
-  variant_name_ar: string | null;
-  variant_name_en: string | null;
-  quantity: number;
-  unit_price_usd: number;
+  items: OrderLine[];
   total_usd: number;
   usd_sdg_rate: number;
   total_sdg: number;
   kyc_required: boolean;
-  fulfillment_fields: FieldDefinition[];
-  fulfillment_data: Record<string, string>;
   created_at: string;
 };
 
@@ -97,7 +92,7 @@ export async function getAdminOrder(reference: string) {
   const supabase = await createClient();
   const { data: order } = await supabase
     .from("orders")
-    .select("*")
+    .select(`*, items:order_items(${LINE_COLUMNS})`)
     .eq("reference", reference)
     .maybeSingle();
   if (!order) return null;
@@ -171,24 +166,16 @@ export async function getAdminOrder(reference: string) {
     }),
   );
 
-  const fieldDefs = fieldDefinitionsSchema.safeParse(order.fulfillment_fields);
   const typed: AdminOrder = {
     id,
     reference: order.reference,
     user_id: order.user_id,
     status: order.status as OrderStatus,
-    product_name_ar: order.product_name_ar,
-    product_name_en: order.product_name_en,
-    variant_name_ar: order.variant_name_ar,
-    variant_name_en: order.variant_name_en,
-    quantity: order.quantity,
-    unit_price_usd: Number(order.unit_price_usd),
+    items: parseLines(order.items),
     total_usd: Number(order.total_usd),
     usd_sdg_rate: Number(order.usd_sdg_rate),
     total_sdg: Number(order.total_sdg),
     kyc_required: order.kyc_required,
-    fulfillment_fields: fieldDefs.success ? fieldDefs.data : [],
-    fulfillment_data: order.fulfillment_data as Record<string, string>,
     created_at: order.created_at,
   };
   return {

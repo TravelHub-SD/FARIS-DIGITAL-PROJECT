@@ -166,28 +166,7 @@ export default async function AdminOrderPage({
         <Section title={t("orders.summary")}>
           <KeyValues
             items={[
-              [
-                t("orders.item"),
-                <>
-                  <L10n
-                    value={localized(
-                      order.product_name_ar,
-                      order.product_name_en,
-                      locale,
-                    )}
-                  />{" "}
-                  —{" "}
-                  <L10n
-                    value={localized(
-                      order.variant_name_ar,
-                      order.variant_name_en,
-                      locale,
-                    )}
-                  />
-                </>,
-              ],
-              [t("orders.quantity"), order.quantity],
-              [t("orders.unitPrice"), formatUsd(order.unit_price_usd, locale)],
+              [t("orders.lineCount"), order.items.length],
               [t("orders.totalUsd"), formatUsd(order.total_usd, locale)],
               [t("orders.rate"), `${order.usd_sdg_rate}`],
               [
@@ -214,36 +193,77 @@ export default async function AdminOrderPage({
         title={t("orders.fulfillment")}
         description={t("orders.fulfillmentHint")}
       >
-        {order.fulfillment_fields.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {t("orders.noFields")}
-          </p>
-        ) : (
-          <KeyValues
-            items={order.fulfillment_fields.map((f) => [
-              <>
-                <L10n value={localized(f.label_ar, f.label_en, locale)} />
-                {f.sensitive && (
-                  <>
-                    {" "}
-                    <Badge tone="warning">{t("orders.sensitive")}</Badge>
-                  </>
-                )}
-              </>,
-              order.fulfillment_data[f.key] !== undefined ? (
-                <span dir="auto" className="font-mono wrap-anywhere select-all">
-                  {order.fulfillment_data[f.key]}
+        <ol className="grid gap-4" data-testid="order-lines">
+          {order.items.map((line) => (
+            <li
+              key={line.line_no}
+              className="grid gap-2 rounded-lg border p-3"
+              data-testid="order-line"
+            >
+              <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                <span>
+                  <span className="text-muted-foreground">{line.line_no}.</span>{" "}
+                  <L10n
+                    value={localized(
+                      line.product_name_ar,
+                      line.product_name_en,
+                      locale,
+                    )}
+                    className="font-medium"
+                  />{" "}
+                  —{" "}
+                  <L10n
+                    value={localized(
+                      line.variant_name_ar,
+                      line.variant_name_en,
+                      locale,
+                    )}
+                  />{" "}
+                  × <span data-testid="line-quantity">{line.quantity}</span>
                 </span>
-              ) : closed && f.sensitive ? (
-                <span className="text-muted-foreground">
-                  {t("orders.purged")}
+                <span dir="auto">
+                  {formatUsd(line.unit_price_usd, locale)} ·{" "}
+                  <span className="font-medium" data-testid="line-total">
+                    {formatSdg(line.line_total_sdg, locale)}
+                  </span>
                 </span>
+              </p>
+              {line.fulfillment_fields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("orders.noFields")}
+                </p>
               ) : (
-                "—"
-              ),
-            ])}
-          />
-        )}
+                <KeyValues
+                  items={line.fulfillment_fields.map((f) => [
+                    <>
+                      <L10n value={localized(f.label_ar, f.label_en, locale)} />
+                      {f.sensitive && (
+                        <>
+                          {" "}
+                          <Badge tone="warning">{t("orders.sensitive")}</Badge>
+                        </>
+                      )}
+                    </>,
+                    line.fulfillment_data[f.key] !== undefined ? (
+                      <span
+                        dir="auto"
+                        className="font-mono wrap-anywhere select-all"
+                      >
+                        {line.fulfillment_data[f.key]}
+                      </span>
+                    ) : closed && f.sensitive ? (
+                      <span className="text-muted-foreground">
+                        {t("orders.purged")}
+                      </span>
+                    ) : (
+                      "—"
+                    ),
+                  ])}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
       </Section>
 
       <Section

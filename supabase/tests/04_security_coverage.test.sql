@@ -29,7 +29,7 @@ select set_eq(
         'product_comments', 'set_customer_blocked', 'admin_orders', 'admin_comments',
         'whatsapp_mark_handled', 'whatsapp_retry', 'whatsapp_spend',
         'void_invoice', 'reissue_invoice', 'search_invoices', 'otp_budget_today',
-        'admin_reset_mfa', 'staff_totp_label'],
+        'admin_reset_mfa', 'staff_totp_label', 'my_cart', 'checkout_cart'],
   'authenticated can execute exactly the intended public RPCs');
 
 select set_eq(
@@ -40,8 +40,8 @@ select set_eq(
   array['otp_issue', 'otp_verify', 'rate_limit_exceeded', 'rate_limit_record', 'rate_limit_clear',
         'auth_user_id_by_phone', 'auth_revoke_sessions',
         'whatsapp_claim', 'whatsapp_message_context', 'whatsapp_mark_sent', 'whatsapp_mark_failure',
-        'whatsapp_log_otp', 'whatsapp_apply_status'],
-  'OTP / session / WhatsApp dispatcher functions are server-only (service_role), never authenticated');
+        'whatsapp_log_otp', 'whatsapp_apply_status', 'service_create_order'],
+  'OTP / session / WhatsApp dispatcher / trusted order creation are server-only (service_role), never authenticated');
 
 select set_eq(
   $$ select p.proname::text from pg_proc p

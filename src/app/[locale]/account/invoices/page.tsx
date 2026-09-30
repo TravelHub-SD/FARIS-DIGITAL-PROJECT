@@ -87,8 +87,9 @@ export default async function MyInvoicesPage({
                           i.product_name_en,
                           locale,
                         )}
-                      />{" "}
-                      · <bdi dir="ltr">{i.order_reference}</bdi> ·{" "}
+                      />
+                      {i.item_count > 1 && ` +${i.item_count - 1}`} ·{" "}
+                      <bdi dir="ltr">{i.order_reference}</bdi> ·{" "}
                       {formatDateTime(i.issued_at, locale)}
                     </span>
                   </span>

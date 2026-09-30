@@ -103,32 +103,30 @@ describe("Hidden/inactive/archived catalog rows are unreachable via direct Postg
   });
 
   it("an order for a hidden variant is refused by the database", async () => {
-    const res = await service()
-      .from("orders")
-      .insert({
-        user_id: customer.id,
-        variant_id: fx.ids.hiddenVariant,
-        quantity: 1,
-        idempotency_key: randomUUID(),
-        fulfillment_data: { player_id: "123456", server: "mena" },
-      });
+    const res = await service().rpc("service_create_order", {
+      p_user_id: customer.id,
+      p_items: [
+        {
+          variant_id: fx.ids.hiddenVariant,
+          quantity: 1,
+          fulfillment_data: { player_id: "123456", server: "mena" },
+        },
+      ],
+      p_idempotency_key: randomUUID(),
+    });
     expect(res.error?.message).toMatch(/VARIANT_UNAVAILABLE/);
   });
 });
 
 describe("Forged fulfillment data is rejected by the database (any insert path)", () => {
   const order = (data: unknown) =>
-    service()
-      .from("orders")
-      .insert({
-        user_id: customer.id,
-        variant_id: fx.ids.okVariant,
-        quantity: 1,
-        idempotency_key: randomUUID(),
-        fulfillment_data: data,
-      })
-      .select("id")
-      .single();
+    service().rpc("service_create_order", {
+      p_user_id: customer.id,
+      p_items: [
+        { variant_id: fx.ids.okVariant, quantity: 1, fulfillment_data: data },
+      ],
+      p_idempotency_key: randomUUID(),
+    });
 
   it.each([
     ["missing required", { server: "mena" }, "missing:player_id"],
@@ -262,17 +260,17 @@ describe("Search", () => {
       .select("price_sdg")
       .eq("id", fx.ids.okVariant)
       .single();
-    const placed = await service()
-      .from("orders")
-      .insert({
-        user_id: customer.id,
-        variant_id: fx.ids.okVariant,
-        quantity: 1,
-        idempotency_key: randomUUID(),
-        fulfillment_data: { player_id: "123456", server: "mena" },
-      })
-      .select("total_sdg")
-      .single();
+    const placed = await service().rpc("service_create_order", {
+      p_user_id: customer.id,
+      p_items: [
+        {
+          variant_id: fx.ids.okVariant,
+          quantity: 1,
+          fulfillment_data: { player_id: "123456", server: "mena" },
+        },
+      ],
+      p_idempotency_key: randomUUID(),
+    });
     expect(Number(placed.data?.total_sdg)).toBe(Number(shown.data?.price_sdg));
   });
 });

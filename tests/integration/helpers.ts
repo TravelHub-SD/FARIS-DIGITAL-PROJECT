@@ -163,21 +163,30 @@ export const VARIANT_CHEAP = "00000000-0000-4000-c000-000000000001"; // 1.10 USD
 /** Valid fulfillment data for VARIANT_CHEAP (seed: required digits player_id, 5–20). */
 export const CHEAP_FIELDS = { player_id: "123456" };
 
-/** Inserts an order through the service role (stand-in for create_order, Phase 5). */
+/**
+ * Creates a one-line order for a customer through the trusted server path
+ * (service_create_order: same triggers and checks as checkout).
+ */
 export async function createOrder(userId: string, variantId = VARIANT_CHEAP) {
-  const { data, error } = await service()
-    .from("orders")
-    .insert({
-      user_id: userId,
-      variant_id: variantId,
-      quantity: 1,
-      idempotency_key: randomUUID(),
-      fulfillment_data: variantId === VARIANT_CHEAP ? CHEAP_FIELDS : {},
-    })
-    .select()
-    .single();
+  const { data, error } = await service().rpc("service_create_order", {
+    p_user_id: userId,
+    p_items: [
+      {
+        variant_id: variantId,
+        quantity: 1,
+        fulfillment_data: variantId === VARIANT_CHEAP ? CHEAP_FIELDS : {},
+      },
+    ],
+    p_idempotency_key: randomUUID(),
+  });
   if (error) throw new Error(`createOrder: ${error.message}`);
-  return data;
+  return data as {
+    id: string;
+    reference: string;
+    user_id: string;
+    status: string;
+    total_sdg: number;
+  };
 }
 
 export async function firstBankAccountId() {

@@ -565,6 +565,22 @@ export default async function SettingsPage({
                 />
               </Field>
               <Field
+                label={t("settings.kycWindow")}
+                htmlFor="kyc_window_hours"
+                hint={t("settings.kycWindowHint")}
+              >
+                <input
+                  id="kyc_window_hours"
+                  name="kyc_window_hours"
+                  type="number"
+                  min={0}
+                  max={720}
+                  required
+                  defaultValue={security.kyc_window_hours}
+                  className={inputClasses}
+                />
+              </Field>
+              <Field
                 label={t("settings.otpLogin")}
                 htmlFor="otp_login_policy"
                 hint={t("settings.otpLoginHint")}

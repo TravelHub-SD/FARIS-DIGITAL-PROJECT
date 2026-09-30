@@ -17,13 +17,17 @@ update app_settings set usd_sdg_rate = 2600, kyc_threshold_usd = 100 where id;
 update product_variants set price_usd = 1.10 where id = '00000000-0000-4000-c000-000000000001';
 
 -- 1. Caller-supplied money values are ignored; the DB derives them.
-insert into orders (id, user_id, variant_id, quantity, idempotency_key,
-                    unit_price_usd, total_usd, usd_sdg_rate, total_sdg, status, kyc_required, reference, fulfillment_data)
+-- Header and line written directly with forged values (as a service-role or
+-- SQL caller could), in the order's own transaction.
+insert into orders (id, user_id, idempotency_key, total_usd, usd_sdg_rate, total_sdg, status, kyc_required, reference)
 values ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-c000-000000000001', 3, gen_random_uuid(),
-        0.01, 0.03, 1, 1, 'completed', false, 'FD-0000000', '{"player_id":"123456"}');
+        gen_random_uuid(), 0.03, 1, 1, 'completed', false, 'FD-0000000');
+insert into order_items (order_id, variant_id, quantity, unit_price_usd, line_total_usd,
+                         usd_sdg_rate, line_total_sdg, product_name_ar, line_no, fulfillment_data)
+values ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-c000-000000000001', 3,
+        0.01, 0.03, 1, 1, 'مزوّر', 9, '{"player_id":"123456"}');
 
-select is((select unit_price_usd from orders where id = '20000000-0000-4000-8000-000000000001'),
+select is((select unit_price_usd from order_items where order_id = '20000000-0000-4000-8000-000000000001'),
           1.10::numeric, 'tampered unit price replaced by the catalog price');
 select is((select total_usd from orders where id = '20000000-0000-4000-8000-000000000001'),
           3.30::numeric, 'total_usd = price x quantity');
@@ -39,9 +43,9 @@ select ok((select reference ~ '^FD-[0-9]{7}$' and reference <> 'FD-0000000'
 
 -- Rounding rule: always up to whole SDG.
 update app_settings set usd_sdg_rate = 2600.3333 where id;
-insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
-values ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}');
+select private.insert_order('10000000-0000-4000-8000-000000000001',
+  '[{"variant_id":"00000000-0000-4000-c000-000000000001","quantity":1,"fulfillment_data":{"player_id":"123456"}}]',
+  gen_random_uuid(), '20000000-0000-4000-8000-000000000002');
 select is((select total_sdg from orders where id = '20000000-0000-4000-8000-000000000002'),
           2861::numeric, 'SDG rounded up: ceil(1.10 x 2600.3333 = 2860.37) = 2861');
 
@@ -50,17 +54,19 @@ update product_variants set price_usd = 5.00 where id = '00000000-0000-4000-c000
 update app_settings set usd_sdg_rate = 3000 where id;
 
 select results_eq(
-  $$ select unit_price_usd, total_usd, usd_sdg_rate, total_sdg from orders
-      where id = '20000000-0000-4000-8000-000000000001' $$,
+  $$ select i.unit_price_usd, o.total_usd, o.usd_sdg_rate, o.total_sdg
+       from orders o join order_items i on i.order_id = o.id
+      where o.id = '20000000-0000-4000-8000-000000000001' $$,
   $$ values (1.10::numeric, 3.30::numeric, 2600::numeric, 8580::numeric) $$,
   'existing order unchanged after price 1.10→5.00 and rate 2600→3000');
 
-insert into orders (id, user_id, variant_id, quantity, idempotency_key, fulfillment_data)
-values ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-c000-000000000001', 1, gen_random_uuid(), '{"player_id":"123456"}');
+select private.insert_order('10000000-0000-4000-8000-000000000001',
+  '[{"variant_id":"00000000-0000-4000-c000-000000000001","quantity":1,"fulfillment_data":{"player_id":"123456"}}]',
+  gen_random_uuid(), '20000000-0000-4000-8000-000000000003');
 select results_eq(
-  $$ select unit_price_usd, usd_sdg_rate, total_sdg from orders
-      where id = '20000000-0000-4000-8000-000000000003' $$,
+  $$ select i.unit_price_usd, o.usd_sdg_rate, o.total_sdg
+       from orders o join order_items i on i.order_id = o.id
+      where o.id = '20000000-0000-4000-8000-000000000003' $$,
   $$ values (5.00::numeric, 3000::numeric, 15000::numeric) $$,
   'a NEW order uses the new price and rate');
 
@@ -69,9 +75,9 @@ select throws_ok(
   $$ update orders set total_sdg = 1 where id = '20000000-0000-4000-8000-000000000001' $$,
   '42501', 'ORDER_SNAPSHOT_IMMUTABLE', 'total_sdg cannot be edited (as postgres)');
 select throws_ok(
-  $$ update orders set unit_price_usd = 0.01, total_usd = 0.03
-      where id = '20000000-0000-4000-8000-000000000001' $$,
-  '42501', 'ORDER_SNAPSHOT_IMMUTABLE', 'price columns cannot be edited');
+  $$ update order_items set unit_price_usd = 0.01, line_total_usd = 0.03
+      where order_id = '20000000-0000-4000-8000-000000000001' $$,
+  '42501', 'ORDER_SNAPSHOT_IMMUTABLE', 'line price columns cannot be edited');
 select throws_ok(
   $$ update orders set usd_sdg_rate = 1 where id = '20000000-0000-4000-8000-000000000001' $$,
   '42501', 'ORDER_SNAPSHOT_IMMUTABLE', 'rate snapshot cannot be edited');
@@ -94,7 +100,7 @@ select is((select count(*)::int from inv), 1, 'completing the order issued exact
 
 select results_eq(
   $$ select total_usd, usd_sdg_rate, total_sdg,
-            (snapshot -> 'order' ->> 'unit_price_usd')::numeric
+            (snapshot -> 'items' -> 0 ->> 'unit_price_usd')::numeric
        from invoices where id = (select id from inv) $$,
   $$ values (3.30::numeric, 2600::numeric, 8580::numeric, 1.10::numeric) $$,
   'invoice totals come from the order snapshot, not current prices or the caller');

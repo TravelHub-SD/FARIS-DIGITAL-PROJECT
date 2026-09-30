@@ -11,21 +11,39 @@ export const INVOICE_NUMBER = /^INV-[0-9]{4}-[0-9]{5,}$/;
 
 export type InvoiceStatus = "issued" | "void";
 
+export type InvoiceLine = {
+  line_no: number;
+  product_name_ar: string | null;
+  product_name_en: string | null;
+  variant_name_ar: string | null;
+  variant_name_en: string | null;
+  quantity: number;
+  unit_price_usd: number;
+  line_total_usd: number;
+  line_total_sdg: number;
+};
+
+/**
+ * Two shapes exist and both are immutable: invoices issued since the cart
+ * (2026-09-30) carry `items`; older ones carry their single line inside
+ * `order`. invoiceLines() reads either.
+ */
 export type InvoiceSnapshot = {
   order: {
     reference: string;
     created_at: string;
     completed_at: string | null;
-    product_name_ar: string | null;
-    product_name_en: string | null;
-    variant_name_ar: string | null;
-    variant_name_en: string | null;
-    quantity: number;
-    unit_price_usd: number;
     total_usd: number;
     usd_sdg_rate: number;
     total_sdg: number;
+    product_name_ar?: string | null;
+    product_name_en?: string | null;
+    variant_name_ar?: string | null;
+    variant_name_en?: string | null;
+    quantity?: number;
+    unit_price_usd?: number;
   };
+  items?: InvoiceLine[];
   customer: { full_name: string | null; phone: string | null };
   seller: {
     name_ar: string;
@@ -66,8 +84,28 @@ export type InvoiceListRow = {
   customer_phone: string | null;
   product_name_ar: string | null;
   product_name_en: string | null;
+  item_count: number;
   total_sdg: number;
 };
+
+export function invoiceLines(s: InvoiceSnapshot): InvoiceLine[] {
+  if (s.items?.length) return s.items;
+  const o = s.order;
+  return [
+    {
+      line_no: 1,
+      product_name_ar: o.product_name_ar ?? null,
+      product_name_en: o.product_name_en ?? null,
+      variant_name_ar: o.variant_name_ar ?? null,
+      variant_name_en: o.variant_name_en ?? null,
+      quantity: o.quantity ?? 1,
+      unit_price_usd: o.unit_price_usd ?? o.total_usd,
+      line_total_usd: o.total_usd,
+      // Single-line orders were charged ceil(total_usd × rate): the total.
+      line_total_sdg: o.total_sdg,
+    },
+  ];
+}
 
 const PAGE = 25;
 

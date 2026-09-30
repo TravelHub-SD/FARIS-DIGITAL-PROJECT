@@ -171,6 +171,7 @@ export default async function AdminInvoicesPage({
                         locale,
                       )}
                     />
+                    {i.item_count > 1 && ` +${i.item_count - 1}`}
                   </td>
                   <td className="whitespace-nowrap">
                     {formatDateTime(i.issued_at, locale)}

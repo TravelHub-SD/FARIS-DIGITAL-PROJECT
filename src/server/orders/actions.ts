@@ -6,16 +6,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { routing } from "@/i18n/routing";
-import {
-  type FieldErrorCode,
-  fieldDefinitionsSchema,
-  validateFulfillment,
-} from "@/lib/fulfillment";
+import { type FieldErrorCode, fieldDefinitionsSchema } from "@/lib/fulfillment";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser, isComplete } from "@/server/auth/session";
 import { getVisibleVariant } from "@/server/catalog/queries";
 import { type ImageRejection, sanitizeImage } from "@/server/files/image";
 import { removeUploadedFile, uploadPrivateJpeg } from "@/server/files/storage";
+import { readFulfillmentForm } from "@/server/orders/fulfillment-form";
 import { dispatchSoon } from "@/server/whatsapp";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -90,22 +87,8 @@ export async function placeOrder(
   if (!variant || !defs?.success)
     return { status: "invalid", errors: { _form: "unavailable" } };
 
-  const input: Record<string, unknown> = {};
-  const duplicated = new Set<string>();
-  for (const [name, value] of formData.entries()) {
-    if (!name.startsWith("f.")) continue; // fields live under "f."; nothing else is data
-    const key = name.slice(2);
-    if (key in input) duplicated.add(key);
-    input[key] = value; // a File is not a string → "type"
-  }
-  const fields = validateFulfillment(defs.data, input);
-  if (!fields.ok || duplicated.size) {
-    const errors: Record<string, FieldErrorCode> = fields.ok
-      ? {}
-      : { ...fields.errors };
-    for (const key of duplicated) errors[key] = "type";
-    return { status: "invalid", errors };
-  }
+  const fields = readFulfillmentForm(formData, defs.data);
+  if (!fields.ok) return { status: "invalid", errors: fields.errors };
 
   const user = await getSessionUser();
   if (!user) return { status: "error", reason: "sign_in" };

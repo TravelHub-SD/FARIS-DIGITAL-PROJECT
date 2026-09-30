@@ -52,12 +52,16 @@ describe("Incomplete (Google, phone-unverified) accounts are unusable", () => {
   });
 
   it("cannot place an order (DB trigger, any insert path)", async () => {
-    const res = await service().from("orders").insert({
-      user_id: googleUser,
-      variant_id: VARIANT_CHEAP,
-      quantity: 1,
-      idempotency_key: randomUUID(),
-      fulfillment_data: CHEAP_FIELDS,
+    const res = await service().rpc("service_create_order", {
+      p_user_id: googleUser,
+      p_items: [
+        {
+          variant_id: VARIANT_CHEAP,
+          quantity: 1,
+          fulfillment_data: CHEAP_FIELDS,
+        },
+      ],
+      p_idempotency_key: randomUUID(),
     });
     expect(res.error?.message).toMatch(/PHONE_NOT_VERIFIED/);
   });
@@ -94,12 +98,16 @@ describe("Incomplete (Google, phone-unverified) accounts are unusable", () => {
         `select phone_e164, phone_verified_at is not null from public.profiles where id = '${id}'`,
       ),
     ).toBe(`+${phone}|t`);
-    const order = await service().from("orders").insert({
-      user_id: id,
-      variant_id: VARIANT_CHEAP,
-      quantity: 1,
-      idempotency_key: randomUUID(),
-      fulfillment_data: CHEAP_FIELDS,
+    const order = await service().rpc("service_create_order", {
+      p_user_id: id,
+      p_items: [
+        {
+          variant_id: VARIANT_CHEAP,
+          quantity: 1,
+          fulfillment_data: CHEAP_FIELDS,
+        },
+      ],
+      p_idempotency_key: randomUUID(),
     });
     expect(order.error).toBeNull();
   });

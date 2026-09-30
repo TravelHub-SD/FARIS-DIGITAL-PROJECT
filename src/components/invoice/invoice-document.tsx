@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { formatDateTime, formatSdg, formatUsd } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
-import type { Invoice } from "@/server/invoices/queries";
+import { type Invoice, invoiceLines } from "@/server/invoices/queries";
 
 // The invoice as a printable A4 document. Rendered ONLY from the snapshot
 // taken when it was issued (never from live orders, prices or profiles), so
@@ -61,8 +61,7 @@ export async function InvoiceDocument({
     maximumFractionDigits: 4,
   }).format(Number(o.usd_sdg_rate));
   const isVoid = invoice.status === "void";
-  const product = pick(o.product_name_ar, o.product_name_en, locale);
-  const variant = pick(o.variant_name_ar, o.variant_name_en, locale);
+  const lines = invoiceLines(s);
 
   return (
     <article
@@ -165,21 +164,36 @@ export async function InvoiceDocument({
           </tr>
         </thead>
         <tbody>
-          <tr className="border-b border-neutral-200 align-top">
-            <td className="py-3">
-              <p className="font-bold">{product}</p>
-              {variant && <p className="text-neutral-600">{variant}</p>}
-            </td>
-            <td className="py-3 text-center">
-              <Ltr>{o.quantity}</Ltr>
-            </td>
-            <td className="py-3 text-end">
-              <Ltr>{formatUsd(o.unit_price_usd, "en")}</Ltr>
-            </td>
-            <td className="py-3 text-end">
-              <Ltr>{formatUsd(o.total_usd, "en")}</Ltr>
-            </td>
-          </tr>
+          {lines.map((line) => {
+            const variant = pick(
+              line.variant_name_ar,
+              line.variant_name_en,
+              locale,
+            );
+            return (
+              <tr
+                key={line.line_no}
+                className="border-b border-neutral-200 align-top"
+                data-testid="invoice-line"
+              >
+                <td className="py-3">
+                  <p className="font-bold">
+                    {pick(line.product_name_ar, line.product_name_en, locale)}
+                  </p>
+                  {variant && <p className="text-neutral-600">{variant}</p>}
+                </td>
+                <td className="py-3 text-center">
+                  <Ltr>{line.quantity}</Ltr>
+                </td>
+                <td className="py-3 text-end">
+                  <Ltr>{formatUsd(line.unit_price_usd, "en")}</Ltr>
+                </td>
+                <td className="py-3 text-end">
+                  <Iso>{formatSdg(line.line_total_sdg, locale)}</Iso>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

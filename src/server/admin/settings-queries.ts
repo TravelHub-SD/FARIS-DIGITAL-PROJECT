@@ -26,6 +26,7 @@ export async function getSettings() {
       order_rate_limit_per_hour: number;
       receipts_per_order_limit: number;
       comment_rate_limit_per_hour: number;
+      kyc_window_hours: number;
     } | null,
     banks: (banks.data ?? []) as {
       id: string;
