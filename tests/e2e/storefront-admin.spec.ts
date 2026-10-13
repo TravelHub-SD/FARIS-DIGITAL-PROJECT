@@ -64,7 +64,7 @@ test("sections, category icon, New badge and compare-at price from the dashboard
     );
     const iconBox = page.getByTestId("category-icon");
     await iconBox.locator("input[type=file]").setInputFiles(icon);
-    await iconBox.getByRole("button", { name: "Upload image" }).click();
+    await iconBox.getByRole("button", { name: "Upload" }).click();
     await expect(page.getByTestId("category-icon-preview")).toBeVisible();
     // Stored as WebP (full + thumbnail) under categories/<id>/.
     expect(

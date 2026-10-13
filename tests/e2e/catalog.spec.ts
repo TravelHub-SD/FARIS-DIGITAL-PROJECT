@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 
 import { createFixtures, type Fixtures } from "../integration/catalog-fixtures";
 
+import { createUser, signInCookies, sql, type TestUser } from "./helpers";
+
 let fx: Fixtures;
 test.beforeAll(async () => {
   fx = await createFixtures(`e2e${randomUUID().slice(0, 6)}`);
@@ -66,14 +68,20 @@ test("hidden, inactive and archived items are unreachable by direct URL, search 
   }
 });
 
-test.describe("forged order-details submissions are rejected by the server", () => {
+test.describe("forged add-to-cart submissions are rejected by the server", () => {
+  // Signed in: a guest is asked to sign in before any detail is read. Every
+  // browser-side check is removed, so only the server decides; each case
+  // also checks in the database that nothing reached the cart.
+  let customer: TestUser;
   test.beforeEach(async ({ page }) => {
+    customer = await createUser();
+    await signInCookies(page.context(), customer.phone, customer.password);
     await page.goto(`/en/p/${fx.slugs.ok}`);
-    await expect(page.getByTestId("order-details-form")).toBeVisible();
-    // Disable every browser-side check: from here on only the server decides.
+    const form = page.getByTestId("add-to-cart-form");
+    await expect(form.locator("button[type=submit]")).toBeEnabled();
     await page.evaluate(() => {
       const form = document.querySelector(
-        "form[data-testid=order-details-form]",
+        "form[data-testid=add-to-cart-form]",
       ) as HTMLFormElement;
       form.noValidate = true;
       form
@@ -86,9 +94,13 @@ test.describe("forged order-details submissions are rejected by the server", () 
     });
   });
   const submit = (page: import("@playwright/test").Page) =>
-    page.getByRole("button", { name: "Place order" }).click();
+    page.getByTestId("add-to-cart-form").locator("button[type=submit]").click();
   const fieldError = (page: import("@playwright/test").Page, key: string) =>
     page.locator(`[data-field-error="${key}"]`);
+  const cartLines = () =>
+    sql(
+      `select count(*) from public.cart_items where user_id = '${customer.id}'`,
+    );
 
   test("missing required fields", async ({ page }) => {
     await submit(page);
@@ -98,7 +110,8 @@ test.describe("forged order-details submissions are rejected by the server", () 
     await expect(fieldError(page, "server")).toHaveText(
       "This field is required.",
     );
-    await expect(page.getByTestId("order-error")).toHaveCount(0);
+    await expect(page.getByTestId("cart-error")).toHaveCount(0);
+    expect(cartLines()).toBe("0");
   });
 
   test("an extra field injected into the form", async ({ page }) => {
@@ -112,14 +125,14 @@ test.describe("forged order-details submissions are rejected by the server", () 
         value: "<script>",
       });
       document
-        .querySelector("form[data-testid=order-details-form]")!
+        .querySelector("form[data-testid=add-to-cart-form]")!
         .appendChild(input);
     });
     await submit(page);
-    await expect(page.locator("[data-tone=error]")).toHaveText(
-      "Unexpected field.",
-    );
-    await expect(page.getByTestId("order-error")).toHaveCount(0);
+    const error = page.getByTestId("cart-error");
+    await expect(error).toHaveText("Unexpected field.");
+    await expect(error).toHaveAttribute("data-reason", "fulfillment_invalid");
+    expect(cartLines()).toBe("0");
   });
 
   test("wrong-typed values: letters in a digits field, an option that does not exist", async ({
@@ -136,33 +149,41 @@ test.describe("forged order-details submissions are rejected by the server", () 
     await expect(fieldError(page, "server")).toHaveText(
       "Choose one of the options.",
     );
+    expect(cartLines()).toBe("0");
   });
 
-  test("a hidden variant id forged into the radio", async ({ page }) => {
+  test("a hidden variant id forged into the package choice", async ({
+    page,
+  }) => {
     await page.fill("#f-player_id", "123456");
     await page.selectOption("#f-server", "mena");
     await page.evaluate((id) => {
       (
-        document.querySelector("input[name=variantId]") as HTMLInputElement
+        document.querySelector(
+          "input[name=variantId]:checked",
+        ) as HTMLInputElement
       ).value = id;
     }, fx.ids.hiddenVariant);
     await submit(page);
-    await expect(page.locator("[data-tone=error]")).toHaveText(
-      "This option is no longer available.",
-    );
+    const error = page.getByTestId("cart-error");
+    await expect(error).toHaveAttribute("data-reason", "variant_unavailable");
+    await expect(error).toContainText("This package is no longer available.");
+    expect(cartLines()).toBe("0");
   });
 
-  test("control: a valid submission (Arabic-Indic digits) passes validation and only asks to sign in", async ({
+  test("control: a valid submission (Arabic-Indic digits) is stored with Latin digits", async ({
     page,
   }) => {
     await page.fill("#f-player_id", "١٢٣٤٥٦");
     await page.selectOption("#f-server", "eu");
     await submit(page);
-    await expect(page.getByTestId("order-error")).toHaveAttribute(
-      "data-reason",
-      "sign_in",
-    );
+    await expect(page.getByTestId("added-to-cart")).toBeVisible();
     await expect(page.locator("[data-field-error]:not(:empty)")).toHaveCount(0);
+    expect(
+      sql(
+        `select fulfillment_data::text from public.cart_items where user_id = '${customer.id}'`,
+      ),
+    ).toBe('{"server": "eu", "player_id": "123456"}');
   });
 });
 

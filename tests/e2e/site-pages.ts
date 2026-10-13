@@ -37,7 +37,12 @@ export async function buildSite() {
   const done = await createOrder(customer.id);
   const { invoice } = await completeOrderWithInvoice(done);
   const paid = await createPaidOrder(customer.id);
-  await createOrder(customer.id); // awaiting payment
+  const awaiting = await createOrder(customer.id); // awaiting payment
+  // A cart with lines (the longest player ID the field accepts) for the cart
+  // and checkout pages.
+  sql(`insert into cart_items (user_id, variant_id, quantity, fulfillment_data) values
+         ('${customer.id}', '${SEED.variant}', 2, '{"player_id":"51234567890123456789"}'),
+         ('${customer.id}', '00000000-0000-4000-c000-000000000004', 1, '{"player_id":"123456","server":"mena"}')`);
   const fresh = await createUser({ name: "New Customer" });
   const applicant = await createUser({ name: "صاحب الطلب" });
   const kyc = await createKycSubmission(applicant.id);
@@ -74,6 +79,8 @@ export async function buildSite() {
   const pages: SitePage[] = [
     { role: "guest", path: "", main: true },
     { role: "guest", path: "/c/games", main: true },
+    { role: "guest", path: "/categories", main: true },
+    { role: "guest", path: "/cart" },
     { role: "guest", path: "/p/pubg-uc", main: true },
     { role: "guest", path: "/search?q=pubg", main: true },
     { role: "guest", path: "/search?q=zzzzzz" },
@@ -88,6 +95,14 @@ export async function buildSite() {
     { role: "customer", path: "/account/orders", main: true },
     { role: "customer", path: `/account/orders/${ref(done)}`, main: true },
     { role: "customer", path: `/account/orders/${ref(paid)}` },
+    {
+      role: "customer",
+      path: `/account/orders/${ref(awaiting)}?placed=1`,
+      main: true,
+    },
+    { role: "customer", path: "/cart", main: true },
+    { role: "customer", path: "/checkout", main: true },
+    { role: "fresh", path: "/cart" },
     { role: "customer", path: "/account/kyc", main: true },
     { role: "customer", path: "/account/invoices", main: true },
     {
@@ -119,6 +134,7 @@ export async function buildSite() {
     { role: "owner", path: "/admin/invoices", main: true },
     { role: "owner", path: `/admin/invoices/${invoice.invoice_number}` },
     { role: "owner", path: "/admin/messages", main: true },
+    { role: "owner", path: "/admin/banners", main: true },
     { role: "owner", path: "/admin/faqs" },
     { role: "owner", path: "/admin/pages", main: true },
     { role: "owner", path: "/admin/security", main: true },

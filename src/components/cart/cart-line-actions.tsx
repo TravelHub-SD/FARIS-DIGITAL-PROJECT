@@ -54,6 +54,10 @@ export function CartLineActions({
   const errors: Record<string, FieldErrorCode> =
     result && !result.ok ? (result.errors ?? {}) : {};
   const reason = result && !result.ok && !result.errors ? result.error : null;
+  // An error on a field the package does not have (injected into the form).
+  const stray = Object.entries(errors).find(
+    ([key]) => !fields.some((f) => f.key === key),
+  );
 
   function run(action: () => Promise<CartResult>) {
     setPending(true);
@@ -159,6 +163,16 @@ export function CartLineActions({
         </details>
       )}
 
+      {stray && (
+        <p
+          role="alert"
+          className={`${alertClasses.base} ${alertClasses.error}`}
+          data-testid="line-error"
+          data-reason="fulfillment_invalid"
+        >
+          {strings.errors[stray[1]] ?? strings.errors.type}
+        </p>
+      )}
       {reason && (
         <p
           role="alert"

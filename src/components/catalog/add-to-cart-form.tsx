@@ -73,6 +73,11 @@ export function AddToCartForm({
   const errors: Record<string, FieldErrorCode> =
     result && !result.ok ? (result.errors ?? {}) : {};
   const reason = result && !result.ok && !result.errors ? result.error : null;
+  // An error on a field this package does not have (a field injected into
+  // the form) has no input to sit next to: shown as a general message.
+  const stray = Object.entries(errors).find(
+    ([key]) => !variant.fields.some((f) => f.key === key),
+  );
 
   return (
     <form
@@ -210,6 +215,16 @@ export function AddToCartForm({
             <a href={cartHref} className="font-bold underline">
               {strings.viewCart}
             </a>
+          </div>
+        )}
+        {stray && (
+          <div
+            role="alert"
+            className={`${alertClasses.base} ${alertClasses.error}`}
+            data-testid="cart-error"
+            data-reason="fulfillment_invalid"
+          >
+            {strings.errors[stray[1]] ?? strings.errors.type}
           </div>
         )}
         {reason && (

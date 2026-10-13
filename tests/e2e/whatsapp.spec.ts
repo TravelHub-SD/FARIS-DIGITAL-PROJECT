@@ -521,13 +521,20 @@ test("Meta unreachable: the order is still created, and the failure shows in the
   await signInCookies(ctx, customer.phone, customer.password);
   const page = await ctx.newPage();
   await page.goto("/en/p/pubg-uc");
-  await page.selectOption("#quantity", "1");
+  const add = page
+    .getByTestId("add-to-cart-form")
+    .locator("button[type=submit]");
+  await expect(add).toBeEnabled();
   await page.fill("#f-player_id", "5123456789");
+  await add.click();
+  await expect(page.getByTestId("added-to-cart")).toBeVisible();
+  await page.goto("/en/checkout");
+  await expect(page.getByTestId("confirm-order")).toBeEnabled();
   const started = Date.now();
-  await page.getByRole("button", { name: "Place order" }).click();
-  await page.waitForURL(/\/en\/account\/orders\/FD-\d{7}$/);
+  await page.getByTestId("confirm-order").click();
+  await page.waitForURL(/\/en\/account\/orders\/FD-\d{7}\?placed=1$/);
   const tookMs = Date.now() - started;
-  const reference = page.url().split("/").pop()!;
+  const reference = new URL(page.url()).pathname.split("/").pop()!;
   await expect(page.getByText(reference).first()).toBeVisible();
   const orderId = sql(`select id from orders where reference = '${reference}'`);
   expect(sql(`select status from orders where id = '${orderId}'`)).toBe("new");
