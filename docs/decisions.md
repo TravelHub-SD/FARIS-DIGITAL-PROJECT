@@ -787,3 +787,38 @@ category and product images in the staging demo data only, uploaded through
 the dashboard's own storage path (re-encoded WebP + thumbnail under
 `products/<id>/` and `categories/<id>/`). They are not in the repository, a
 migration or any seed; products without a mark keep the letter tile.
+
+## 2026-10-13 — Staging for the client review (no credentials here)
+
+**Deployment.** Only one Vercel project is linked to the repository,
+`faris-digital-staging`; its production branch is
+`claude/friendly-mccarthy-c3ejcc`, so a push to that branch updates the
+staging site only (pushes to `main` make previews). The client-owned
+production projects do not exist yet (roadmap, client-blocked list).
+Vercel Authentication (standard protection) is still on, and every response
+carries `x-robots-tag: noindex`.
+
+**Migration 20261003100000 on staging.** Applied in parts through the
+Supabase tool: everything additive (sections, `section_id`, `is_new`,
+compare-at price and its function, promo slides). The last part is held for
+Hassan's approval because it drops data: copy the old banner into a slide,
+drop the five `app_settings.banner_*` columns, replace `search_products`,
+record the migration. It must run after a deployment that no longer reads
+those columns (any commit from 7421177 on). Until then the cards on staging
+show no "New" badge or "was" price (they come from `search_products`);
+product pages already show both.
+
+**Demo data (staging only, inserts and updates, nothing deleted).** Four
+sections, one category per game or service (the two old catch-all categories
+hidden once empty), 20 products and 38 packages with "New" badges and
+compare-at prices, three promo slides, multi-line orders created through
+`private.insert_order` (the checkout path), and two carts. Brand marks from
+Simple Icons (CC0) were uploaded as category icons and product images by a
+temporary staff account through the dashboard's own path (repository
+`processPublicImage`, aal2 session, `public-assets` under `categories/<id>/`
+and `products/<id>/`, `image_path` set under RLS, audited). That account was
+then disabled (inactive + banned; deletion waits for approval). Products with
+no mark keep the letter tile. Two accounts were created for the client: a
+customer and a staff member with every permission and no owner rights, who
+must enrol an authenticator at first sign-in (proven: the staff data API
+refuses the account until then).
