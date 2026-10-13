@@ -869,7 +869,8 @@
       "delete": "حذف الشريحة",
       "deleteConfirm": "حذف هذه الشريحة وصورتها؟",
       "slideTitle": "العنوان"
-    }
+    },
+    "edit": "تعديل"
   },
   "Catalog": {
     "categories": "الأقسام",

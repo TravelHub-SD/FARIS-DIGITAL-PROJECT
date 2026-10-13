@@ -63,11 +63,37 @@ export default async function CatalogPage({
         description={t("catalog.sectionsHint")}
         testId="admin-sections"
       >
-        {sections.map((s) => (
-          <div key={s.id} className="rounded-lg border p-3">
-            <SectionForm section={s} />
-          </div>
-        ))}
+        {sections.length > 0 && (
+          <ul className="grid divide-y rounded-lg border">
+            {sections.map((s) => (
+              <li key={s.id}>
+                <details className="group" data-testid="section-item">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/50 [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center gap-2 font-medium">
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {s.sort_order}
+                      </span>
+                      <L10n value={localized(s.name_ar, s.name_en, locale)} />
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {!s.is_active && (
+                        <Badge tone="neutral">
+                          {t("catalog.states.hidden")}
+                        </Badge>
+                      )}
+                      <span className="text-sm text-primary group-open:hidden">
+                        {t("edit")}
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="border-t p-3">
+                    <SectionForm section={s} />
+                  </div>
+                </details>
+              </li>
+            ))}
+          </ul>
+        )}
         <SectionForm />
       </Section>
 

@@ -60,7 +60,12 @@ export default async function LocaleLayout({
   // Set by proxy.ts for this request (Content-Security-Policy). Reading it
   // makes every page render per request: a static page cannot carry a fresh
   // nonce. Catalog data stays cached (catalogCache in server/catalog/queries.ts).
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const requestHeaders = await headers();
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
+  // The dashboard has its own navigation: no shopper tabs or chat button.
+  const shopper = !/^\/(ar|en)\/admin(\/|$)/.test(
+    requestHeaders.get("x-pathname") ?? "",
+  );
 
   return (
     <html
@@ -69,7 +74,9 @@ export default async function LocaleLayout({
       className={plexArabic.variable}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col pb-16 font-sans md:pb-0">
+      <body
+        className={`flex min-h-dvh flex-col font-sans ${shopper ? "pb-16 md:pb-0" : ""}`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -83,8 +90,8 @@ export default async function LocaleLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
-          <BottomNav />
-          <WhatsAppButton />
+          {shopper && <BottomNav />}
+          {shopper && <WhatsAppButton />}
         </ThemeProvider>
       </body>
     </html>

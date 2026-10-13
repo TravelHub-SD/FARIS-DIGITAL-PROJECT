@@ -869,7 +869,8 @@
       "delete": "Delete slide",
       "deleteConfirm": "Delete this slide and its image?",
       "slideTitle": "Title"
-    }
+    },
+    "edit": "Edit"
   },
   "Catalog": {
     "categories": "Categories",

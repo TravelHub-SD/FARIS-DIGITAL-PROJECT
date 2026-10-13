@@ -133,6 +133,6 @@ Depends on the client (runbook §0):
 ## Phase 11 — Storefront redesign + shopping cart (Hassan, 2026-09-30)
 - [x] Stage 1: design system, 360px Arabic mockups (light/dark), cart architecture recommendation — approved; mockups with the client
 - [x] Stage 2: cart table (RLS), orders with line items, existing orders migrated (byte-identical), per-line rounding, one checkout = one order, KYC on the order total + rolling window setting (dashboard, audited), tests + planted violations
-- [ ] Stage 3: mobile shell (bottom nav, compact header, WhatsApp button), home (banner slider, sections of square icons, sticky category bar), category and product UI; category sections and "New" / compare-at price in the data model — waits for the client's feedback on the mockups
-- [ ] Stage 4: cart, checkout, order and invoice UI, admin line items
+- [x] Stage 3: mobile shell (bottom nav, compact header, WhatsApp button), home (banner slider, sections of square icons, sticky category bar), category and product UI; category sections, promo slides and "New" / compare-at price in the data model and the dashboard (client reviews on staging instead of the mockups)
+- [x] Stage 4: cart, checkout, order and invoice UI, admin line items
 - [ ] Stage 5: account pages and admin pass; full verification (check, all suites, 360px sweep, axe, CSP sweep, JS budget before/after)

@@ -720,3 +720,70 @@ of on the total (3 pgTAP + 1 integration); the rolling window ignored
 (exactly the split-order tests); a hidden variant: with only the line trigger
 weakened, checkout's own check still refuses; with both weakened, the cart
 tests fail.
+
+## 2026-09-30 — Redesign Stages 3–5: storefront, cart UI, dashboard controls
+
+**Plan change (Hassan).** The client does not review the mockups; he reviews
+the real site on staging. Stages 3 and 4 were built against the approved
+design system and mockups.
+
+**Category sections.** A new `category_sections` table (name ar/en, order,
+visible) groups categories on the home page; `categories.section_id` points
+to it (`on delete set null`: deleting a section keeps its categories, shown
+under "More categories"). Managed with the `products` permission, audited,
+RLS like the categories. A category with exactly one product opens that
+product directly (approved in Stage 1). Rejected: a free-text "group" column
+on categories (no ordering, no translation, typos split groups).
+
+**"New" badge and compare-at price: display only.** `products.is_new` and
+`product_variants.compare_at_price_usd`. The struck-through price is computed
+in SQL (`compare_at_sdg`, same rounding as the price) and is NULL unless it is
+above the current price, so a stale value never shows a fake discount. The
+order path never reads it: the line trigger prices from `price_usd` alone
+(pgTAP 09: an order with a compare-at of 99 USD is charged 5.20). Cards show
+the compare-at of the cheapest package, the one whose price they show.
+
+**Promo slides.** `promo_banners` (title, subtitle, image, link, order,
+visible; `settings` permission) replaces the single banner in
+`app_settings`; the migration copies the old banner into the first slide and
+drops the five columns. Links are a site path or https only (CHECK). The
+slider is CSS scroll-snap with the next slide peeking in: no carousel
+library, no JavaScript.
+
+**Category icons.** A new `icon` image profile: roughly square (aspect 0.8 to
+1.25), at least 200 px, stored as 512 px WebP + 256 px thumbnail under
+`categories/<id>/`, through the same validate/re-encode/swap path as product
+images (the storage policy already confined `categories/` to `products`
+staff).
+
+**Phone shell.** Bottom navigation (Home, Categories, Cart with count, My
+orders, Account) rendered on the server: the current tab comes from the
+request path (`x-pathname`, set in `proxy.ts`) and the badge from one RLS
+count; with no session cookie the count is 0 without a request. The floating
+WhatsApp button uses the number from Settings and is hidden when none is set.
+Neither is shown in the dashboard, which has its own navigation. The section
+chips are the only new client code on the home page (an IntersectionObserver
+marks the visible section; the chips are plain anchors and work without it).
+
+**Cart and checkout pages.** Quantity, edit and remove run Server Actions
+with the customer's session; the database re-checks each change and re-prices
+the cart, and the page re-renders with the database's totals (the browser
+never computes a price). Sensitive details are shortened in the cart
+(`a•••@example.com`). The cart offers checkout only when nothing is
+unavailable and verification is not needed; `/checkout` repeats both checks
+and the database repeats them again. The checkout page generates one
+idempotency key per page view, so a double tap or a retry after a lost
+response creates the order once; a changed price shows the new total and
+needs a second confirmation. After the order: its page with a "received"
+note, the amount and account numbers with copy buttons, and a four-step
+progress bar.
+
+**Buttons.** Text size and weight moved from the shared base class into each
+button size: with no class merging, `text-sm font-medium` in the base and
+`text-base font-bold` in the `xl` size conflicted and the base won.
+
+**Staging demo images.** Brand marks from Simple Icons (CC0) are used as
+category and product images in the staging demo data only, uploaded through
+the dashboard's own storage path (re-encoded WebP + thumbnail under
+`products/<id>/` and `categories/<id>/`). They are not in the repository, a
+migration or any seed; products without a mark keep the letter tile.
