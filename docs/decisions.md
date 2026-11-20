@@ -892,3 +892,12 @@ before Phase 9.
   planted (row shown to staff) it fails.
 - **Verified:** `npm run check` pass; e2e on the production build 74/74
   (axe, 360 px and CSP sweeps included).
+- **WhatsApp button on the sign-in screens (follow-up).** On a phone the
+  card fills the width and the register form is taller than the screen, so a
+  floating button covered the card or a field wherever it was placed. Below
+  `md` the sign-in screens (`data-auth-shell`) hide the floating button and
+  show the same link as a labelled pill under the card; everywhere else, and
+  on wider screens where the card leaves room, it still floats.
+  `tests/e2e/auth-whatsapp.spec.ts` checks seven screens at 360 px (register
+  step 2 included) at the top, middle and bottom of the page; with the old
+  floating button it fails ("whatsapp-button over <section>").

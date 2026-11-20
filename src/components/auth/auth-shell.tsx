@@ -1,8 +1,11 @@
 import { getTranslations } from "next-intl/server";
 
+import { WhatsAppButton } from "@/components/layout/whatsapp-button";
+
 // The frame of every sign-in screen (sign in, register, password reset,
 // complete account, two-step sign-in): a brand band with the page's icon and
 // title, then the form on a clean card. Server-rendered: no JavaScript.
+// On phones the WhatsApp button sits under the card, never over it.
 export async function AuthShell({
   icon,
   title,
@@ -19,7 +22,7 @@ export async function AuthShell({
 }) {
   const t = await getTranslations("Brand");
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-6 sm:py-14">
+    <div className="mx-auto w-full max-w-md px-4 py-6 sm:py-14" data-auth-shell>
       <section className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-sm">
         <header className="relative grid justify-items-center gap-3 bg-primary px-6 pt-6 pb-7 text-center text-primary-foreground">
           <p className="text-sm font-bold tracking-tight">{t("name")}</p>
@@ -46,6 +49,7 @@ export async function AuthShell({
           )}
         </div>
       </section>
+      <WhatsAppButton inline />
     </div>
   );
 }
