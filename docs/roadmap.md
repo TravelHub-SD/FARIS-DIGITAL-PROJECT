@@ -135,4 +135,5 @@ Depends on the client (runbook §0):
 - [x] Stage 2: cart table (RLS), orders with line items, existing orders migrated (byte-identical), per-line rounding, one checkout = one order, KYC on the order total + rolling window setting (dashboard, audited), tests + planted violations
 - [x] Stage 3: mobile shell (bottom nav, compact header, WhatsApp button), home (banner slider, sections of square icons, sticky category bar), category and product UI; category sections, promo slides and "New" / compare-at price in the data model and the dashboard (client reviews on staging instead of the mockups)
 - [x] Stage 4: cart, checkout, order and invoice UI, admin line items
-- [ ] Stage 5: account pages and admin pass; full verification (check, all suites, 360px sweep, axe, CSP sweep, JS budget before/after)
+- [x] Stage 5: account pages and admin pass; full verification (check, all suites, 360px sweep, axe, CSP sweep, JS budget before/after) — results in decisions.md 2026-11-20
+- [x] Staging for the client: last part of the storefront migration applied, temporary upload account deleted, demo sessions revoked, Vercel Authentication off (still noindex)

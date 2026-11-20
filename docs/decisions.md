@@ -822,3 +822,46 @@ no mark keep the letter tile. Two accounts were created for the client: a
 customer and a staff member with every permission and no owner rights, who
 must enrol an authenticator at first sign-in (proven: the staff data API
 refuses the account until then).
+
+## 2026-11-20 — Stage 5 verified; staging opened for the client (approved by Hassan)
+
+**Verification (commit 9f8e153, local Supabase reset with migrations + seed,
+fake Meta Graph API; run 2026-10-13).** `npm run check` (typecheck, lint,
+logical CSS, messages, Prettier, build): pass. E2E on `next dev`: 72 passed,
+1 skipped (the catalog-cache test, which only exists on `next start`). E2E
+on the production build (`E2E_SERVER=prod`): 73/73, cache test included.
+Vitest (unit + integration): 385/385 in 25 files. pgTAP: 252/252 in 9 files.
+The 360 px, axe and CSP sweeps (`tests/e2e/site-pages.ts`, ar + en, light and
+dark) cover the cart with lines, checkout, the placed order, my orders,
+categories, the home page with sections and slides, the account page and the
+dashboard (banners and catalog included); the guest and empty carts get the
+360 px and CSP sweeps only.
+
+**JavaScript, gzip, production build.** Unchanged pages: `/ar` and `/en`
+180.2 → 180.9 KB, `/ar/c/games` 180.2 → 180.2, product 183.4 → 183.5, login
+206.3 → 206.3. New pages: categories 180.2, cart 196.0, checkout 195.5, order
+confirmation 206.0, my orders 193.8, account 206.5, dashboard 203.5–205.6.
+The heaviest page is at the login page's level, against 312 KB for login
+before Phase 9.
+
+**Staging, 2026-11-20.**
+- The last part of migration 20261003100000 ran on staging exactly as in the
+  file (one transaction): the old banner ("Staging: demo data only") became
+  slide 0, the five `app_settings.banner_*` columns were dropped,
+  `search_products` was replaced, and the migration was recorded in the
+  migration history. Checked on the site: the cards show the "New" badge on
+  the 4 products marked new and the "was" price on the 5 whose cheapest
+  package has one.
+- The client's two demo accounts have no open session (the ones left by the
+  sign-in checks were revoked).
+- The temporary upload account was deleted (staff row, permissions, profile,
+  authenticator, identity). The 52 images it uploaded and its 26 audit
+  entries stay: neither references the user by foreign key, and every product
+  image and category icon still resolves.
+- Vercel Authentication is off on `faris-digital-staging` only (password
+  protection and trusted IPs were already off). Still not indexable: every
+  page has `<meta name="robots" content="noindex, nofollow">` and
+  `robots.txt` is `Disallow: /` (`isIndexable()`: a `*.vercel.app` address
+  never is). The `x-robots-tag` header noted on 2026-10-13 came from Vercel
+  Authentication and went with it. Checked from a Vercel Sandbox with no
+  Vercel login: pages answer 200 and both demo accounts sign in.
