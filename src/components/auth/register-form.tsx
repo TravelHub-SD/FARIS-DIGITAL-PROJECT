@@ -6,7 +6,6 @@ import { useState, useTransition } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
-import { useHydrated } from "@/lib/use-hydrated";
 import {
   fullNameRule,
   newPasswordRule,
@@ -21,6 +20,9 @@ import {
 import {
   type ActionFailure,
   Field,
+  FormError,
+  Steps,
+  SubmitButton,
   useCountdown,
   useErrorText,
   useRuleForm,
@@ -33,7 +35,6 @@ export function RegisterForm() {
   const [phone, setPhone] = useState<string | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
-  const hydrated = useHydrated();
   const cooldown = useCountdown();
 
   const sendCode = (e164: string) =>
@@ -49,6 +50,7 @@ export function RegisterForm() {
       }
     });
   const first = useRuleForm({ phone: phoneRule }, (v) => sendCode(v.phone));
+  const steps = [t("steps.phone"), t("steps.account")];
   const second = useRuleForm(
     { code: otpCodeRule, fullName: fullNameRule, password: newPasswordRule },
     (v) =>
@@ -68,6 +70,7 @@ export function RegisterForm() {
         onSubmit={first.onSubmit}
         onChange={first.onChange}
       >
+        <Steps current={1} labels={steps} />
         <Field
           id="phone"
           label={t("phone")}
@@ -79,10 +82,8 @@ export function RegisterForm() {
           name="phone"
           error={first.errors.phone}
         />
-        {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-        <Button type="submit" disabled={pending || !hydrated}>
-          {t("sendCode")}
-        </Button>
+        {failure && <FormError>{errorText(failure)}</FormError>}
+        <SubmitButton pending={pending}>{t("sendCode")}</SubmitButton>
       </form>
     );
   }
@@ -95,6 +96,7 @@ export function RegisterForm() {
       onSubmit={second.onSubmit}
       onChange={second.onChange}
     >
+      <Steps current={2} labels={steps} />
       <Alert>{t("codeSentTo", { phone: formatPhone(phone) })}</Alert>
       <Field
         id="code"
@@ -123,10 +125,8 @@ export function RegisterForm() {
         name="password"
         error={second.errors.password}
       />
-      {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending || !hydrated}>
-        {t("register.submit")}
-      </Button>
+      {failure && <FormError>{errorText(failure)}</FormError>}
+      <SubmitButton pending={pending}>{t("register.submit")}</SubmitButton>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <Button
           type="button"

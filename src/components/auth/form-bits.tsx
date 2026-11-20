@@ -3,9 +3,12 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useState } from "react";
 
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AuthErrorKey } from "@/i18n/keys";
+import { useHydrated } from "@/lib/use-hydrated";
 import type { Rule } from "@/lib/validation/auth-rules";
 
 type FieldProps = React.ComponentProps<typeof Input> & {
@@ -115,4 +118,104 @@ export function useCountdown() {
     return () => clearTimeout(id);
   }, [seconds]);
   return { seconds, start: (s: number) => setSeconds(s) };
+}
+
+/** "Step 1 of 2 · Phone number" with a progress bar, for two-step forms. */
+export function Steps({
+  current,
+  labels,
+}: {
+  current: number;
+  labels: string[];
+}) {
+  const t = useTranslations("Auth");
+  return (
+    <div className="grid gap-2" data-testid="auth-steps">
+      <p className="text-xs font-bold text-primary-text">
+        {t("stepOf", { current, total: labels.length })} · {labels[current - 1]}
+      </p>
+      <div className="grid grid-flow-col gap-1.5" aria-hidden>
+        {labels.map((label, i) => (
+          <span
+            key={label}
+            className={`h-1.5 rounded-full ${i < current ? "bg-primary" : "bg-muted"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="size-5 animate-spin motion-reduce:animate-none"
+      fill="none"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeOpacity=".3"
+        strokeWidth="3"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The form's main button: full width, disabled until hydration (a click
+ * before it would submit natively) and while the action runs, with a
+ * spinner. The label never changes, so it keeps its accessible name.
+ */
+export function SubmitButton({
+  pending,
+  children,
+}: {
+  pending: boolean;
+  children: React.ReactNode;
+}) {
+  const hydrated = useHydrated();
+  return (
+    <Button
+      type="submit"
+      size="xl"
+      className="w-full"
+      disabled={pending || !hydrated}
+      aria-busy={pending || undefined}
+    >
+      {pending && <Spinner />}
+      {children}
+    </Button>
+  );
+}
+
+/** A failed action, with an icon (the text says what to do next). */
+export function FormError({ children }: { children: React.ReactNode }) {
+  return (
+    <Alert tone="error" className="flex items-start gap-2">
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="mt-0.5 size-4 shrink-0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7.5v5.5M12 16.5h.01" />
+      </svg>
+      <span className="grid gap-1">{children}</span>
+    </Alert>
+  );
 }

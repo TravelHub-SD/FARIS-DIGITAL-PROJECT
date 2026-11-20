@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { formatPhone } from "@/lib/phone";
 import { otpCodeRule, phoneRule } from "@/lib/validation/auth-rules";
 import { completePhoneLink, requestPhoneLinkOtp } from "@/server/auth/actions";
-import { useHydrated } from "@/lib/use-hydrated";
 
 import {
   type ActionFailure,
   Field,
+  FormError,
+  Steps,
+  SubmitButton,
   useCountdown,
   useErrorText,
   useRuleForm,
@@ -25,7 +27,6 @@ export function CompleteAccountForm() {
   const [phone, setPhone] = useState<string | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
-  const hydrated = useHydrated();
   const cooldown = useCountdown();
 
   const sendCode = (e164: string) =>
@@ -41,6 +42,7 @@ export function CompleteAccountForm() {
       }
     });
   const first = useRuleForm({ phone: phoneRule }, (v) => sendCode(v.phone));
+  const steps = [t("steps.phone"), t("steps.code")];
   const second = useRuleForm({ code: otpCodeRule }, (v) =>
     startTransition(async () => {
       setFailure(null);
@@ -57,6 +59,7 @@ export function CompleteAccountForm() {
       onSubmit={second.onSubmit}
       onChange={second.onChange}
     >
+      <Steps current={2} labels={steps} />
       <Alert>{t("codeSentTo", { phone: formatPhone(phone) })}</Alert>
       <Field
         id="code"
@@ -69,10 +72,8 @@ export function CompleteAccountForm() {
         name="code"
         error={second.errors.code}
       />
-      {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending || !hydrated}>
-        {t("complete.submit")}
-      </Button>
+      {failure && <FormError>{errorText(failure)}</FormError>}
+      <SubmitButton pending={pending}>{t("complete.submit")}</SubmitButton>
       <Button
         type="button"
         variant="link"
@@ -93,6 +94,7 @@ export function CompleteAccountForm() {
       onSubmit={first.onSubmit}
       onChange={first.onChange}
     >
+      <Steps current={1} labels={steps} />
       <Field
         id="phone"
         label={t("phone")}
@@ -105,16 +107,14 @@ export function CompleteAccountForm() {
         error={first.errors.phone}
       />
       {failure && (
-        <Alert tone="error">
+        <FormError>
           {errorText(failure)}
           {failure.error === "phone_taken" && (
-            <span className="mt-1 block">{t("complete.existingAccount")}</span>
+            <span className="block">{t("complete.existingAccount")}</span>
           )}
-        </Alert>
+        </FormError>
       )}
-      <Button type="submit" disabled={pending || !hydrated}>
-        {t("sendCode")}
-      </Button>
+      <SubmitButton pending={pending}>{t("sendCode")}</SubmitButton>
     </form>
   );
 }

@@ -88,6 +88,18 @@ export const ShieldIcon = (p: IconProps) => (
     <path d="M12 3 5 6v6c0 4 3 7.5 7 9 4-1.5 7-5 7-9V6Z" />
   </Svg>
 );
+export const KeyIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="m10.8 12.2 8.2-8.2M16 7l3 3M14 9l2 2" />
+  </Svg>
+);
+/** Points to the reading start: left in English, right in Arabic ("back"). */
+export const BackArrowIcon = ({ className = "size-5" }: IconProps) => (
+  <Svg className={`${className} rtl:rotate-180`}>
+    <path d="M19 12H5M11 6l-6 6 6 6" />
+  </Svg>
+);
 export const CopyIcon = (p: IconProps) => (
   <Svg {...p}>
     <rect x="9" y="9" width="11" height="11" rx="2" />

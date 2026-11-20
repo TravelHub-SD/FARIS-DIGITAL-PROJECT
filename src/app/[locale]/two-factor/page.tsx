@@ -2,16 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { AuthShell } from "@/components/auth/auth-shell";
 import { TotpEnrol, TotpVerify } from "@/components/auth/two-factor-forms";
+import { ShieldIcon } from "@/components/icons";
 import { ClientMessages } from "@/components/layout/client-messages";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { signOut } from "@/server/auth/actions";
@@ -39,27 +34,25 @@ export default async function TwoFactorPage({
 
   return (
     <ClientMessages namespaces={["Auth"]}>
-      <div className="mx-auto w-full max-w-md px-4 py-10 sm:py-16">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(enrolled ? "verifyTitle" : "setupTitle")}</CardTitle>
-            <CardDescription>
-              {t(enrolled ? "verifyDescription" : "setupDescription")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5">
-            {enrolled ? <TotpVerify /> : <TotpEnrol />}
+      <AuthShell
+        icon={<ShieldIcon />}
+        title={t(enrolled ? "verifyTitle" : "setupTitle")}
+        description={t(enrolled ? "verifyDescription" : "setupDescription")}
+        footer={
+          <>
             <p className="text-xs text-muted-foreground">
               {t(enrolled ? "lostPhone" : "whyRequired")}
             </p>
             <form action={signOut.bind(null, locale)}>
-              <Button type="submit" variant="ghost" size="sm">
+              <Button type="submit" variant="ghost" size="sm" className="-ms-3">
                 {t("signOut")}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-      </div>
+          </>
+        }
+      >
+        {enrolled ? <TotpVerify /> : <TotpEnrol />}
+      </AuthShell>
     </ClientMessages>
   );
 }

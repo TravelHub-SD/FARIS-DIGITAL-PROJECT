@@ -101,18 +101,22 @@ export default async function AccountPage({
             ›
           </span>
         </Link>
-        <Link href="/account/kyc" className={row}>
-          <span className="flex items-center gap-3 font-bold">
-            <ShieldIcon className="size-5 text-primary-text" />
-            {t("kycStatus")}
-          </span>
-          <span
-            data-testid="kyc-status"
-            className={`rounded-full px-3 py-1 text-xs font-bold ${kycTone}`}
-          >
-            {tKyc(`status.${profile.kyc_status}`)}
-          </span>
-        </Link>
+        {/* Identity verification is for customers' large orders; staff
+            accounts do not see it (Hassan, 2026-11-20). */}
+        {!isStaff && (
+          <Link href="/account/kyc" className={row}>
+            <span className="flex items-center gap-3 font-bold">
+              <ShieldIcon className="size-5 text-primary-text" />
+              {t("kycStatus")}
+            </span>
+            <span
+              data-testid="kyc-status"
+              className={`rounded-full px-3 py-1 text-xs font-bold ${kycTone}`}
+            >
+              {tKyc(`status.${profile.kyc_status}`)}
+            </span>
+          </Link>
+        )}
       </nav>
 
       <section className="grid gap-4 rounded-2xl border bg-card p-4">

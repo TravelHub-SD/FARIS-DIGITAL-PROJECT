@@ -865,3 +865,30 @@ before Phase 9.
   never is). The `x-robots-tag` header noted on 2026-10-13 came from Vercel
   Authentication and went with it. Checked from a Vercel Sandbox with no
   Vercel login: pages answer 200 and both demo accounts sign in.
+
+## 2026-11-20 — Before the client handover: back link, sign-in screens, staff account page (Hassan)
+
+- **Back to store.** Every customer page outside the storefront (account, my
+  orders, order, invoices, KYC, cart, checkout) starts with a "back to store"
+  link. Its arrow is drawn pointing left and turned half a turn in Arabic
+  (`rtl:rotate-180`), so it always points to the reading start. It scrolls
+  with the page: on phones the bottom bar stays the only fixed navigation.
+  Not printed (invoices). `tests/e2e/back-to-store.spec.ts` checks all eight
+  pages in both languages (side, direction, clear of the bottom bar) and its
+  absence from the storefront; planted without the RTL turn it fails
+  (expected `180deg`, got `none`).
+- **Sign-in screens, visual only.** Sign in, register, password reset,
+  complete account and two-step sign-in share `AuthShell` (server-rendered:
+  brand band with the page icon and title, card body, footer links). Forms
+  gained a step indicator (two-step flows), a full-width button with a
+  spinner while the action runs (still disabled until hydration) and an
+  error alert with an icon. Labels, field ids, server actions, OTP logic and
+  their tests are unchanged. `/login` JavaScript: 206.3 → 206.8 KB gzip
+  (same 15 scripts; the shared spinner, icon and steps).
+- **KYC row hidden for staff.** On `/account`, staff (the same check as the
+  dashboard entry: active admins) no longer see the identity verification
+  row; customers and deactivated staff still do. `admin-entry.spec.ts` now
+  waits for the orders link instead of the KYC row and asserts the rule;
+  planted (row shown to staff) it fails.
+- **Verified:** `npm run check` pass; e2e on the production build 74/74
+  (axe, 360 px and CSP sweeps included).

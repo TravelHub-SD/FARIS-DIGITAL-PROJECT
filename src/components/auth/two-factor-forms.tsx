@@ -18,6 +18,8 @@ import {
 import {
   type ActionFailure,
   Field,
+  FormError,
+  SubmitButton,
   useErrorText,
   useRuleForm,
 } from "./form-bits";
@@ -32,7 +34,6 @@ function CodeForm({
   pending: boolean;
 }) {
   const t = useTranslations("Auth");
-  const hydrated = useHydrated();
   const form = useRuleForm({ code: otpCodeRule }, (v) => onCode(v.code));
   return (
     <form
@@ -54,9 +55,7 @@ function CodeForm({
         maxLength={6}
         error={form.errors.code}
       />
-      <Button type="submit" disabled={pending || !hydrated}>
-        {submitLabel}
-      </Button>
+      <SubmitButton pending={pending}>{submitLabel}</SubmitButton>
     </form>
   );
 }
@@ -81,7 +80,7 @@ export function TotpVerify() {
           })
         }
       />
-      {failure && <Alert tone="error">{errorText(failure)}</Alert>}
+      {failure && <FormError>{errorText(failure)}</FormError>}
     </div>
   );
 }
@@ -119,19 +118,29 @@ export function TotpEnrol({ backup = false }: { backup?: boolean }) {
           onClick={start}
           disabled={pending || !hydrated}
           variant={backup ? "outline" : "default"}
+          size={backup ? "default" : "xl"}
+          className={backup ? undefined : "w-full"}
         >
           {t(backup ? "twoFactor.addBackup" : "twoFactor.start")}
         </Button>
-        {failure && <Alert tone="error">{errorText(failure)}</Alert>}
+        {failure && <FormError>{errorText(failure)}</FormError>}
       </div>
     );
 
   return (
     <div className="grid gap-5" data-testid="totp-setup">
-      <ol className="grid list-decimal gap-2 ps-5 text-sm">
-        <li>{t("twoFactor.step1")}</li>
-        <li>{t("twoFactor.step2")}</li>
-        <li>{t("twoFactor.step3")}</li>
+      <ol className="grid gap-3 text-sm">
+        {(["step1", "step2", "step3"] as const).map((step, i) => (
+          <li key={step} className="flex items-start gap-3">
+            <span
+              aria-hidden
+              className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary-text"
+            >
+              {i + 1}
+            </span>
+            <span className="pt-0.5">{t(`twoFactor.${step}`)}</span>
+          </li>
+        ))}
       </ol>
       {/* A data: URL made by the Auth server; allowed by the CSP (img-src data:). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -140,7 +149,7 @@ export function TotpEnrol({ backup = false }: { backup?: boolean }) {
         alt={t("twoFactor.qrAlt")}
         width={200}
         height={200}
-        className="justify-self-center rounded-md bg-white p-2"
+        className="justify-self-center rounded-2xl border bg-white p-3 shadow-sm"
       />
       <div className="grid gap-1 text-sm">
         <span className="text-muted-foreground">
@@ -169,7 +178,7 @@ export function TotpEnrol({ backup = false }: { backup?: boolean }) {
           })
         }
       />
-      {failure && <Alert tone="error">{errorText(failure)}</Alert>}
+      {failure && <FormError>{errorText(failure)}</FormError>}
     </div>
   );
 }

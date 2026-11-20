@@ -6,6 +6,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CheckoutForm } from "@/components/cart/checkout-form";
 import { L10n } from "@/components/catalog/l10n";
 import { InfoIcon, ShieldIcon } from "@/components/icons";
+import { BackToStore } from "@/components/layout/back-to-store";
 import { Link } from "@/components/link";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { redirect } from "@/i18n/navigation";
@@ -31,12 +32,15 @@ export default async function CheckoutPage({
 
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-[minmax(0,1fr)] gap-4 px-4 pt-4 pb-32 md:pb-10">
-      <Link
-        href="/cart"
-        className="text-sm text-muted-foreground hover:underline"
-      >
-        {t("backToCart")}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-x-4">
+        <BackToStore />
+        <Link
+          href="/cart"
+          className="text-sm text-muted-foreground hover:underline"
+        >
+          {t("backToCart")}
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold">{t("checkoutTitle")}</h1>
 
       <section

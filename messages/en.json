@@ -53,6 +53,13 @@
     "resendIn": "New code in {seconds}s",
     "changePhone": "Change number",
     "codeSentTo": "We sent a code to {phone} on WhatsApp.",
+    "stepOf": "Step {current} of {total}",
+    "steps": {
+      "phone": "Phone number",
+      "account": "Code and account details",
+      "password": "Code and new password",
+      "code": "Verification code"
+    },
     "login": {
       "title": "Sign in",
       "description": "Sign in with your phone number and password.",
@@ -1114,6 +1121,7 @@
   "Nav": {
     "label": "Main navigation",
     "home": "Home",
+    "backToStore": "Back to store",
     "categories": "Categories",
     "cart": "Cart",
     "orders": "My orders",

@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { AuthShell } from "@/components/auth/auth-shell";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BackArrowIcon, KeyIcon } from "@/components/icons";
 import { Link } from "@/components/link";
 import type { Locale } from "@/i18n/routing";
 
@@ -30,20 +25,21 @@ export default async function ResetPasswordPage({
   setRequestLocale(locale);
   const t = await getTranslations("Auth");
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("reset.title")}</CardTitle>
-        <CardDescription>{t("reset.description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-5">
-        <ResetPasswordForm />
+    <AuthShell
+      icon={<KeyIcon />}
+      title={t("reset.title")}
+      description={t("reset.description")}
+      footer={
         <Link
           href="/login"
-          className="text-sm text-primary underline underline-offset-4"
+          className="inline-flex items-center gap-1.5 justify-self-start font-bold text-primary-text underline underline-offset-4"
         >
+          <BackArrowIcon className="size-4" />
           {t("reset.back")}
         </Link>
-      </CardContent>
-    </Card>
+      }
+    >
+      <ResetPasswordForm />
+    </AuthShell>
   );
 }

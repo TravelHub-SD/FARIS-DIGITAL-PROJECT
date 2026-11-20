@@ -5,7 +5,6 @@ import { useState, useTransition } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useHydrated } from "@/lib/use-hydrated";
 import {
   newPasswordRule,
   otpCodeRule,
@@ -19,6 +18,9 @@ import {
 import {
   type ActionFailure,
   Field,
+  FormError,
+  Steps,
+  SubmitButton,
   useCountdown,
   useErrorText,
   useRuleForm,
@@ -31,7 +33,6 @@ export function ResetPasswordForm() {
   const [phone, setPhone] = useState<string | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
-  const hydrated = useHydrated();
   const cooldown = useCountdown();
 
   const sendCode = (e164: string) =>
@@ -47,6 +48,7 @@ export function ResetPasswordForm() {
       }
     });
   const first = useRuleForm({ phone: phoneRule }, (v) => sendCode(v.phone));
+  const steps = [t("steps.phone"), t("steps.password")];
   const second = useRuleForm(
     { code: otpCodeRule, password: newPasswordRule },
     (v) =>
@@ -66,6 +68,7 @@ export function ResetPasswordForm() {
         onSubmit={first.onSubmit}
         onChange={first.onChange}
       >
+        <Steps current={1} labels={steps} />
         <Field
           id="phone"
           label={t("phone")}
@@ -77,10 +80,8 @@ export function ResetPasswordForm() {
           name="phone"
           error={first.errors.phone}
         />
-        {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-        <Button type="submit" disabled={pending || !hydrated}>
-          {t("sendCode")}
-        </Button>
+        {failure && <FormError>{errorText(failure)}</FormError>}
+        <SubmitButton pending={pending}>{t("sendCode")}</SubmitButton>
       </form>
     );
   }
@@ -93,6 +94,7 @@ export function ResetPasswordForm() {
       onSubmit={second.onSubmit}
       onChange={second.onChange}
     >
+      <Steps current={2} labels={steps} />
       <Alert>{t("reset.sentGeneric")}</Alert>
       <Field
         id="code"
@@ -114,10 +116,8 @@ export function ResetPasswordForm() {
         name="password"
         error={second.errors.password}
       />
-      {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending || !hydrated}>
-        {t("reset.submit")}
-      </Button>
+      {failure && <FormError>{errorText(failure)}</FormError>}
+      <SubmitButton pending={pending}>{t("reset.submit")}</SubmitButton>
       <Button
         type="button"
         variant="link"

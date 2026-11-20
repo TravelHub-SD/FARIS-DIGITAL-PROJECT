@@ -6,6 +6,7 @@ import { toFormFields } from "@/components/catalog/fulfillment-fields";
 import { L10n } from "@/components/catalog/l10n";
 import { ProductVisual } from "@/components/catalog/product-visual";
 import { InfoIcon } from "@/components/icons";
+import { BackToStore } from "@/components/layout/back-to-store";
 import { Link } from "@/components/link";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { Locale } from "@/i18n/routing";
@@ -65,6 +66,7 @@ export default async function CartPage({
 
   const shell = (children: React.ReactNode) => (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-[minmax(0,1fr)] gap-4 px-4 pt-4 pb-32 md:pb-10">
+      <BackToStore />
       {children}
     </div>
   );

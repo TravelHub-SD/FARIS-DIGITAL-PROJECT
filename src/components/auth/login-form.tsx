@@ -3,15 +3,14 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { loginPasswordRule, phoneRule } from "@/lib/validation/auth-rules";
 import { login } from "@/server/auth/actions";
-import { useHydrated } from "@/lib/use-hydrated";
 
 import {
   type ActionFailure,
   Field,
+  FormError,
+  SubmitButton,
   useErrorText,
   useRuleForm,
 } from "./form-bits";
@@ -22,7 +21,6 @@ export function LoginForm({ next }: { next?: string }) {
   const errorText = useErrorText();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
-  const hydrated = useHydrated();
   const form = useRuleForm(
     { phone: phoneRule, password: loginPasswordRule },
     (v) =>
@@ -60,10 +58,8 @@ export function LoginForm({ next }: { next?: string }) {
         autoComplete="current-password"
         error={form.errors.password}
       />
-      {failure && <Alert tone="error">{errorText(failure)}</Alert>}
-      <Button type="submit" disabled={pending || !hydrated}>
-        {t("login.submit")}
-      </Button>
+      {failure && <FormError>{errorText(failure)}</FormError>}
+      <SubmitButton pending={pending}>{t("login.submit")}</SubmitButton>
     </form>
   );
 }
