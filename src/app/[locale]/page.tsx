@@ -136,6 +136,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           banners={banners}
           locale={locale as Locale}
           label={t("offers")}
+          pauseLabel={t("pauseSlides")}
+          playLabel={t("playSlides")}
         />
       </div>
       <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-7 px-4 pb-10">

@@ -901,3 +901,80 @@ before Phase 9.
   `tests/e2e/auth-whatsapp.spec.ts` checks seven screens at 360 px (register
   step 2 included) at the top, middle and bottom of the page; with the old
   floating button it fails ("whatsapp-button over <section>").
+
+## 2026-11-21 — Client feedback round 1 (Hassan)
+
+**1. Busy bar.** A 3 px bar under the top edge, slightly transparent, shown
+after 120 ms while an App Router navigation or a Server Action is pending.
+`src/instrumentation-client.ts` (Next's client instrumentation, runs before
+hydration) sets `html[data-busy]`; the bar is CSS only (`.nav-progress`,
+logical inset so it runs in the reading direction; static under reduced
+motion). Start: `onRouterTransitionStart`, and every fetch carrying the
+`Next-Action` header or a non-prefetch `RSC` header (a pass-through wrapper
+that only counts). End: Next's history write when the new page is shown, or
+the requests settling (back/forward; an action that changes no page ends
+400 ms after its answer). No React component, no new CSP source, no
+`loading.tsx`: the Phase 9 finding stands (a loading boundary turns a guarded
+page's 404 into 200); a test asserts `/search` still has the only one.
+Rejected: a route-level skeleton (above), a full-screen overlay (asked
+against), hooking each form (misses programmatic actions).
+
+**2. Slider autoplay.** `BannerAutoplay`, a small client control inside the
+server-rendered slider (slides stay HTML; swipe and scroll-snap work without
+it). Every 5 s it scrolls to the next slide (by the slide's start edge, so
+RTL and LTR both work; wraps to the first). It holds while the slider is
+touched, hovered or focused and goes on 5 s after the last interaction; it
+waits while the tab is hidden or the slider is off screen; while paused the
+wait starts over, so Play never jumps at once. With `prefers-reduced-motion`
+it does not autoplay; the pause/play button (WCAG 2.2.2) is shown for two or
+more slides, and a pause by the button lasts until Play.
+
+**3. Brand: Fast Store.** Site name (messages `Brand`, `Metadata`, footer),
+page titles, Open Graph and its image (`scripts/make-og-image.mjs`, now waits
+for hydration before drawing), JSON-LD, the TOTP issuer shown in
+authenticator apps (new enrolments; an already-added authenticator keeps its
+old label in the app), the WhatsApp template drafts, handover guide, spec,
+README and CLAUDE.md's product name. The Arabic UI uses the same Latin name
+("Fast Store"); an Arabic rendering is a one-line message change if the client
+wants one. Migration `20261121100000_brand_fast_store.sql` changes the
+seller-name default and the settings row only where it still holds the old
+default (a name set in the dashboard is kept); issued invoices keep their
+snapshot (tested). Not renamed, on purpose: the bank account holder and the
+social accounts (the owner's own), the staging project names and
+`faris-digital.vercel.app` (identifiers; the client already has the link), the
+OTP lock key and the package name (internal).
+
+**4. Live order status: polling, not Realtime.**
+- *Realtime under RLS* would add supabase-js and its realtime client to the
+  account pages (about 35–50 KB gzip; they ship none today), a
+  `wss://…supabase.co` CSP source, a socket that mobile networks in Sudan
+  drop or block (reconnect and token refresh logic), and a second data path
+  to secure (publication plus RLS on `realtime.messages`).
+- *Polling while visible* (chosen): `OrderLive` (about 1 KB) asks
+  `/api/orders/status` every 15 s, only while the tab is visible and online,
+  backing off to 2 minutes on errors; a tab coming back into view checks at
+  once. The answer is a fingerprint of the order's status and receipt
+  reviews, read with the customer's session (RLS) and filtered to their own
+  orders; when it changes the page is rendered again on the server
+  (`router.refresh()`), the same RLS path as any visit. Another customer's
+  reference is the same 404 as one that does not exist; no session is 401.
+  Cost: one small query per open tab per 15 s; latency up to 15 s, enough for
+  statuses that change over minutes. Revisit Realtime if many customers watch
+  orders at once.
+- Proven (`tests/e2e/order-live.spec.ts`): Bob's order changes → Bob's page
+  refreshes, Alice's pages poll, get only `{sig}` and do not refresh; Alice
+  asking for Bob's reference → 404; Alice's own change → her order page and
+  list update without reload; no polls while the tab is hidden. Planted (the
+  signature read with the service role and no customer filter) it fails.
+
+**5. Bottom navigation tab.** It was chosen on the server from the request
+path, inside the root layout, which client navigation does not render again:
+the first page's tab stayed marked. Now the server renders labels, icons and
+the cart badge and a small client component (`BottomNavTabs`) marks the tab
+from `usePathname()`. Same cause, same fix for the shop's chrome on the
+dashboard: the bar, chat button and their bottom space hide when the page
+holds `data-admin-shell`, so moving between shop and dashboard client-side is
+right in both directions. Planted (the tab read once) the test fails.
+
+**Not started:** the custom-amount product type with a currency calculator
+(waiting for the client's answers).

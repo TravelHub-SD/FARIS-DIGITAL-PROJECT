@@ -144,6 +144,50 @@
   }
 }
 
+/* Busy bar: a thin, slightly transparent line under the top edge while a
+   navigation or Server Action is pending (html[data-busy], set by
+   src/instrumentation-client.ts). It appears only after 120 ms, so fast
+   answers do not flicker; it runs in the reading direction (logical inset). */
+.nav-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.nav-progress::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -40%;
+  width: 40%;
+  border-radius: 9999px;
+  background: var(--primary);
+  opacity: 0.85;
+  animation: nav-progress 1.1s ease-in-out infinite;
+}
+html[data-busy] .nav-progress {
+  opacity: 1;
+  transition-delay: 120ms;
+}
+@keyframes nav-progress {
+  to {
+    inset-inline-start: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress::before {
+    animation: none;
+    inset-inline-start: 0;
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+
 /* Printing (invoices): A4 paper, white, no site chrome. Chrome elements carry
    `print:hidden`; the invoice document has its own paper colours. */
 @media print {

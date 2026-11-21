@@ -296,6 +296,10 @@ overwrites these headers, or the per-IP limits can be bypassed.
 
 ## Appendix: staging (faris-digital-staging)
 
+The product is **Fast Store** (renamed from Faris Digital on 2026-11-21); the
+staging project names and its `faris-digital.vercel.app` address keep the old
+name because they are identifiers, not shown to customers as the brand.
+
 A hosted copy for review with demo data only. It never holds real customers.
 
 - **Supabase:** project `faris-digital-staging` (ref `iojsknoiyewndldggwfo`, free tier).

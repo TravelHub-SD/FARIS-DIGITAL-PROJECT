@@ -137,3 +137,11 @@ Depends on the client (runbook §0):
 - [x] Stage 4: cart, checkout, order and invoice UI, admin line items
 - [x] Stage 5: account pages and admin pass; full verification (check, all suites, 360px sweep, axe, CSP sweep, JS budget before/after) — results in decisions.md 2026-11-20
 - [x] Staging for the client: last part of the storefront migration applied, temporary upload account deleted, demo sessions revoked, Vercel Authentication off (still noindex)
+
+## Client feedback round 1 (Hassan, 2026-11-21)
+- [x] Busy bar while a navigation or Server Action is pending (no loading boundary above guarded pages)
+- [x] Promo slider autoplay (5 s, held on touch/hover/focus, pause/play button, none with reduced motion)
+- [x] Brand renamed to Fast Store (site, Open Graph image, JSON-LD, docs, TOTP issuer; new invoices' seller name; issued invoices untouched)
+- [x] Live order status on the customer's order page and list (polling while visible; isolation tested)
+- [x] Bottom navigation marks the current tab after client navigation
+- [ ] Custom-amount product type with a currency calculator — waiting for the client's answers

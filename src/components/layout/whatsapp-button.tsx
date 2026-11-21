@@ -8,7 +8,8 @@ import { getSiteSettings } from "@/server/catalog/site";
 // above a page's sticky action bar (pages with one set data-dock on <main>).
 // The sign-in screens (data-auth-shell) fill a phone's width, so a floating
 // button would cover their fields while scrolling: below md the floating
-// one hides there and AuthShell shows the inline one under the card.
+// one hides there and AuthShell shows the inline one under the card. The
+// dashboard (data-admin-shell) has no chat button.
 export async function WhatsAppButton({ inline = false }: { inline?: boolean }) {
   const settings = await getSiteSettings();
   const digits = settings.contact_whatsapp?.replace(/\D/g, "");
@@ -36,7 +37,7 @@ export async function WhatsAppButton({ inline = false }: { inline?: boolean }) {
       aria-label={t("whatsapp")}
       title={t("whatsapp")}
       data-testid="whatsapp-button"
-      className="fixed end-4 bottom-20 z-30 grid size-13 place-items-center rounded-full bg-whatsapp text-whatsapp-foreground shadow-lg transition-transform hover:scale-105 md:bottom-6 print:hidden max-md:[body:has([data-auth-shell])_&]:hidden [body:has([data-dock])_&]:bottom-36 md:[body:has([data-dock])_&]:bottom-6"
+      className="fixed end-4 bottom-20 z-30 grid size-13 place-items-center rounded-full bg-whatsapp text-whatsapp-foreground shadow-lg transition-transform hover:scale-105 md:bottom-6 print:hidden [body:has([data-admin-shell])_&]:hidden max-md:[body:has([data-auth-shell])_&]:hidden [body:has([data-dock])_&]:bottom-36 md:[body:has([data-dock])_&]:bottom-6"
     >
       <ChatIcon className="size-6" />
     </a>

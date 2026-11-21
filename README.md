@@ -1,4 +1,4 @@
-# Faris Digital
+# Fast Store
 
 Bilingual (Arabic/English) marketplace for digital products and services in Sudan.
 Start with `CLAUDE.md`, then `docs/spec.md`, `docs/roadmap.md`, `docs/decisions.md` and `docs/architecture.md`.

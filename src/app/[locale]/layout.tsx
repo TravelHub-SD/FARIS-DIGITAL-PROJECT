@@ -62,10 +62,6 @@ export default async function LocaleLayout({
   // nonce. Catalog data stays cached (catalogCache in server/catalog/queries.ts).
   const requestHeaders = await headers();
   const nonce = requestHeaders.get("x-nonce") ?? undefined;
-  // The dashboard has its own navigation: no shopper tabs or chat button.
-  const shopper = !/^\/(ar|en)\/admin(\/|$)/.test(
-    requestHeaders.get("x-pathname") ?? "",
-  );
 
   return (
     <html
@@ -74,9 +70,14 @@ export default async function LocaleLayout({
       className={plexArabic.variable}
       suppressHydrationWarning
     >
-      <body
-        className={`flex min-h-dvh flex-col font-sans ${shopper ? "pb-16 md:pb-0" : ""}`}
-      >
+      {/* The dashboard (data-admin-shell) has its own navigation: the shop's
+          tabs, chat button and their bottom space hide there. Decided in the
+          browser, not from the request path: this layout is not rendered
+          again on client navigation between the shop and the dashboard. */}
+      <body className="flex min-h-dvh flex-col pb-16 font-sans has-[[data-admin-shell]]:pb-0 md:pb-0">
+        {/* Busy bar: shown while a navigation or Server Action is pending
+            (html[data-busy], set by src/instrumentation-client.ts). */}
+        <div aria-hidden className="nav-progress" data-testid="nav-progress" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -90,8 +91,8 @@ export default async function LocaleLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
           <SiteFooter />
-          {shopper && <BottomNav />}
-          {shopper && <WhatsAppButton />}
+          <BottomNav />
+          <WhatsAppButton />
         </ThemeProvider>
       </body>
     </html>

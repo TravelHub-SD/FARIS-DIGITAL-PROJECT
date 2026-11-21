@@ -90,7 +90,7 @@ create temp table inv1 on commit drop as
 grant select on inv1 to authenticated;
 select is((select snapshot #>> '{customer,full_name}' from inv1), 'أحمد عثمان', 'customer name copied');
 select is((select snapshot #>> '{customer,phone}' from inv1), '+249911000061', 'customer phone copied');
-select is((select snapshot #>> '{seller,name_ar}' from inv1), 'فارس ديجيتال', 'seller name copied');
+select is((select snapshot #>> '{seller,name_ar}' from inv1), 'Fast Store', 'seller name copied');
 select is((select snapshot #>> '{payment,transaction_ref}' from inv1), 'INVTX1', 'accepted payment copied');
 select results_eq(
   $$ select total_usd, usd_sdg_rate, total_sdg, (snapshot #>> '{items,0,quantity}')::int from inv1 $$,

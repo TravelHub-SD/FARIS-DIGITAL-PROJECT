@@ -8,7 +8,8 @@ test fake (`tests/fakes/meta-templates.json`) mirrors this table.
 Every template is created twice: language **Arabic (`ar`)** and **English
 (`en`)**. A customer receives the language of their profile (`profiles.locale`).
 
-If the product name "Faris Digital" changes, the template texts must be edited
+The product was renamed from "Faris Digital" to "Fast Store" on 2026-11-21 and
+the drafts below use the new name. If the name changes again, the template texts must be edited
 and approved again (template names stay the same).
 
 ## 1. `otp_code`: category Authentication
@@ -33,14 +34,14 @@ Parameters: `{{1}}` order reference (`FD-1234567`), `{{2}}` status name
 
 **ar**
 ```
-تحديث على طلبك {{1}} في فارس ديجيتال: الحالة الآن {{2}}.
+تحديث على طلبك {{1}} في Fast Store: الحالة الآن {{2}}.
 ملاحظة: {{3}}
 يمكنك متابعة طلبك من حسابك في الموقع.
 ```
 
 **en**
 ```
-Update on your Faris Digital order {{1}}: the status is now {{2}}.
+Update on your Fast Store order {{1}}: the status is now {{2}}.
 Note: {{3}}
 You can follow your order from your account on the website.
 ```
@@ -54,12 +55,12 @@ No parameters.
 
 **ar**
 ```
-تم التحقق من هويتك في فارس ديجيتال. يمكنك الآن تقديم الطلبات التي تتطلب التحقق.
+تم التحقق من هويتك في Fast Store. يمكنك الآن تقديم الطلبات التي تتطلب التحقق.
 ```
 
 **en**
 ```
-Your identity has been verified at Faris Digital. You can now place orders that require verification.
+Your identity has been verified at Fast Store. You can now place orders that require verification.
 ```
 
 ## 4. `kyc_rejected`: category Utility
@@ -68,13 +69,13 @@ Parameter: `{{1}}` the reason written by staff.
 
 **ar**
 ```
-لم نتمكن من قبول مستند الهوية الذي أرسلته إلى فارس ديجيتال. السبب: {{1}}.
+لم نتمكن من قبول مستند الهوية الذي أرسلته إلى Fast Store. السبب: {{1}}.
 يمكنك رفع مستند جديد من حسابك في الموقع.
 ```
 
 **en**
 ```
-We could not accept the identity document you sent to Faris Digital. Reason: {{1}}.
+We could not accept the identity document you sent to Fast Store. Reason: {{1}}.
 You can upload a new document from your account on the website.
 ```
 

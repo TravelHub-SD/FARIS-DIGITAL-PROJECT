@@ -7,7 +7,7 @@ describe("isIndexable: only production on its own domain may be crawled", () => 
     [
       {
         VERCEL_ENV: "production",
-        NEXT_PUBLIC_SITE_URL: "https://farisdigital.sd",
+        NEXT_PUBLIC_SITE_URL: "https://faststore.sd",
       },
       true,
     ],
@@ -21,11 +21,11 @@ describe("isIndexable: only production on its own domain may be crawled", () => 
     [
       {
         VERCEL_ENV: "preview",
-        NEXT_PUBLIC_SITE_URL: "https://farisdigital.sd",
+        NEXT_PUBLIC_SITE_URL: "https://faststore.sd",
       },
       false,
     ],
-    [{ NEXT_PUBLIC_SITE_URL: "https://farisdigital.sd" }, false],
+    [{ NEXT_PUBLIC_SITE_URL: "https://faststore.sd" }, false],
     [{ VERCEL_ENV: "production" }, false],
     [{ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "not a url" }, false],
   ])("%j → %s", (env, expected) => {
@@ -41,7 +41,7 @@ describe("robots.txt", () => {
 
   it("production on its own domain: private areas closed, sitemap listed", async () => {
     process.env.VERCEL_ENV = "production";
-    process.env.NEXT_PUBLIC_SITE_URL = "https://farisdigital.sd";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://faststore.sd";
     const { default: robots } = await import("@/app/robots");
     const r = robots();
     const rule = [r.rules].flat()[0]!;
@@ -54,7 +54,7 @@ describe("robots.txt", () => {
         "/auth/",
       ]),
     );
-    expect(r.sitemap).toBe("https://farisdigital.sd/sitemap.xml");
+    expect(r.sitemap).toBe("https://faststore.sd/sitemap.xml");
   });
 
   it("anything else (staging, previews, local): everything closed, no sitemap", async () => {

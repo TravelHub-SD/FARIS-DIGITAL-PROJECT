@@ -7,12 +7,14 @@ import { CheckIcon } from "@/components/icons";
 import { Link } from "@/components/link";
 import { CopyButton } from "@/components/orders/copy-button";
 import { OrderLines } from "@/components/orders/order-lines";
+import { OrderLive } from "@/components/orders/order-live";
 import { StatusChip } from "@/components/orders/status-chip";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { Locale } from "@/i18n/routing";
 import { formatDateTime, formatSdg, formatUsd } from "@/lib/format";
 import { requireCompleteUser } from "@/server/auth/session";
 import { invoicesForOrder } from "@/server/invoices/queries";
+import { orderSignature } from "@/server/orders/live";
 import { getMyOrder } from "@/server/orders/queries";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -31,6 +33,7 @@ export default async function OrderPage({
   const data = await getMyOrder(user.id, reference);
   if (!data) notFound();
   const { order, receipts, history, banks } = data;
+  const signature = (await orderSignature(user.id, order.reference)) ?? "";
   const justPlaced = (await searchParams).placed === "1";
   const t = await getTranslations("Orders");
   const tInv = await getTranslations("Invoices");
@@ -67,6 +70,7 @@ export default async function OrderPage({
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
+      <OrderLive reference={order.reference} signature={signature} />
       <Link
         href="/account/orders"
         className="text-sm text-muted-foreground hover:underline"
@@ -96,11 +100,14 @@ export default async function OrderPage({
               {order.reference}
             </bdi>
           </h1>
-          <StatusChip
-            status={order.status}
-            inReview={pendingReceipt}
-            testId="order-status"
-          />
+          {/* Announced when staff change it (OrderLive refreshes the page). */}
+          <span aria-live="polite">
+            <StatusChip
+              status={order.status}
+              inReview={pendingReceipt}
+              testId="order-status"
+            />
+          </span>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
           <span>{formatDateTime(order.created_at, locale)}</span>

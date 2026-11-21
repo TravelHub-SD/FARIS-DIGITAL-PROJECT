@@ -60,7 +60,7 @@ insert into public.admin_permissions (admin_id, permission) values
 update public.app_settings
    set contact_phone = '+249900000100',
        contact_whatsapp = '+249900000100',
-       contact_email = 'staging@faris-digital.example',
+       contact_email = 'staging@faststore.example',
        address_ar = 'الخرطوم (بيانات تجريبية)',
        address_en = 'Khartoum (demo data)',
        banner_title_ar = 'نسخة تجريبية: البيانات للعرض فقط',

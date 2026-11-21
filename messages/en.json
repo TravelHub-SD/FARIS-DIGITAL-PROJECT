@@ -1,9 +1,9 @@
 {
   "Brand": {
-    "name": "Faris Digital"
+    "name": "Fast Store"
   },
   "Metadata": {
-    "title": "Faris Digital",
+    "title": "Fast Store",
     "description": "Digital products and services in Sudan: game top-ups, Starlink, mobile airtime and app subscriptions."
   },
   "Header": {
@@ -21,11 +21,13 @@
     "title": "Digital products and services, simple and secure",
     "subtitle": "Game top-ups, Starlink, mobile airtime and app subscriptions, paid by bank transfer, with order updates on WhatsApp.",
     "faq": "Frequently asked questions",
-    "offers": "Offers"
+    "offers": "Offers",
+    "pauseSlides": "Pause the slides",
+    "playSlides": "Play the slides"
   },
   "Footer": {
     "followUs": "Follow us",
-    "rights": "© {year} Faris Digital. All rights reserved.",
+    "rights": "© {year} Fast Store. All rights reserved.",
     "contactUs": "Contact us",
     "whatsapp": "WhatsApp",
     "pages": "Site information"
@@ -128,7 +130,7 @@
       "setupTitle": "Set up two-step sign-in",
       "setupDescription": "Staff accounts need a code from an authenticator app on your phone as well as your password. This protects customers' data and payments if a password is ever stolen.",
       "verifyTitle": "Enter your authenticator code",
-      "verifyDescription": "Open the authenticator app on your phone and enter the 6-digit code shown for Faris Digital.",
+      "verifyDescription": "Open the authenticator app on your phone and enter the 6-digit code shown for Fast Store.",
       "whyRequired": "Required for every staff account. It takes about two minutes.",
       "lostPhone": "Lost or changed your phone? Use a backup authenticator if you added one. Otherwise ask the owner to reset your two-step sign-in (Admins page).",
       "signOut": "Sign out",
@@ -137,7 +139,7 @@
       "step1": "Install an authenticator app on your phone (Google Authenticator or Microsoft Authenticator).",
       "step2": "In the app, add an account and scan this QR code, or type the key below.",
       "step3": "Enter the 6-digit code the app shows.",
-      "qrAlt": "QR code to add Faris Digital to your authenticator app",
+      "qrAlt": "QR code to add Fast Store to your authenticator app",
       "manualKey": "Or type this key in the app:",
       "code": "6-digit code",
       "codeHint": "The code changes every 30 seconds.",

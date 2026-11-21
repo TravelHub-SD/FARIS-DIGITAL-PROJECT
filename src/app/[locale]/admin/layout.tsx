@@ -96,7 +96,10 @@ export default async function AdminLayout({
 
   return (
     <ClientMessages namespaces={["Admin", "Kyc"]}>
-      <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[13rem_1fr] lg:py-8 print:block print:max-w-none print:p-0">
+      <div
+        className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[13rem_1fr] lg:py-8 print:block print:max-w-none print:p-0"
+        data-admin-shell
+      >
         <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start print:hidden">
           <AdminNav items={items} label={t("label")} />
         </aside>

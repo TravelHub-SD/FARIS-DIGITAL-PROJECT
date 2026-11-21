@@ -31,7 +31,7 @@ export type EnrolResult =
   | { ok: true; factorId: string; qr: string; secret: string }
   | { ok: false; error: MfaError };
 
-const ISSUER = "Faris Digital";
+const ISSUER = "Fast Store";
 const failBucket = "mfa_fail_user";
 
 async function staffUser() {

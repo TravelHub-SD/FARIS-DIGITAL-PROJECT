@@ -1,4 +1,4 @@
-# CLAUDE.md — Faris Digital
+# CLAUDE.md — Fast Store
 
 Production marketplace for digital products/services in the Sudanese market.
 Read `docs/spec.md` (requirements), `docs/roadmap.md` (phases), `docs/decisions.md` (decision log) before doing anything.
@@ -23,7 +23,7 @@ No extra dependencies without a stated reason. Prefer simple, maintainable code 
 ## Brand
 - Primary blue: `#005CFF`
 - Accent orange: `#FF7A00`
-- Working product name: **Faris Digital** (temporary)
+- Product name: **Fast Store** (renamed from Faris Digital, 2026-11-21)
 - Locale defaults: Arabic first, timezone `Africa/Khartoum`, phone numbers Sudanese format `+249…` (normalize before storing)
 
 ## Hard rules — never break these

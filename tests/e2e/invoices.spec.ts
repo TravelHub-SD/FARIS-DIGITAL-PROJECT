@@ -48,7 +48,7 @@ test.beforeAll(async () => {
     name: "Orders only",
   });
   sql(
-    `update app_settings set contact_phone = '+249912345678', contact_email = 'sales@faris.example', address_ar = 'الخرطوم، شارع المك نمر', address_en = 'Khartoum, Al-Mek Nimir St.' where id`,
+    `update app_settings set contact_phone = '+249912345678', contact_email = 'sales@faststore.example', address_ar = 'الخرطوم، شارع المك نمر', address_en = 'Khartoum, Al-Mek Nimir St.' where id`,
   );
   const order = await createPaidOrder(owner.id);
   orderId = order.id;
@@ -165,7 +165,7 @@ test("the invoice does not change when prices, the rate, the seller or the custo
       `update products set name_en = '${original[1]}' where id = (select product_id from product_variants where id = ${V})`,
     );
     sql(
-      `update app_settings set usd_sdg_rate = 2600, business_name_en = 'Faris Digital', contact_phone = '+249912345678' where id`,
+      `update app_settings set usd_sdg_rate = 2600, business_name_en = 'Fast Store', contact_phone = '+249912345678' where id`,
     );
     sql(
       `update profiles set full_name = 'أحمد عثمان محمد' where id = '${owner.id}'`,

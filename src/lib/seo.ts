@@ -62,7 +62,7 @@ export const DEFAULT_OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Faris Digital · فارس ديجيتال",
+  alt: "Fast Store",
 };
 
 /** Open Graph for an indexable page; page-level openGraph replaces the layout's. */

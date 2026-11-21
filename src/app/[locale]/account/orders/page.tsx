@@ -3,12 +3,14 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { L10n } from "@/components/catalog/l10n";
 import { Link } from "@/components/link";
+import { OrderLive } from "@/components/orders/order-live";
 import { StatusChip } from "@/components/orders/status-chip";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { Locale } from "@/i18n/routing";
 import { formatDateTime, formatSdg } from "@/lib/format";
 import { localized } from "@/lib/localized";
 import { requireCompleteUser } from "@/server/auth/session";
+import { ordersSignature } from "@/server/orders/live";
 import { listMyOrders } from "@/server/orders/queries";
 
 export const metadata: Metadata = { robots: { index: false } };
@@ -20,10 +22,14 @@ export default async function OrdersPage({
   setRequestLocale(locale);
   const user = await requireCompleteUser(locale);
   const t = await getTranslations("Orders");
-  const orders = await listMyOrders(user.id);
+  const [orders, signature] = await Promise.all([
+    listMyOrders(user.id),
+    ordersSignature(user.id),
+  ]);
 
   return (
     <div className="grid gap-4">
+      <OrderLive signature={signature} />
       <h1 className="text-2xl font-bold">{t("title")}</h1>
       {orders.length === 0 ? (
         <div className="grid justify-items-center gap-3 rounded-2xl border bg-card px-4 py-10 text-center">

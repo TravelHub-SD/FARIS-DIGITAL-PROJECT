@@ -1,4 +1,8 @@
-# Faris Digital — Product Specification
+# Fast Store — Product Specification
+
+> Renamed from "Faris Digital" on 2026-11-21 (client feedback round 1). The
+> account holder and social accounts below are the owner's own and keep their
+> names.
 
 Source of truth for requirements. If something here conflicts with a request in chat, raise it instead of silently choosing.
 
