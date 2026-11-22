@@ -35,6 +35,7 @@ export function CartLineActions({
   lineId,
   quantity,
   maxQuantity,
+  fixedQuantity = false,
   available,
   fields,
   values,
@@ -43,6 +44,8 @@ export function CartLineActions({
   lineId: string;
   quantity: number;
   maxQuantity: number;
+  /** A custom-amount line is always one: no quantity control. */
+  fixedQuantity?: boolean;
   available: boolean;
   fields: FormField[];
   values: Record<string, string>;
@@ -78,7 +81,7 @@ export function CartLineActions({
   return (
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {available ? (
+        {available && !fixedQuantity ? (
           <div
             className="inline-flex h-9 items-center rounded-lg border bg-background"
             role="group"

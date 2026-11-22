@@ -6,6 +6,8 @@ import { formatSdg } from "@/lib/format";
 import { localized } from "@/lib/localized";
 import type { OrderLine } from "@/server/orders/queries";
 
+import { amountText, CustomAmountFormula } from "./custom-amount-formula";
+
 // The lines of one order with the details each one was ordered with. Used by
 // the customer's order page and the admin order page. Sensitive values that
 // were removed when the order closed show as "removed".
@@ -19,6 +21,7 @@ export async function OrderLines({
   closed: boolean;
 }) {
   const t = await getTranslations("Orders");
+  const ta = await getTranslations("CustomAmount");
   return (
     <ol className="grid divide-y" data-testid="order-lines">
       {items.map((line) => (
@@ -28,31 +31,73 @@ export async function OrderLines({
           data-testid="order-line"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <p>
-              <L10n
-                value={localized(
-                  line.product_name_ar,
-                  line.product_name_en,
-                  locale,
-                )}
-                className="font-medium"
-              />{" "}
-              —{" "}
-              <L10n
-                value={localized(
-                  line.variant_name_ar,
-                  line.variant_name_en,
-                  locale,
-                )}
-              />{" "}
-              <span className="text-muted-foreground">
-                × <span data-testid="line-quantity">{line.quantity}</span>
-              </span>
-            </p>
+            {line.kind === "custom_amount" &&
+            line.amount &&
+            line.currency_code ? (
+              <p>
+                <L10n
+                  value={localized(
+                    line.product_name_ar,
+                    line.product_name_en,
+                    locale,
+                  )}
+                  className="font-medium"
+                />{" "}
+                —{" "}
+                <span className="text-muted-foreground">
+                  {ta("amountLabel")}:
+                </span>{" "}
+                <bdi
+                  dir="ltr"
+                  className="rounded-md bg-primary-soft px-1.5 font-bold text-primary-text tabular-nums"
+                  data-testid="line-amount"
+                >
+                  {amountText(line.amount, line.currency_code)}
+                </bdi>
+              </p>
+            ) : (
+              <p>
+                <L10n
+                  value={localized(
+                    line.product_name_ar,
+                    line.product_name_en,
+                    locale,
+                  )}
+                  className="font-medium"
+                />{" "}
+                —{" "}
+                <L10n
+                  value={localized(
+                    line.variant_name_ar,
+                    line.variant_name_en,
+                    locale,
+                  )}
+                />{" "}
+                <span className="text-muted-foreground">
+                  × <span data-testid="line-quantity">{line.quantity}</span>
+                </span>
+              </p>
+            )}
             <span className="font-medium" dir="auto" data-testid="line-total">
               {formatSdg(line.line_total_sdg, locale)}
             </span>
           </div>
+          {line.kind === "custom_amount" &&
+            line.amount &&
+            line.currency_code &&
+            line.currency_rate_sdg && (
+              <p className="text-muted-foreground">
+                <CustomAmountFormula
+                  amount={line.amount}
+                  currency={line.currency_code}
+                  rate={line.currency_rate_sdg}
+                  feeSdg={line.fee_sdg}
+                  totalSdg={line.line_total_sdg}
+                  feeWord={ta("feeWord")}
+                  testId="line-formula"
+                />
+              </p>
+            )}
           {line.fulfillment_fields.length > 0 && (
             <dl className="grid gap-0.5">
               {line.fulfillment_fields.map((f) => {

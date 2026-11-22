@@ -30,6 +30,7 @@ const PAGE_GUARD: [RegExp, string][] = [
   // Every staff member manages their own authenticators.
   [/^security\//, "requireAdmin(locale)"],
   [/^settings\//, 'requireAdmin(locale, "settings")'],
+  [/^currencies\//, 'requireAdmin(locale, "settings")'],
   [/^messages\//, 'requireAdmin(locale, "orders")'],
   [/^invoices\//, 'requireAdmin(locale, "invoices")'],
   [/^admins\//, "requireOwner(locale)"],
@@ -56,6 +57,7 @@ const ACTION_GUARD: Record<string, Record<string, string>> = {
   "orders.ts": { "*": 'actionAdmin("orders")' },
   "catalog.ts": { "*": 'actionAdmin("products")' },
   "settings.ts": { "*": 'actionAdmin("settings")' },
+  "custom-amount.ts": { "*": 'actionAdmin("settings")' },
   "messages.ts": { "*": 'actionAdmin("orders")' },
   "kyc.ts": { "*": 'actionAdmin("kyc")' },
   "invoices.ts": { "*": 'actionAdmin("invoices")' },

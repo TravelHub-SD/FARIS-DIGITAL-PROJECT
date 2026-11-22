@@ -9,6 +9,7 @@ import {
   AddToCartForm,
   type FormVariant,
 } from "@/components/catalog/add-to-cart-form";
+import { CustomAmountForm } from "@/components/catalog/custom-amount-form";
 import { toFormFields } from "@/components/catalog/fulfillment-fields";
 import { ProductVisual } from "@/components/catalog/product-visual";
 import { InfoIcon } from "@/components/icons";
@@ -33,6 +34,11 @@ const REASONS = [
   "not_found",
   "invalid_input",
   "server_error",
+  "currency_unavailable",
+  "amount_invalid",
+  "amount_decimals",
+  "amount_below_min",
+  "amount_above_max",
 ] as const satisfies readonly CartError[];
 
 type Props = PageProps<"/[locale]/p/[slug]">;
@@ -71,6 +77,7 @@ export default async function ProductPage({ params }: Props) {
   const product = await getProduct(slug);
   if (!product) notFound();
   const t = await getTranslations("Catalog");
+  const ta = await getTranslations("CustomAmount");
   const comments = await listProductComments(product.id);
 
   const name = localized(product.name_ar, product.name_en, locale);
@@ -188,9 +195,13 @@ export default async function ProductPage({ params }: Props) {
               className="text-2xl font-bold sm:text-3xl"
             />
             <p className="text-sm font-bold text-primary-text" dir="auto">
-              {prices.length
-                ? t("from", { price: formatSdg(Math.min(...prices), locale)! })
-                : t("priceUnavailable")}
+              {product.custom
+                ? ta("anyAmount")
+                : prices.length
+                  ? t("from", {
+                      price: formatSdg(Math.min(...prices), locale)!,
+                    })
+                  : t("priceUnavailable")}
             </p>
           </header>
           <L10n
@@ -200,43 +211,113 @@ export default async function ProductPage({ params }: Props) {
           />
         </div>
         <div className="grid content-start gap-4">
-          <AddToCartForm
-            variants={variants}
-            loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
-            cartHref={`/${locale}/cart`}
-            strings={{
-              chooseOption: t("chooseOption"),
-              details: t("details"),
-              addToCart: t("addToCart"),
-              added: t("added"),
-              viewCart: t("viewCart"),
-              quantity: t("quantity"),
-              increase: t("increase"),
-              decrease: t("decrease"),
-              total: t("total"),
-              signInAction: t("signInAction"),
-              required: t("required"),
-              optional: t("optional"),
-              select: t("select"),
-              priceUnavailable: t("priceUnavailable"),
-              wasPrice: t("wasPrice"),
-              errors: {
-                missing: t("errors.missing"),
-                unknown: t("errors.unknown"),
-                type: t("errors.type"),
-                length: t("errors.length"),
-                format: t("errors.format"),
-                option: t("errors.option"),
-                unavailable: t("errors.unavailable"),
-              },
-              reasons: Object.fromEntries(
-                REASONS.map((r) => [r, t(`cartReasons.${r}`)]),
-              ),
-            }}
-          />
+          {product.custom ? (
+            <CustomAmountForm
+              productId={product.id}
+              currencies={product.custom.currencies.map((c) => ({
+                code: c.code,
+                name: locale === "ar" ? c.name_ar : c.name_en,
+                symbol: c.symbol,
+                rate: c.rate,
+                min: c.min,
+                max: c.max,
+                updated: formatDateTime(c.rate_updated_at, locale),
+              }))}
+              decimals={product.custom.decimals}
+              feePercent={product.custom.fee_percent}
+              feeFixedSdg={product.custom.fee_fixed_sdg}
+              fields={toFormFields(product.custom.fields, locale)}
+              locale={locale}
+              loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
+              cartHref={`/${locale}/cart`}
+              strings={{
+                amount: ta("amount"),
+                currency: ta("currency"),
+                limits: ta.raw("limits") as string,
+                rate: ta("rate"),
+                rateUpdated: ta.raw("rateUpdated") as string,
+                subtotal: ta("subtotal"),
+                fee: ta("fee"),
+                feeRule: ta.raw(
+                  Number(product.custom.fee_percent) > 0 &&
+                    Number(product.custom.fee_fixed_sdg) > 0
+                    ? "feeBoth"
+                    : Number(product.custom.fee_percent) > 0
+                      ? "feePercent"
+                      : "feeFixed",
+                ) as string,
+                total: t("total"),
+                roundingNote: ta("roundingNote"),
+                details: t("details"),
+                addToCart: t("addToCart"),
+                added: t("added"),
+                viewCart: t("viewCart"),
+                signInAction: t("signInAction"),
+                required: t("required"),
+                optional: t("optional"),
+                select: t("select"),
+                enterAmount: ta("enterAmount"),
+                amountErrors: {
+                  malformed: ta("errors.malformed"),
+                  zero: ta("errors.zero"),
+                  negative: ta("errors.negative"),
+                  decimals: ta.raw("errors.decimals") as string,
+                  below_min: ta.raw("errors.below_min") as string,
+                  above_max: ta.raw("errors.above_max") as string,
+                },
+                errors: {
+                  missing: t("errors.missing"),
+                  unknown: t("errors.unknown"),
+                  type: t("errors.type"),
+                  length: t("errors.length"),
+                  format: t("errors.format"),
+                  option: t("errors.option"),
+                  unavailable: t("errors.unavailable"),
+                },
+                reasons: Object.fromEntries(
+                  REASONS.map((r) => [r, t.raw(`cartReasons.${r}`) as string]),
+                ),
+              }}
+            />
+          ) : (
+            <AddToCartForm
+              variants={variants}
+              loginHref={`/${locale}/login?next=${encodeURIComponent(`/${locale}/p/${product.slug}`)}`}
+              cartHref={`/${locale}/cart`}
+              strings={{
+                chooseOption: t("chooseOption"),
+                details: t("details"),
+                addToCart: t("addToCart"),
+                added: t("added"),
+                viewCart: t("viewCart"),
+                quantity: t("quantity"),
+                increase: t("increase"),
+                decrease: t("decrease"),
+                total: t("total"),
+                signInAction: t("signInAction"),
+                required: t("required"),
+                optional: t("optional"),
+                select: t("select"),
+                priceUnavailable: t("priceUnavailable"),
+                wasPrice: t("wasPrice"),
+                errors: {
+                  missing: t("errors.missing"),
+                  unknown: t("errors.unknown"),
+                  type: t("errors.type"),
+                  length: t("errors.length"),
+                  format: t("errors.format"),
+                  option: t("errors.option"),
+                  unavailable: t("errors.unavailable"),
+                },
+                reasons: Object.fromEntries(
+                  REASONS.map((r) => [r, t.raw(`cartReasons.${r}`) as string]),
+                ),
+              }}
+            />
+          )}
           <p className="flex gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-text">
             <InfoIcon className="mt-0.5 size-4 shrink-0" />
-            {t("priceNote")}
+            {product.custom ? ta("priceNote") : t("priceNote")}
           </p>
         </div>
       </div>

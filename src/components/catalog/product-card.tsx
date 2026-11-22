@@ -26,6 +26,8 @@ export async function ProductCard({
   heading?: "h2" | "h3";
 }) {
   const t = await getTranslations("Catalog");
+  const ta = await getTranslations("CustomAmount");
+  const custom = product.kind === "custom_amount";
   const name = localized(product.name_ar, product.name_en, locale);
   const description = localized(
     product.description_ar,
@@ -69,7 +71,11 @@ export async function ProductCard({
             className="mt-auto flex flex-wrap items-baseline gap-x-1.5 pt-1.5"
             dir="auto"
           >
-            {price ? (
+            {custom ? (
+              <span className="text-sm font-bold" data-testid="card-any-amount">
+                {ta("cardPrice")}
+              </span>
+            ) : price ? (
               <>
                 <span className="text-[11px] text-muted-foreground">
                   {t("fromShort")}
@@ -93,7 +99,7 @@ export async function ProductCard({
           </p>
           <span className="mt-2 flex h-9 items-center justify-center gap-1 rounded-lg bg-primary-soft text-sm font-bold text-primary-text">
             <PlusIcon className="size-4" />
-            {t("choosePackage")}
+            {custom ? ta("cardAction") : t("choosePackage")}
           </span>
         </div>
       </Link>

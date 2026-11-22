@@ -221,15 +221,20 @@ export default async function AdminOrdersPage({
                         o.product_name_en,
                         locale,
                       )}
-                    />{" "}
-                    —{" "}
-                    <L10n
-                      value={localized(
-                        o.variant_name_ar,
-                        o.variant_name_en,
-                        locale,
-                      )}
                     />
+                    {(o.variant_name_ar || o.variant_name_en) && (
+                      <>
+                        {" "}
+                        —{" "}
+                        <L10n
+                          value={localized(
+                            o.variant_name_ar,
+                            o.variant_name_en,
+                            locale,
+                          )}
+                        />
+                      </>
+                    )}
                     {o.item_count > 1 &&
                       ` ${t("orders.moreItems", { count: o.item_count - 1 })}`}
                   </td>

@@ -8,6 +8,10 @@ import { ProductVisual } from "@/components/catalog/product-visual";
 import { InfoIcon } from "@/components/icons";
 import { BackToStore } from "@/components/layout/back-to-store";
 import { Link } from "@/components/link";
+import {
+  amountText,
+  CustomAmountFormula,
+} from "@/components/orders/custom-amount-formula";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { Locale } from "@/i18n/routing";
 import { formatSdg } from "@/lib/format";
@@ -24,6 +28,18 @@ function mask(value: string) {
   if (at > 0) return `${value[0]}•••${value.slice(at)}`;
   return value.length > 4 ? `${value[0]}•••${value.slice(-2)}` : "•••";
 }
+
+// Why a custom-amount line cannot be ordered now (private.custom_amount_quote).
+const ISSUES = [
+  "PRODUCT_UNAVAILABLE",
+  "CURRENCY_UNAVAILABLE",
+  "AMOUNT_ABOVE_MAX",
+  "AMOUNT_BELOW_MIN",
+  "AMOUNT_DECIMALS",
+  "AMOUNT_INVALID",
+  "PRICING_NOT_CONFIGURED",
+] as const;
+type Issue = (typeof ISSUES)[number];
 
 function Details({
   line,
@@ -62,6 +78,7 @@ export default async function CartPage({
   setRequestLocale(locale);
   const t = await getTranslations("Cart");
   const tc = await getTranslations("Catalog");
+  const ta = await getTranslations("CustomAmount");
   const user = await getSessionUser();
 
   const shell = (children: React.ReactNode) => (
@@ -232,14 +249,48 @@ export default async function CartPage({
                       : t("unavailable")}
                   </span>
                 </div>
-                <L10n
-                  value={localized(
-                    line.variant_name_ar,
-                    line.variant_name_en,
-                    locale,
-                  )}
-                  className="text-xs text-muted-foreground"
-                />
+                {line.kind === "custom_amount" ? (
+                  <p className="grid gap-0.5 text-xs text-muted-foreground">
+                    {line.available && line.amount && line.rate ? (
+                      <CustomAmountFormula
+                        amount={line.amount}
+                        currency={line.currency_code ?? ""}
+                        rate={line.rate}
+                        feeSdg={line.fee_sdg}
+                        totalSdg={line.line_total_sdg ?? 0}
+                        feeWord={ta("feeWord")}
+                        testId="line-formula"
+                      />
+                    ) : (
+                      <bdi dir="ltr" className="font-bold tabular-nums">
+                        {amountText(
+                          line.amount ?? "0",
+                          line.currency_code ?? "",
+                        )}
+                      </bdi>
+                    )}
+                    {line.issue && (
+                      <span
+                        className="text-destructive"
+                        data-testid="line-issue"
+                        data-issue={line.issue}
+                      >
+                        {ta(
+                          `issues.${(ISSUES as readonly string[]).includes(line.issue) ? (line.issue as Issue) : "AMOUNT_INVALID"}`,
+                        )}
+                      </span>
+                    )}
+                  </p>
+                ) : (
+                  <L10n
+                    value={localized(
+                      line.variant_name_ar,
+                      line.variant_name_en,
+                      locale,
+                    )}
+                    className="text-xs text-muted-foreground"
+                  />
+                )}
                 <Details
                   line={line}
                   defs={line.required_fields}
@@ -250,6 +301,7 @@ export default async function CartPage({
                   lineId={line.id}
                   quantity={line.quantity}
                   maxQuantity={line.max_quantity}
+                  fixedQuantity={line.kind === "custom_amount"}
                   available={line.available}
                   fields={toFormFields(line.required_fields, locale)}
                   values={line.fulfillment_data}

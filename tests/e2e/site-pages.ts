@@ -1,7 +1,10 @@
 import { devices, type Browser } from "@playwright/test";
 
 import {
+  BILL_DATA,
   completeOrderWithInvoice,
+  createCustomOrder,
+  createCustomProduct,
   createKycSubmission,
   createOrder,
   createPaidOrder,
@@ -43,6 +46,13 @@ export async function buildSite() {
   sql(`insert into cart_items (user_id, variant_id, quantity, fulfillment_data) values
          ('${customer.id}', '${SEED.variant}', 2, '{"player_id":"51234567890123456789"}'),
          ('${customer.id}', '00000000-0000-4000-c000-000000000004', 1, '{"player_id":"123456","server":"mena"}')`);
+  // Custom amount (item 6): a product with a fee, a cart line, and a
+  // completed order whose invoice shows "56.50 EUR × 2,800 + fee = …".
+  const bill = createCustomProduct();
+  sql(`insert into cart_items (user_id, product_id, currency_code, amount, fulfillment_data) values
+         ('${customer.id}', '${bill.id}', 'EUR', 456.78, '${JSON.stringify(BILL_DATA)}')`);
+  const billOrder = await createCustomOrder(customer.id, bill.id);
+  const { invoice: billInvoice } = await completeOrderWithInvoice(billOrder);
   const fresh = await createUser({ name: "New Customer" });
   const applicant = await createUser({ name: "صاحب الطلب" });
   const kyc = await createKycSubmission(applicant.id);
@@ -82,6 +92,7 @@ export async function buildSite() {
     { role: "guest", path: "/categories", main: true },
     { role: "guest", path: "/cart" },
     { role: "guest", path: "/p/pubg-uc", main: true },
+    { role: "guest", path: `/p/${bill.slug}`, main: true },
     { role: "guest", path: "/search?q=pubg", main: true },
     { role: "guest", path: "/search?q=zzzzzz" },
     { role: "guest", path: "/login", main: true },
@@ -95,6 +106,7 @@ export async function buildSite() {
     { role: "customer", path: "/account/orders", main: true },
     { role: "customer", path: `/account/orders/${ref(done)}`, main: true },
     { role: "customer", path: `/account/orders/${ref(paid)}` },
+    { role: "customer", path: `/account/orders/${ref(billOrder)}`, main: true },
     {
       role: "customer",
       path: `/account/orders/${ref(awaiting)}?placed=1`,
@@ -110,11 +122,17 @@ export async function buildSite() {
       path: `/account/invoices/${invoice.invoice_number}`,
       main: true,
     },
+    {
+      role: "customer",
+      path: `/account/invoices/${billInvoice.invoice_number}`,
+      main: true,
+    },
     { role: "fresh", path: "/account/orders" },
     { role: "fresh", path: "/account/invoices" },
     { role: "owner", path: "/admin", main: true },
     { role: "owner", path: "/admin/orders", main: true },
     { role: "owner", path: `/admin/orders/${ref(done)}`, main: true },
+    { role: "owner", path: `/admin/orders/${ref(billOrder)}`, main: true },
     { role: "owner", path: "/admin/orders?status=completed&q=zzzz" },
     { role: "owner", path: "/admin/catalog", main: true },
     { role: "owner", path: "/admin/catalog/categories/new" },
@@ -126,6 +144,8 @@ export async function buildSite() {
       path: `/admin/catalog/products/${SEED.product}/variants/new`,
     },
     { role: "owner", path: `/admin/catalog/variants/${SEED.variant}` },
+    { role: "owner", path: `/admin/catalog/products/${bill.id}`, main: true },
+    { role: "owner", path: "/admin/currencies", main: true },
     { role: "owner", path: "/admin/customers", main: true },
     { role: "owner", path: `/admin/customers/${customer.id}` },
     { role: "owner", path: "/admin/kyc", main: true },

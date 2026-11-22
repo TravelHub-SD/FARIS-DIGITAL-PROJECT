@@ -21,6 +21,13 @@ export type InvoiceLine = {
   unit_price_usd: number;
   line_total_usd: number;
   line_total_sdg: number;
+  /** Custom-amount lines only (invoices issued since 2026-11-21). */
+  kind?: "custom_amount";
+  amount?: string;
+  currency_code?: string;
+  currency_symbol?: string;
+  currency_rate_sdg?: number | string;
+  fee_sdg?: number | string;
 };
 
 /**

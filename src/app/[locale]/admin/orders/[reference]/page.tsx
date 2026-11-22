@@ -13,6 +13,10 @@ import {
 } from "@/components/admin/ui";
 import { L10n } from "@/components/catalog/l10n";
 import { Link } from "@/components/link";
+import {
+  amountText,
+  CustomAmountFormula,
+} from "@/components/orders/custom-amount-formula";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { inputClasses, selectClasses } from "@/components/ui/styles";
 import type { Locale } from "@/i18n/routing";
@@ -52,6 +56,7 @@ export default async function AdminOrderPage({
   const data = await getAdminOrder(reference);
   if (!data) notFound();
   const t = await getTranslations("Admin");
+  const ta = await getTranslations("CustomAmount");
   const { order, customer, receipts, history, notes, nextStatuses } = data;
   const messages = await orderMessages(order.id);
   // Invoices are visible to staff who also hold the invoices permission.
@@ -212,22 +217,59 @@ export default async function AdminOrderPage({
                     className="font-medium"
                   />{" "}
                   —{" "}
-                  <L10n
-                    value={localized(
-                      line.variant_name_ar,
-                      line.variant_name_en,
-                      locale,
-                    )}
-                  />{" "}
-                  × <span data-testid="line-quantity">{line.quantity}</span>
+                  {line.kind === "custom_amount" &&
+                  line.amount &&
+                  line.currency_code ? (
+                    <>
+                      <span className="text-muted-foreground">
+                        {ta("amountLabel")}:
+                      </span>{" "}
+                      <bdi
+                        dir="ltr"
+                        className="rounded-md bg-primary-soft px-1.5 text-base font-bold text-primary-text tabular-nums"
+                        data-testid="line-amount"
+                      >
+                        {amountText(line.amount, line.currency_code)}
+                      </bdi>
+                    </>
+                  ) : (
+                    <>
+                      <L10n
+                        value={localized(
+                          line.variant_name_ar,
+                          line.variant_name_en,
+                          locale,
+                        )}
+                      />{" "}
+                      × <span data-testid="line-quantity">{line.quantity}</span>
+                    </>
+                  )}
                 </span>
                 <span dir="auto">
-                  {formatUsd(line.unit_price_usd, locale)} ·{" "}
+                  {line.kind !== "custom_amount" && (
+                    <>{formatUsd(line.unit_price_usd, locale)} · </>
+                  )}
                   <span className="font-medium" data-testid="line-total">
                     {formatSdg(line.line_total_sdg, locale)}
                   </span>
                 </span>
               </p>
+              {line.kind === "custom_amount" &&
+                line.amount &&
+                line.currency_code &&
+                line.currency_rate_sdg && (
+                  <p className="text-sm text-muted-foreground">
+                    <CustomAmountFormula
+                      amount={line.amount}
+                      currency={line.currency_code}
+                      rate={line.currency_rate_sdg}
+                      feeSdg={line.fee_sdg}
+                      totalSdg={line.line_total_sdg}
+                      feeWord={ta("feeWord")}
+                      testId="line-formula"
+                    />
+                  </p>
+                )}
               {line.fulfillment_fields.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {t("orders.noFields")}

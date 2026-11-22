@@ -144,4 +144,4 @@ Depends on the client (runbook §0):
 - [x] Brand renamed to Fast Store (site, Open Graph image, JSON-LD, docs, TOTP issuer; new invoices' seller name; issued invoices untouched)
 - [x] Live order status on the customer's order page and list (polling while visible; isolation tested)
 - [x] Bottom navigation marks the current tab after client navigation
-- [ ] Custom-amount product type with a currency calculator — waiting for the client's answers
+- [x] Custom-amount product type with a currency calculator: built with every open business question as a setting with a safe default (currencies and rates, allowed currencies with min/max, decimals, fee % and fixed; no currency in production until the owner adds one); server-side pricing, snapshot, KYC in USD, invoices (decisions.md 2026-11-21)

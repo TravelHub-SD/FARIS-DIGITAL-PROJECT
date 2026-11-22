@@ -276,6 +276,7 @@ export async function ProductForm({
 }: {
   product?: {
     id: string;
+    kind: "package" | "custom_amount";
     category_id: string;
     slug: string;
     name_ar: string | null;
@@ -356,6 +357,39 @@ export async function ProductForm({
           />
         </Field>
       </div>
+      {product ? (
+        <p className="text-sm" data-testid="product-kind">
+          <span className="text-muted-foreground">{t("catalog.kind")}:</span>{" "}
+          <span className="font-medium">
+            {t(`catalog.kinds.${product.kind}`)}
+          </span>
+        </p>
+      ) : (
+        <fieldset className="grid gap-2">
+          <legend className="mb-1 text-sm font-medium">
+            {t("catalog.kind")}
+          </legend>
+          {(["package", "custom_amount"] as const).map((kind) => (
+            <label key={kind} className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="kind"
+                value={kind}
+                defaultChecked={kind === "package"}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span>
+                <span className="font-medium">
+                  {t(`catalog.kinds.${kind}`)}
+                </span>
+                <span className="block text-muted-foreground">
+                  {t(`catalog.kindHints.${kind}`)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         <CheckboxField
           name="is_active"

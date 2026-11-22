@@ -8,6 +8,10 @@ import { L10n } from "@/components/catalog/l10n";
 import { InfoIcon, ShieldIcon } from "@/components/icons";
 import { BackToStore } from "@/components/layout/back-to-store";
 import { Link } from "@/components/link";
+import {
+  amountText,
+  CustomAmountFormula,
+} from "@/components/orders/custom-amount-formula";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -28,6 +32,7 @@ export default async function CheckoutPage({
   if (cart.lines.length === 0) redirect({ href: "/cart", locale });
   const t = await getTranslations("Cart");
   const tc = await getTranslations("Catalog");
+  const ta = await getTranslations("CustomAmount");
   const blocked = cart.unavailable > 0 || cart.kyc_needed;
 
   return (
@@ -65,17 +70,40 @@ export default async function CheckoutPage({
                   )}
                   className="font-bold"
                 />{" "}
-                <span className="text-muted-foreground">
-                  —{" "}
-                  <L10n
-                    value={localized(
-                      line.variant_name_ar,
-                      line.variant_name_en,
-                      locale,
+                {line.kind === "custom_amount" ? (
+                  <span className="block text-muted-foreground">
+                    {line.available && line.amount && line.rate ? (
+                      <CustomAmountFormula
+                        amount={line.amount}
+                        currency={line.currency_code ?? ""}
+                        rate={line.rate}
+                        feeSdg={line.fee_sdg}
+                        totalSdg={line.line_total_sdg ?? 0}
+                        feeWord={ta("feeWord")}
+                        testId="line-formula"
+                      />
+                    ) : (
+                      <bdi dir="ltr" className="tabular-nums">
+                        {amountText(
+                          line.amount ?? "0",
+                          line.currency_code ?? "",
+                        )}
+                      </bdi>
                     )}
-                  />{" "}
-                  × {line.quantity}
-                </span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    —{" "}
+                    <L10n
+                      value={localized(
+                        line.variant_name_ar,
+                        line.variant_name_en,
+                        locale,
+                      )}
+                    />{" "}
+                    × {line.quantity}
+                  </span>
+                )}
               </span>
               <span className="shrink-0 font-bold" dir="auto">
                 {line.available
@@ -143,6 +171,8 @@ export default async function CheckoutPage({
               variant_unavailable: t("reasons.variant_unavailable"),
               invalid_quantity: tc("reasons.invalid_quantity"),
               fulfillment_invalid: t("reasons.fulfillment_invalid"),
+              currency_unavailable: t("reasons.currency_unavailable"),
+              amount_invalid: t("reasons.amount_invalid"),
               rate_limited: tc("reasons.rate_limited"),
               cart_empty: t("reasons.cart_empty"),
               invalid_input: tc("reasons.invalid_input"),

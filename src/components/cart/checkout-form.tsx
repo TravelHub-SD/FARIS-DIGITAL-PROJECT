@@ -30,6 +30,8 @@ const REASON_LINK: Record<string, [keyof Strings["actions"], string]> = {
   variant_unavailable: ["cart", "/cart"],
   invalid_quantity: ["cart", "/cart"],
   fulfillment_invalid: ["cart", "/cart"],
+  currency_unavailable: ["cart", "/cart"],
+  amount_invalid: ["cart", "/cart"],
   cart_empty: ["cart", "/cart"],
 };
 

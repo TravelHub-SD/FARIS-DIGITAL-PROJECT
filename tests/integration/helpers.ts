@@ -341,3 +341,94 @@ export function sql(query: string): string {
     throw new Error(stderr.trim() || String(error));
   }
 }
+
+/** Fulfillment fields of the demo "Pay a bill with Visa" product. */
+export const BILL_FIELDS = [
+  {
+    key: "bill_link",
+    type: "text",
+    label_ar: "رابط الفاتورة",
+    label_en: "Invoice link",
+    required: true,
+    min_length: 5,
+    max_length: 200,
+  },
+  {
+    key: "email",
+    type: "email",
+    label_ar: "البريد الإلكتروني",
+    label_en: "Email",
+    required: true,
+  },
+];
+export const BILL_DATA = {
+  bill_link: "https://pay.example/inv/77",
+  email: "bill@example.com",
+};
+
+/**
+ * A visible custom-amount product in the seed "games" category, offered in
+ * the given seed currencies (default EUR 1–500 and USD 5–1000) with the
+ * given fee (default 1.5% + 200 SDG).
+ */
+export function createCustomProduct(
+  opts: {
+    slug?: string;
+    feePercent?: string;
+    feeFixedSdg?: string;
+    decimals?: number;
+    currencies?: [code: string, min: string, max: string][];
+  } = {},
+) {
+  const slug = opts.slug ?? `pay-bill-${randomUUID().slice(0, 8)}`;
+  const id =
+    sql(`insert into public.products (category_id, slug, name_ar, name_en, description_ar, description_en, kind)
+      values ('00000000-0000-4000-a000-000000000001', '${slug}', 'ادفع فاتورة بالفيزا', 'Pay a bill with Visa',
+              'نسدد فاتورتك الدولية ببطاقة فيزا.', 'We pay your foreign bill with a Visa card.', 'custom_amount')
+      returning id`).split("\n")[0];
+  sql(`update public.custom_amount_products
+          set fee_percent = ${opts.feePercent ?? "1.5"}, fee_fixed_sdg = ${opts.feeFixedSdg ?? "200"},
+              amount_decimals = ${opts.decimals ?? 2},
+              required_fields = '${JSON.stringify(BILL_FIELDS)}'
+        where product_id = '${id}'`);
+  const currencies = opts.currencies ?? [
+    ["EUR", "1", "500"],
+    ["USD", "5", "1000"],
+  ];
+  sql(`insert into public.custom_amount_currencies (product_id, currency_code, min_amount, max_amount, sort_order)
+       values ${currencies.map(([c, min, max], i) => `('${id}', '${c}', ${min}, ${max}, ${i + 1})`).join(", ")}`);
+  return { id, slug };
+}
+
+/** An order with a package line and a custom-amount line (trusted path). */
+export async function createCustomOrder(
+  userId: string,
+  productId: string,
+  currency = "EUR",
+  amount = "56.5",
+) {
+  const { data, error } = await service().rpc("service_create_order", {
+    p_user_id: userId,
+    p_items: [
+      {
+        product_id: productId,
+        currency_code: currency,
+        amount,
+        fulfillment_data: BILL_DATA,
+      },
+      {
+        variant_id: VARIANT_CHEAP,
+        quantity: 1,
+        fulfillment_data: CHEAP_FIELDS,
+      },
+    ],
+    p_idempotency_key: randomUUID(),
+  });
+  if (error) throw new Error(`createCustomOrder: ${error.message}`);
+  return data as {
+    id: string;
+    reference: string;
+    user_id: string;
+    total_sdg: number;
+  };
+}

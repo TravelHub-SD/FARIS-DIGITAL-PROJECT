@@ -1,8 +1,13 @@
+import { Fragment } from "react";
 import { getTranslations } from "next-intl/server";
 
 import type { Locale } from "@/i18n/routing";
 import { formatDateTime, formatSdg, formatUsd } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
+import {
+  amountText,
+  CustomAmountFormula,
+} from "@/components/orders/custom-amount-formula";
 import { type Invoice, invoiceLines } from "@/server/invoices/queries";
 
 // The invoice as a printable A4 document. Rendered ONLY from the snapshot
@@ -53,6 +58,7 @@ export async function InvoiceDocument({
   locale: Locale;
 }) {
   const t = await getTranslations({ locale, namespace: "Invoices.doc" });
+  const ta = await getTranslations({ locale, namespace: "CustomAmount" });
   const s = invoice.snapshot;
   const o = s.order;
   const seller = s.seller;
@@ -62,6 +68,10 @@ export async function InvoiceDocument({
   }).format(Number(o.usd_sdg_rate));
   const isVoid = invoice.status === "void";
   const lines = invoiceLines(s);
+  // The USD subtotal and rate describe package lines; with custom-amount
+  // lines (each with its own currency and rate) only the total is meaningful.
+  const custom = lines.some((l) => l.kind === "custom_amount");
+  const packages = lines.some((l) => l.kind !== "custom_amount");
 
   return (
     <article
@@ -158,9 +168,9 @@ export async function InvoiceDocument({
         <thead>
           <tr className="border-b-2 border-neutral-300 text-start text-xs text-neutral-500">
             <th className="py-2 text-start font-bold">{t("item")}</th>
-            <th className="py-2 text-center font-bold">{t("qty")}</th>
-            <th className="py-2 text-end font-bold">{t("unitPrice")}</th>
-            <th className="py-2 text-end font-bold">{t("amount")}</th>
+            <th className="py-2 ps-3 text-center font-bold">{t("qty")}</th>
+            <th className="py-2 ps-3 text-end font-bold">{t("unitPrice")}</th>
+            <th className="py-2 ps-3 text-end font-bold">{t("amount")}</th>
           </tr>
         </thead>
         <tbody>
@@ -170,28 +180,65 @@ export async function InvoiceDocument({
               line.variant_name_en,
               locale,
             );
+            const custom =
+              line.kind === "custom_amount" &&
+              line.amount &&
+              line.currency_code &&
+              line.currency_rate_sdg !== undefined
+                ? {
+                    amount: line.amount,
+                    currency: line.currency_code,
+                    rate: String(line.currency_rate_sdg),
+                  }
+                : null;
             return (
-              <tr
-                key={line.line_no}
-                className="border-b border-neutral-200 align-top"
-                data-testid="invoice-line"
-              >
-                <td className="py-3">
-                  <p className="font-bold">
-                    {pick(line.product_name_ar, line.product_name_en, locale)}
-                  </p>
-                  {variant && <p className="text-neutral-600">{variant}</p>}
-                </td>
-                <td className="py-3 text-center">
-                  <Ltr>{line.quantity}</Ltr>
-                </td>
-                <td className="py-3 text-end">
-                  <Ltr>{formatUsd(line.unit_price_usd, "en")}</Ltr>
-                </td>
-                <td className="py-3 text-end">
-                  <Iso>{formatSdg(line.line_total_sdg, locale)}</Iso>
-                </td>
-              </tr>
+              <Fragment key={line.line_no}>
+                <tr
+                  className={`align-top ${custom ? "" : "border-b border-neutral-200"}`}
+                  data-testid="invoice-line"
+                >
+                  <td className="py-3">
+                    <p className="font-bold">
+                      {pick(line.product_name_ar, line.product_name_en, locale)}
+                    </p>
+                    {variant && <p className="text-neutral-600">{variant}</p>}
+                  </td>
+                  <td className="py-3 ps-3 text-center">
+                    <Ltr>{line.quantity}</Ltr>
+                  </td>
+                  <td className="py-3 ps-3 text-end">
+                    <Ltr>
+                      {custom
+                        ? amountText(custom.amount, custom.currency)
+                        : formatUsd(line.unit_price_usd, "en")}
+                    </Ltr>
+                  </td>
+                  <td className="py-3 ps-3 text-end">
+                    <Iso>{formatSdg(line.line_total_sdg, locale)}</Iso>
+                  </td>
+                </tr>
+                {custom && (
+                  // The breakdown on its own row: the description column
+                  // is too narrow for it on a phone.
+                  <tr className="border-b border-neutral-200">
+                    <td colSpan={4} className="pb-3 text-neutral-600">
+                      <CustomAmountFormula
+                        amount={custom.amount}
+                        currency={custom.currency}
+                        rate={custom.rate}
+                        feeSdg={
+                          line.fee_sdg === undefined
+                            ? null
+                            : String(line.fee_sdg)
+                        }
+                        totalSdg={line.line_total_sdg}
+                        feeWord={ta("feeWord")}
+                        testId="invoice-line-formula"
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
@@ -201,14 +248,22 @@ export async function InvoiceDocument({
         className="ms-auto grid w-full max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-2"
         data-testid="invoice-totals"
       >
-        <dt className="text-neutral-600">{t("subtotal")}</dt>
-        <dd className="text-end">
-          <Ltr>{formatUsd(o.total_usd, "en")}</Ltr>
-        </dd>
-        <dt className="text-neutral-600">{t("rate")}</dt>
-        <dd className="text-end">
-          <Iso testId="invoice-rate">{t("rateValue", { rate })}</Iso>
-        </dd>
+        {!custom && (
+          <>
+            <dt className="text-neutral-600">{t("subtotal")}</dt>
+            <dd className="text-end">
+              <Ltr>{formatUsd(o.total_usd, "en")}</Ltr>
+            </dd>
+          </>
+        )}
+        {packages && (
+          <>
+            <dt className="text-neutral-600">{t("rate")}</dt>
+            <dd className="text-end">
+              <Iso testId="invoice-rate">{t("rateValue", { rate })}</Iso>
+            </dd>
+          </>
+        )}
         <dt className="border-t-2 border-neutral-900 pt-2 text-base font-bold">
           {t("total")}
         </dt>

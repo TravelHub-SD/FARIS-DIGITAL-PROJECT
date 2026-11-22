@@ -80,6 +80,11 @@ export default async function AdminLayout({
       show: permissions.has("settings"),
     },
     {
+      href: `${base}/currencies`,
+      label: t("currencies"),
+      show: permissions.has("settings"),
+    },
+    {
       href: `${base}/settings`,
       label: t("settings"),
       show: permissions.has("settings"),

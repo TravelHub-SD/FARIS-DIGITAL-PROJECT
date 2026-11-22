@@ -272,7 +272,8 @@
       "invoices": "Invoices",
       "security": "Security",
       "pages": "Pages",
-      "banners": "Promo slides"
+      "banners": "Promo slides",
+      "currencies": "Currencies"
     },
     "permissions": {
       "orders": "Orders",
@@ -459,7 +460,16 @@
       "iconHint": "A square image shown on the home page tiles. Resize before uploading: roughly square, at least 200×200 px, up to 2 MB. Re-encoded to WebP.",
       "isNew": "“New” badge",
       "compareAtUsd": "Compare-at price (USD)",
-      "compareAtHint": "Display only: shown struck through next to the price when higher. Never charged. Leave empty to hide it."
+      "compareAtHint": "Display only: shown struck through next to the price when higher. Never charged. Leave empty to hide it.",
+      "kind": "Product type",
+      "kinds": {
+        "package": "Fixed packages",
+        "custom_amount": "Custom amount"
+      },
+      "kindHints": {
+        "package": "The customer picks one of the packages you price (e.g. 60 UC).",
+        "custom_amount": "The customer types an amount in a currency (e.g. a bill paid with Visa). Prices come from the currency rates and this product's fee. Cannot be changed later."
+      }
     },
     "fields": {
       "none": "No details asked. The customer only chooses the option.",
@@ -704,7 +714,9 @@
       "delete_failed": "The file could not be deleted from storage. Try again; if it keeps failing, report it.",
       "already_issued": "This order already has a valid invoice.",
       "cannot_reset_self": "Reset your own authenticators on the Security page.",
-      "page_incomplete": "A published page needs a title and a text in at least one language."
+      "page_incomplete": "A published page needs a title and a text in at least one language.",
+      "currency_taken": "This currency code already exists.",
+      "usd_rate_not_set": "Set the store's USD rate in Settings first: USD always uses it."
     },
     "messages": {
       "title": "WhatsApp messages",
@@ -879,7 +891,55 @@
       "deleteConfirm": "Delete this slide and its image?",
       "slideTitle": "Title"
     },
-    "edit": "Edit"
+    "edit": "Edit",
+    "customAmount": {
+      "title": "Custom amount",
+      "intro": "What the customer can type, in which currencies, and the service fee. Changes apply to new carts and orders only; placed orders keep their rate and fee.",
+      "missing": "This product has no custom-amount settings.",
+      "readOnly": "Only staff with the settings permission can change these values.",
+      "currencies": "Allowed currencies",
+      "currenciesHint": "The product is offered only in these currencies, between the minimum and maximum amount. Rates are set on the Currencies page.",
+      "noCurrencies": "No currency yet: customers cannot order this product until you allow one.",
+      "currency": "Currency",
+      "rate": "Rate (SDG per 1)",
+      "min": "Minimum",
+      "max": "Maximum",
+      "example": "Price of the minimum",
+      "disabled": "Disabled",
+      "remove": "Remove",
+      "removeConfirm": "Stop offering {code} for this product?",
+      "added": "Currency allowed.",
+      "add": "Allow currency",
+      "allCurrenciesUsed": "Every active currency is already allowed.",
+      "pricing": "Amount and fee",
+      "decimals": "Decimals allowed",
+      "decimalsHint": "Digits after the decimal point the customer may type (0 to 3).",
+      "feePercent": "Service fee (%)",
+      "feePercentHint": "Of amount × rate. 0 for none.",
+      "feeFixed": "Fixed fee (SDG)",
+      "feeFixedHint": "Added to every line. 0 for none.",
+      "fieldsHint": "What the customer must provide (e.g. invoice link, website, email). Same editor as packages."
+    },
+    "currencies": {
+      "title": "Currencies",
+      "intro": "Rates for custom-amount products, in SDG per 1 unit, updated by hand. A new rate applies to carts and new orders at once; placed orders and invoices keep the rate they were made with.",
+      "list": "Currencies",
+      "empty": "No currency yet. Add the ones customers may pay in.",
+      "updated": "Rate updated {date}",
+      "active": "Active",
+      "disabled": "Disabled",
+      "addTitle": "Add a currency",
+      "addHint": "A disabled currency is no longer offered anywhere; nothing is deleted.",
+      "code": "Code",
+      "codeHint": "Three letters (ISO 4217), e.g. EUR.",
+      "nameAr": "Name — Arabic",
+      "nameEn": "Name — English",
+      "symbol": "Symbol",
+      "rate": "SDG per 1 unit",
+      "usdHint": "USD always uses the store's USD rate (Settings).",
+      "rateHint": "E.g. 3050 or 3050.5.",
+      "add": "Add currency"
+    }
   },
   "Catalog": {
     "categories": "Categories",
@@ -988,7 +1048,12 @@
       "cart_full": "Your cart is full (20 items at most). Check out or remove an item.",
       "not_found": "This item is no longer in your cart.",
       "invalid_input": "Something was wrong with the form. Please try again.",
-      "server_error": "Could not save right now. Please try again shortly."
+      "server_error": "Could not save right now. Please try again shortly.",
+      "currency_unavailable": "This currency is no longer offered for this product.",
+      "amount_invalid": "Enter a valid amount.",
+      "amount_decimals": "Use at most {decimals} decimal places.",
+      "amount_below_min": "The minimum is {min} {code}.",
+      "amount_above_max": "The maximum is {max} {code}."
     }
   },
   "Orders": {
@@ -1158,7 +1223,46 @@
     "reasons": {
       "variant_unavailable": "An item in your cart is no longer available. Review your cart.",
       "fulfillment_invalid": "The details of an item are incomplete. Check them in your cart.",
-      "cart_empty": "Your cart is empty."
+      "cart_empty": "Your cart is empty.",
+      "currency_unavailable": "A currency in your cart is no longer offered. Review your cart.",
+      "amount_invalid": "An amount in your cart is outside the allowed limits now. Review your cart."
+    }
+  },
+  "CustomAmount": {
+    "anyAmount": "Enter the amount you need",
+    "priceNote": "The price in Sudanese pounds uses today's rate for the currency you choose. It is calculated again when you confirm the order, and you will be asked to agree if it changed.",
+    "amount": "Amount",
+    "currency": "Currency",
+    "limits": "From {min} to {max} {code}",
+    "rate": "Rate",
+    "rateUpdated": "Updated {date}",
+    "subtotal": "Amount × rate",
+    "fee": "Service fee",
+    "feePercent": "{percent}%",
+    "feeFixed": "{fixed} SDG",
+    "feeBoth": "{percent}% + {fixed} SDG",
+    "roundingNote": "The total is rounded up to the nearest pound.",
+    "enterAmount": "Enter an amount",
+    "errors": {
+      "malformed": "Enter a number, for example 56.50.",
+      "zero": "The amount must be more than zero.",
+      "negative": "The amount cannot be negative.",
+      "decimals": "Use at most {decimals} decimal places.",
+      "below_min": "The minimum is {min} {code}.",
+      "above_max": "The maximum is {max} {code}."
+    },
+    "feeWord": "fee",
+    "cardPrice": "Any amount",
+    "cardAction": "Enter amount",
+    "amountLabel": "Amount",
+    "issues": {
+      "PRODUCT_UNAVAILABLE": "This product is no longer available.",
+      "CURRENCY_UNAVAILABLE": "This currency is no longer offered. Remove the item and add it again in another currency.",
+      "AMOUNT_ABOVE_MAX": "This amount is now above the maximum. Remove the item and add it again.",
+      "AMOUNT_BELOW_MIN": "This amount is now below the minimum. Remove the item and add it again.",
+      "AMOUNT_DECIMALS": "This amount now has too many decimals. Remove the item and add it again.",
+      "AMOUNT_INVALID": "This amount is not valid. Remove the item and add it again.",
+      "PRICING_NOT_CONFIGURED": "This product cannot be priced right now."
     }
   }
 }

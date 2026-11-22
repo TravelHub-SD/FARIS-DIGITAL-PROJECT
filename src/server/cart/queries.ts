@@ -15,7 +15,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export type CartLine = {
   id: string;
-  variant_id: string;
+  kind: "package" | "custom_amount";
+  /** Null on a custom-amount line. */
+  variant_id: string | null;
   product_id: string;
   product_slug: string;
   image_path: string | null;
@@ -30,6 +32,17 @@ export type CartLine = {
   /** False when the product was hidden since: not in the total, blocks checkout. */
   available: boolean;
   line_total_sdg: number | null;
+  /** Custom-amount lines: what was typed, and the live rate and fee. */
+  amount: string | null;
+  currency_code: string | null;
+  currency_symbol: string | null;
+  currency_name_ar: string | null;
+  currency_name_en: string | null;
+  amount_decimals: number | null;
+  rate: string | null;
+  fee_sdg: string | null;
+  /** Why a custom-amount line cannot be ordered now (AMOUNT_ABOVE_MAX, …). */
+  issue: string | null;
 };
 
 export type Cart = {

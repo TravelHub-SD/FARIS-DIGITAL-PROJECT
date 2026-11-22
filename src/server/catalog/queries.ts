@@ -49,6 +49,7 @@ export type Banner = {
 export type ProductSummary = {
   id: string;
   slug: string;
+  kind: ProductKind;
   category_slug: string;
   category_name_ar: string | null;
   category_name_en: string | null;
@@ -58,7 +59,8 @@ export type ProductSummary = {
   description_en: string | null;
   image_path: string | null;
   is_new: boolean;
-  min_price_usd: number;
+  /** Null for a custom-amount product (the customer chooses the amount). */
+  min_price_usd: number | null;
   min_price_sdg: number | null;
   /** The cheapest package's "was" price, only when above its price. */
   compare_at_sdg: number | null;
@@ -79,9 +81,33 @@ export type Variant = {
   fields: FieldDefinition[];
 };
 
+export type ProductKind = "package" | "custom_amount";
+
+/** One currency a custom-amount product accepts, with its limits. */
+export type AmountCurrency = {
+  code: string;
+  name_ar: string;
+  name_en: string;
+  symbol: string;
+  /** SDG per 1 unit, as stored (decimal string). */
+  rate: string;
+  rate_updated_at: string;
+  min: string;
+  max: string;
+};
+
+export type CustomAmount = {
+  decimals: number;
+  fee_percent: string;
+  fee_fixed_sdg: string;
+  fields: FieldDefinition[];
+  currencies: AmountCurrency[];
+};
+
 export type ProductDetail = {
   id: string;
   slug: string;
+  kind: ProductKind;
   name_ar: string | null;
   name_en: string | null;
   description_ar: string | null;
@@ -91,6 +117,8 @@ export type ProductDetail = {
   updated_at: string;
   category: Category;
   variants: Variant[];
+  /** Set for a custom-amount product (then `variants` is empty). */
+  custom: CustomAmount | null;
 };
 
 export type SearchParams = {
@@ -215,9 +243,74 @@ export const browseProducts = catalogCache(
   }) => searchProducts({ ...params, sort: params.sort ?? "popular" }),
 );
 
+// Allowed currencies of a custom-amount product; currencies!inner drops a
+// disabled currency (RLS on currencies hides it from anon).
+const CUSTOM_SELECT = `custom:custom_amount_products(amount_decimals, fee_percent, fee_fixed_sdg, required_fields,
+       currencies:custom_amount_currencies(min_amount, max_amount, sort_order,
+         currency:currencies!inner(code, name_ar, name_en, symbol, sdg_rate, rate_updated_at, sort_order)))`;
+
+type RawCustom = {
+  amount_decimals: number;
+  fee_percent: number | string;
+  fee_fixed_sdg: number | string;
+  required_fields: unknown;
+  currencies: {
+    min_amount: number | string;
+    max_amount: number | string;
+    sort_order: number;
+    currency: {
+      code: string;
+      name_ar: string;
+      name_en: string;
+      symbol: string;
+      sdg_rate: number | string;
+      rate_updated_at: string;
+      sort_order: number;
+    } | null;
+  }[];
+} | null;
+
+/** Decimal string from a PostgREST numeric (a JSON number). */
+const dec = (v: number | string) => String(v);
+
+/** Null when nothing can be ordered (no active currency allowed yet). */
+function parseCustom(raw: RawCustom): CustomAmount | null {
+  if (!raw) return null;
+  const fields = fieldDefinitionsSchema.safeParse(raw.required_fields);
+  if (!fields.success) return null;
+  const currencies = raw.currencies
+    .filter((c) => c.currency)
+    .sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        a.currency!.sort_order - b.currency!.sort_order ||
+        a.currency!.code.localeCompare(b.currency!.code),
+    )
+    .map((c) => ({
+      code: c.currency!.code,
+      name_ar: c.currency!.name_ar,
+      name_en: c.currency!.name_en,
+      symbol: c.currency!.symbol,
+      rate: dec(c.currency!.sdg_rate),
+      rate_updated_at: c.currency!.rate_updated_at,
+      min: dec(c.min_amount),
+      max: dec(c.max_amount),
+    }));
+  if (currencies.length === 0) return null;
+  return {
+    decimals: raw.amount_decimals,
+    fee_percent: dec(raw.fee_percent),
+    fee_fixed_sdg: dec(raw.fee_fixed_sdg),
+    fields: fields.data,
+    currencies,
+  };
+}
+
 /**
- * A product is reachable only if it, its category and at least one variant
- * are visible. Anything else is a 404, never a partial page.
+ * A product is reachable only if it and its category are visible and it can
+ * be ordered: a package product with at least one visible variant, or a
+ * custom-amount product with at least one active currency allowed. Anything
+ * else is a 404, never a partial page.
  */
 export const getProduct = cache(
   catalogCache(
@@ -226,9 +319,10 @@ export const getProduct = cache(
       const res = await createPublicClient()
         .from("products")
         .select(
-          `id, slug, name_ar, name_en, description_ar, description_en, image_path, is_new, updated_at,
+          `id, slug, kind, name_ar, name_en, description_ar, description_en, image_path, is_new, updated_at,
        category:categories!inner(id, slug, name_ar, name_en, description_ar, description_en, image_path),
-       variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, compare_at_sdg, price_sdg_totals, max_quantity, required_fields, sort_order)`,
+       variants:product_variants(id, name_ar, name_en, price_usd, price_sdg, compare_at_sdg, price_sdg_totals, max_quantity, required_fields, sort_order),
+       ${CUSTOM_SELECT}`,
         )
         .eq("slug", slug)
         .order("sort_order", { referencedTable: "variants" })
@@ -236,17 +330,25 @@ export const getProduct = cache(
       // Untyped client (no generated DB types): a many-to-one embed is an object
       // at runtime, which the inferred type does not know.
       const row = orThrow(res) as unknown as
-        | (Omit<ProductDetail, "variants" | "category"> & {
+        | (Omit<ProductDetail, "variants" | "category" | "custom"> & {
             category: Category | null;
             variants: (Omit<Variant, "fields" | "totals_sdg"> & {
               compare_at_sdg: number | string | null;
               required_fields: unknown;
               price_sdg_totals: (number | string)[] | null;
             })[];
+            custom: RawCustom;
           })
         | null;
-      if (!row || !row.category || row.variants.length === 0) return null;
+      if (!row || !row.category) return null;
 
+      if (row.kind === "custom_amount") {
+        const custom = parseCustom(row.custom);
+        if (!custom) return null;
+        return { ...row, category: row.category, variants: [], custom };
+      }
+
+      if (row.variants.length === 0) return null;
       const variants: Variant[] = [];
       for (const v of row.variants) {
         const fields = fieldDefinitionsSchema.safeParse(v.required_fields);
@@ -267,10 +369,28 @@ export const getProduct = cache(
         });
       }
       if (variants.length === 0) return null;
-      return { ...row, category: row.category, variants };
+      return { ...row, category: row.category, variants, custom: null };
     },
   ),
 );
+
+/**
+ * A visible custom-amount product's settings, read as anon (a hidden
+ * product, a disabled currency or a package product does not exist here).
+ * Not cached: the add-to-cart action checks against the live settings.
+ */
+export async function getVisibleCustomAmount(
+  productId: string,
+): Promise<CustomAmount | null> {
+  const res = await createPublicClient()
+    .from("products")
+    .select(`id, kind, ${CUSTOM_SELECT}`)
+    .eq("id", productId)
+    .eq("kind", "custom_amount")
+    .maybeSingle();
+  const row = orThrow(res) as unknown as { custom: RawCustom } | null;
+  return row ? parseCustom(row.custom) : null;
+}
 
 export const getVisibleVariant = async (variantId: string) => {
   const res = await createPublicClient()
@@ -283,9 +403,25 @@ export const getVisibleVariant = async (variantId: string) => {
   return orThrow(res);
 };
 
+// What makes a product orderable, from the embeds below: a visible variant,
+// or (custom amount) an allowed currency that is active.
+const ORDERABLE =
+  "kind, product_variants(id), custom_amount_products(custom_amount_currencies(currency_code, currencies!inner(code)))";
+type OrderableRow = {
+  kind: ProductKind;
+  product_variants: { id: string }[];
+  custom_amount_products: {
+    custom_amount_currencies: { currency_code: string }[];
+  } | null;
+};
+const orderable = (p: OrderableRow) =>
+  p.kind === "custom_amount"
+    ? (p.custom_amount_products?.custom_amount_currencies.length ?? 0) > 0
+    : p.product_variants.length > 0;
+
 /**
- * Sitemap: every visible category and every product with at least one
- * visible variant (RLS already hides products of hidden categories).
+ * Sitemap: every visible category and every orderable product (RLS already
+ * hides products of hidden categories).
  */
 export const listSitemapEntries = catalogCache("sitemap", () =>
   buildSafe(
@@ -299,18 +435,23 @@ export const listSitemapEntries = catalogCache("sitemap", () =>
         db.from("categories").select("slug").order("sort_order"),
         db
           .from("products")
-          .select("slug, updated_at, product_variants!inner(id)")
+          .select(`slug, updated_at, ${ORDERABLE}`)
           .order("slug")
           .limit(5000),
       ]);
       return {
         categories: orThrow(categories) as { slug: string }[],
         products: (
-          orThrow(products) as { slug: string; updated_at: string }[]
-        ).map(({ slug, updated_at }) => ({
-          slug,
-          updated_at,
-        })),
+          orThrow(products) as unknown as ({
+            slug: string;
+            updated_at: string;
+          } & OrderableRow)[]
+        )
+          .filter(orderable)
+          .map(({ slug, updated_at }) => ({
+            slug,
+            updated_at,
+          })),
       };
     },
   ),
@@ -318,7 +459,7 @@ export const listSitemapEntries = catalogCache("sitemap", () =>
 
 type TileRow = Category & {
   section_id: string | null;
-  products: { slug: string }[];
+  products: ({ slug: string } & OrderableRow)[];
 };
 
 /**
@@ -341,12 +482,14 @@ export const listSections = cache(
           db
             .from("categories")
             .select(
-              "id, slug, name_ar, name_en, description_ar, description_en, image_path, section_id, products!inner(slug, product_variants!inner(id))",
+              `id, slug, name_ar, name_en, description_ar, description_en, image_path, section_id, products!inner(slug, ${ORDERABLE})`,
             )
             .order("sort_order")
             .order("slug"),
         ]);
-        const rows = orThrow(categories) as unknown as TileRow[];
+        const rows = (orThrow(categories) as unknown as TileRow[])
+          .map((row) => ({ ...row, products: row.products.filter(orderable) }))
+          .filter((row) => row.products.length > 0);
         const tile = ({ products, section_id: _s, ...c }: TileRow) => {
           void _s;
           return {

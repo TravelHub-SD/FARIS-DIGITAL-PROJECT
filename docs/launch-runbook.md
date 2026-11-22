@@ -20,6 +20,7 @@ Never copy data from staging: production starts from migrations only.
 | 9 | Logo (PNG/WebP) | C | No | A text wordmark is shown until uploaded (Settings). |
 | 10 | Real catalog: categories, products, packages, prices, images | C (entered in the dashboard) | **Yes** (nothing to sell) | Entered by staff after launch setup, before opening. |
 | 11 | Exchange rate and KYC threshold | C | **Yes** | Orders are refused until both are set (Settings). |
+| 11b | Custom-amount products ("Pay a bill with Visa"): currencies and their rates, allowed currencies with min/max, decimals, service fee | C | No (only if such products are sold) | *Currencies* page, then the product's *Custom amount* section. Production starts with no currency, so these products are not for sale until configured. |
 | 12 | Confirm the three bank accounts and the Arabic branch names | C | **Yes** | Created by migration from the spec; branch names were translated by us. |
 | 13 | Business name (ar/en), contacts, address, social links | C | No (invoices print the business name: set before the first sale) | Settings. |
 | 14 | About, Terms and Privacy texts (the terms should cover refunds) | C writes, staff enter them in *Pages* | **Yes** (signed scope) | The pages are built and editable (Phase 10b); each stays hidden until its text is published. |
@@ -222,7 +223,9 @@ New values for production; never reuse staging's.
 Settings: exchange rate, KYC threshold, business name (ar/en), contacts,
 address, social links, logo, banner; confirm the bank accounts; review the
 limits and the OTP daily budget. Catalog: categories, products, images,
-packages. FAQs. *Pages*: About, Terms and Privacy texts in Arabic (and
+packages. Custom-amount products: add the currencies and their rates
+(*Currencies*), then on each such product allow currencies with their
+limits, set decimals and the fee, and the fields to collect. FAQs. *Pages*: About, Terms and Privacy texts in Arabic (and
 English), then *Published*. Then one real order end to end with a small amount (register,
 order, transfer, receipt, accept, complete, invoice, WhatsApp messages).
 

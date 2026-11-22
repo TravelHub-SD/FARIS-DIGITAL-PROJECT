@@ -73,6 +73,7 @@ export async function getAdminCategory(id: string) {
 export type AdminProductRow = {
   id: string;
   slug: string;
+  kind: "package" | "custom_amount";
   name_ar: string | null;
   name_en: string | null;
   image_path: string | null;
@@ -97,7 +98,7 @@ export async function listAdminProducts(filters: {
   let query = supabase
     .from("products")
     .select(
-      "id, slug, name_ar, name_en, image_path, is_active, is_new, archived_at, completed_orders_count, category:categories(name_ar, name_en), variants:product_variants(price_usd, is_active, archived_at)",
+      "id, slug, kind, name_ar, name_en, image_path, is_active, is_new, archived_at, completed_orders_count, category:categories(name_ar, name_en), variants:product_variants(price_usd, is_active, archived_at)",
     )
     .order("sort_order")
     .order("slug")
@@ -142,7 +143,7 @@ export async function getAdminProduct(id: string) {
   const { data } = await supabase
     .from("products")
     .select(
-      "id, category_id, slug, name_ar, name_en, description_ar, description_en, image_path, sort_order, is_active, is_new, archived_at, completed_orders_count, variants:product_variants(id, product_id, name_ar, name_en, price_usd, compare_at_price_usd, max_quantity, sort_order, is_active, archived_at, required_fields)",
+      "id, kind, category_id, slug, name_ar, name_en, description_ar, description_en, image_path, sort_order, is_active, is_new, archived_at, completed_orders_count, variants:product_variants(id, product_id, name_ar, name_en, price_usd, compare_at_price_usd, max_quantity, sort_order, is_active, archived_at, required_fields)",
     )
     .eq("id", id)
     .order("sort_order", { referencedTable: "variants" })
@@ -158,7 +159,11 @@ export async function getAdminProduct(id: string) {
       required_fields: defs.success ? defs.data : [],
     };
   });
-  return { ...data, variants };
+  return {
+    ...data,
+    kind: data.kind as "package" | "custom_amount",
+    variants,
+  };
 }
 
 export async function getAdminVariant(id: string) {

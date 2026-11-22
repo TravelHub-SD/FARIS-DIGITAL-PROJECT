@@ -294,7 +294,11 @@ export default async function CatalogPage({
                       />
                     </td>
                     <td dir="auto">
-                      {min !== null ? (
+                      {p.kind === "custom_amount" ? (
+                        <Badge tone="info">
+                          {t("catalog.kinds.custom_amount")}
+                        </Badge>
+                      ) : min !== null ? (
                         formatUsd(min, locale)
                       ) : (
                         <span className="text-muted-foreground">

@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { L10n } from "@/components/catalog/l10n";
 import { Link } from "@/components/link";
 import { OrderLive } from "@/components/orders/order-live";
+import { amountText } from "@/components/orders/custom-amount-formula";
 import { StatusChip } from "@/components/orders/status-chip";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { Locale } from "@/i18n/routing";
@@ -60,7 +61,18 @@ export default async function OrdersPage({
                       locale,
                     )}
                   />{" "}
-                  ×{o.items[0]?.quantity}
+                  {o.items[0]?.kind === "custom_amount" &&
+                  o.items[0].amount &&
+                  o.items[0].currency_code ? (
+                    <bdi dir="ltr" className="tabular-nums">
+                      {amountText(
+                        String(o.items[0].amount),
+                        o.items[0].currency_code,
+                      )}
+                    </bdi>
+                  ) : (
+                    <>×{o.items[0]?.quantity}</>
+                  )}
                   {o.items.length > 1 &&
                     ` ${t("moreItems", { count: o.items.length - 1 })}`}
                 </span>

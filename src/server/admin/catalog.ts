@@ -176,6 +176,8 @@ const productSchema = z
     sort_order: sortOrder,
     is_active: checkbox,
     is_new: checkbox,
+    // Chosen once, when the product is created (never both, never changed).
+    kind: z.enum(["package", "custom_amount"]).optional(),
   })
   .refine((p) => p.name_ar || p.name_en);
 
@@ -183,7 +185,7 @@ export async function saveProduct(formData: FormData): Promise<ActionResult> {
   if (!(await actionAdmin("products"))) return NOT_ALLOWED;
   const input = productSchema.safeParse(fields(formData));
   if (!input.success) return INVALID;
-  const { id, ...row } = input.data;
+  const { id, kind, ...row } = input.data;
 
   const supabase = await createClient();
   if (id) {
@@ -198,7 +200,7 @@ export async function saveProduct(formData: FormData): Promise<ActionResult> {
   }
   const { data, error } = await supabase
     .from("products")
-    .insert(row)
+    .insert({ ...row, kind: kind ?? "package" })
     .select("id")
     .single();
   if (error || !data) return dbError(error);

@@ -15,6 +15,7 @@ export type OrderStatus = "new" | "processing" | "completed" | "cancelled";
 /** One line of an order: its own product, package, quantity, price and details. */
 export type OrderLine = {
   line_no: number;
+  kind: "package" | "custom_amount";
   product_name_ar: string | null;
   product_name_en: string | null;
   variant_name_ar: string | null;
@@ -25,6 +26,12 @@ export type OrderLine = {
   line_total_sdg: number;
   fulfillment_fields: FieldDefinition[];
   fulfillment_data: Record<string, string>;
+  /** Custom-amount lines: the snapshot taken when the order was placed. */
+  amount: string | null;
+  currency_code: string | null;
+  currency_symbol: string | null;
+  currency_rate_sdg: string | null;
+  fee_sdg: string | null;
 };
 
 export type OrderSummary = {
@@ -40,6 +47,9 @@ export type OrderSummary = {
     | "variant_name_ar"
     | "variant_name_en"
     | "quantity"
+    | "kind"
+    | "amount"
+    | "currency_code"
   >[];
   total_sdg: number;
   created_at: string;
@@ -54,7 +64,7 @@ export type OrderDetail = Omit<OrderSummary, "items"> & {
 };
 
 export const LINE_COLUMNS =
-  "line_no, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity, unit_price_usd, line_total_usd, line_total_sdg, fulfillment_fields, fulfillment_data";
+  "line_no, kind, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity, unit_price_usd, line_total_usd, line_total_sdg, fulfillment_fields, fulfillment_data, amount, currency_code, currency_symbol, currency_rate_sdg, fee_sdg";
 
 type RawLine = Omit<
   OrderLine,
@@ -63,7 +73,13 @@ type RawLine = Omit<
   | "line_total_sdg"
   | "fulfillment_fields"
   | "fulfillment_data"
+  | "amount"
+  | "currency_rate_sdg"
+  | "fee_sdg"
 > & {
+  amount: number | string | null;
+  currency_rate_sdg: number | string | null;
+  fee_sdg: number | string | null;
   unit_price_usd: number | string;
   line_total_usd: number | string;
   line_total_sdg: number | string;
@@ -84,6 +100,10 @@ export function parseLines(rows: RawLine[] | null | undefined): OrderLine[] {
         line_total_sdg: Number(l.line_total_sdg),
         fulfillment_fields: fields.success ? fields.data : [],
         fulfillment_data: (l.fulfillment_data ?? {}) as Record<string, string>,
+        amount: l.amount === null ? null : String(l.amount),
+        currency_rate_sdg:
+          l.currency_rate_sdg === null ? null : String(l.currency_rate_sdg),
+        fee_sdg: l.fee_sdg === null ? null : String(l.fee_sdg),
       };
     });
 }
@@ -115,7 +135,7 @@ export type BankAccount = {
 };
 
 const SUMMARY =
-  "id, reference, status, total_sdg, created_at, items:order_items(line_no, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity)";
+  "id, reference, status, total_sdg, created_at, items:order_items(line_no, kind, product_name_ar, product_name_en, variant_name_ar, variant_name_en, quantity, amount, currency_code)";
 
 export async function listMyOrders(userId: string): Promise<OrderSummary[]> {
   const supabase = await createClient();

@@ -67,3 +67,14 @@ insert into public.promo_banners (title_ar, title_en, subtitle_ar, subtitle_en, 
   ('اشحن ببجي في دقائق', 'Top up PUBG in minutes', 'أدخل معرّف اللاعب وحوّل من بنكك', 'Enter your player ID and pay by bank transfer', '/p/pubg-uc', 1),
   ('ستارلينك', 'Starlink', 'تجديد الاشتراك الشهري', 'Monthly subscription renewal', '/c/starlink', 2);
 update public.app_settings set contact_whatsapp = '+249900000100' where id;
+
+-- Custom-amount products (item 6): the five currencies the client named, with
+-- PLACEHOLDER rates (SDG per unit). USD always follows the store's USD rate.
+-- Not in any migration: production starts with no currency until the owner
+-- adds them in the dashboard.
+insert into public.currencies (code, name_ar, name_en, symbol, sdg_rate, sort_order) values
+  ('USD', 'دولار أمريكي', 'US dollar', '$', 2600.0000, 1),
+  ('EUR', 'يورو', 'Euro', '€', 2800.0000, 2),
+  ('SAR', 'ريال سعودي', 'Saudi riyal', 'ر.س', 690.0000, 3),
+  ('AED', 'درهم إماراتي', 'UAE dirham', 'د.إ', 705.0000, 4),
+  ('GBP', 'جنيه إسترليني', 'Pound sterling', '£', 3300.0000, 5);

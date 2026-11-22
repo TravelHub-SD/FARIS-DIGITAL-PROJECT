@@ -4,10 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { routing } from "@/i18n/routing";
-import { type FieldErrorCode, fieldDefinitionsSchema } from "@/lib/fulfillment";
+import {
+  type FieldDefinition,
+  type FieldErrorCode,
+  fieldDefinitionsSchema,
+} from "@/lib/fulfillment";
+import { compareDecimal, parseAmount } from "@/lib/custom-amount";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser, isComplete } from "@/server/auth/session";
-import { getVisibleVariant } from "@/server/catalog/queries";
+import {
+  getVisibleCustomAmount,
+  getVisibleVariant,
+} from "@/server/catalog/queries";
 import { readFulfillmentForm } from "@/server/orders/fulfillment-form";
 import { dispatchSoon } from "@/server/whatsapp";
 
@@ -27,7 +35,13 @@ export type CartError =
   | "customer_blocked"
   | "not_found"
   | "invalid_input"
-  | "server_error";
+  | "server_error"
+  // Custom-amount lines (the database's AMOUNT_* / CURRENCY_* checks).
+  | "currency_unavailable"
+  | "amount_invalid"
+  | "amount_decimals"
+  | "amount_below_min"
+  | "amount_above_max";
 
 export type CartResult =
   | { ok: true }
@@ -44,6 +58,13 @@ const CART_DB_ERRORS: [string, CartError][] = [
   ["FULFILLMENT_INVALID", "fulfillment_invalid"],
   ["CUSTOMER_BLOCKED", "customer_blocked"],
   ["quantity_check", "invalid_quantity"],
+  ["PRODUCT_UNAVAILABLE", "variant_unavailable"],
+  ["PRICING_NOT_CONFIGURED", "variant_unavailable"],
+  ["CURRENCY_UNAVAILABLE", "currency_unavailable"],
+  ["AMOUNT_DECIMALS", "amount_decimals"],
+  ["AMOUNT_BELOW_MIN", "amount_below_min"],
+  ["AMOUNT_ABOVE_MAX", "amount_above_max"],
+  ["AMOUNT_INVALID", "amount_invalid"],
 ];
 
 function mapCartError(message: string | undefined): CartError {
@@ -114,6 +135,64 @@ export async function addToCart(formData: FormData): Promise<CartResult> {
   return { ok: true };
 }
 
+/**
+ * Adds a custom-amount line: product, currency, the amount as typed (Arabic
+ * digits and separators accepted) and the details. Never a price: the cart
+ * trigger re-reads the rate, limits and fee (private.custom_amount_quote) and
+ * the cart and checkout price the line from them. Checked here first only to
+ * answer with a precise message; the database decides.
+ */
+export async function addCustomAmountToCart(
+  formData: FormData,
+): Promise<CartResult> {
+  const productId = formData.get("productId");
+  const currency = formData.get("currency");
+  const rawAmount = formData.get("amount");
+  if (
+    typeof productId !== "string" ||
+    !UUID.test(productId) ||
+    typeof currency !== "string" ||
+    !/^[A-Z]{3}$/.test(currency) ||
+    typeof rawAmount !== "string" ||
+    rawAmount.length > 40
+  )
+    return { ok: false, error: "invalid_input" };
+
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "sign_in" };
+
+  // Read as anon: a hidden product or a disabled currency does not exist here.
+  const settings = await getVisibleCustomAmount(productId);
+  if (!settings) return { ok: false, error: "variant_unavailable" };
+  const allowed = settings.currencies.find((c) => c.code === currency);
+  if (!allowed) return { ok: false, error: "currency_unavailable" };
+  const amount = parseAmount(rawAmount, settings.decimals);
+  if (!amount.ok)
+    return {
+      ok: false,
+      error: amount.error === "decimals" ? "amount_decimals" : "amount_invalid",
+    };
+  if (compareDecimal(amount.value, allowed.min) < 0)
+    return { ok: false, error: "amount_below_min" };
+  if (compareDecimal(amount.value, allowed.max) > 0)
+    return { ok: false, error: "amount_above_max" };
+  const fields = readFulfillmentForm(formData, settings.fields);
+  if (!fields.ok)
+    return { ok: false, error: "fulfillment_invalid", errors: fields.errors };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("cart_items").insert({
+    product_id: productId,
+    currency_code: currency,
+    // A decimal string: never a float on the way to the numeric column.
+    amount: amount.value,
+    fulfillment_data: fields.data,
+  });
+  if (error) return { ok: false, error: mapCartError(error.message) };
+  refresh();
+  return { ok: true };
+}
+
 /** Changes a line's quantity and, when "f." fields are sent, its details. */
 export async function updateCartLine(formData: FormData): Promise<CartResult> {
   const lineId = formData.get("lineId");
@@ -126,22 +205,30 @@ export async function updateCartLine(formData: FormData): Promise<CartResult> {
   const supabase = await createClient();
   const { data: line } = await supabase
     .from("cart_items")
-    .select("id, variant_id")
+    .select("id, variant_id, product_id")
     .eq("id", lineId)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!line) return { ok: false, error: "not_found" };
+  // A custom-amount line is always one (the amount is the quantity).
+  if (!line.variant_id && quantity !== 1)
+    return { ok: false, error: "invalid_quantity" };
 
   const patch: { quantity: number; fulfillment_data?: Record<string, string> } =
     { quantity };
   if ([...formData.keys()].some((k) => k.startsWith("f."))) {
-    const variant = await getVisibleVariant(line.variant_id);
-    const defs = variant
-      ? fieldDefinitionsSchema.safeParse(variant.required_fields)
-      : null;
-    if (!variant || !defs?.success)
-      return { ok: false, error: "variant_unavailable" };
-    const fields = readFulfillmentForm(formData, defs.data);
+    let defs: FieldDefinition[] | null = null;
+    if (line.variant_id) {
+      const variant = await getVisibleVariant(line.variant_id);
+      const parsed = variant
+        ? fieldDefinitionsSchema.safeParse(variant.required_fields)
+        : null;
+      defs = parsed?.success ? parsed.data : null;
+    } else {
+      defs = (await getVisibleCustomAmount(line.product_id))?.fields ?? null;
+    }
+    if (!defs) return { ok: false, error: "variant_unavailable" };
+    const fields = readFulfillmentForm(formData, defs);
     if (!fields.ok)
       return { ok: false, error: "fulfillment_invalid", errors: fields.errors };
     patch.fulfillment_data = fields.data;
@@ -183,6 +270,8 @@ export type CheckoutError =
   | "variant_unavailable"
   | "invalid_quantity"
   | "fulfillment_invalid"
+  | "currency_unavailable"
+  | "amount_invalid"
   | "rate_limited"
   | "invalid_input"
   | "server_error";

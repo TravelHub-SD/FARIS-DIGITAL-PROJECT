@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { ActionForm } from "@/components/admin/action-form";
 import { ArchiveForm, ProductForm } from "@/components/admin/catalog-forms";
+import { CustomAmountSettingsSection } from "@/components/admin/custom-amount-forms";
 import {
   Badge,
   Empty,
@@ -28,6 +29,10 @@ import {
   getRate,
   listAdminCategories,
 } from "@/server/admin/catalog-queries";
+import {
+  getCustomAmountSettings,
+  listAdminCurrencies,
+} from "@/server/admin/custom-amount-queries";
 import { PUBLIC_UPLOAD_MAX_BYTES } from "@/server/admin/public-images";
 import { requireAdmin } from "@/server/auth/session";
 
@@ -39,7 +44,7 @@ export default async function EditProductPage({
   const { locale: raw, id } = await params;
   const locale = raw as Locale;
   setRequestLocale(locale);
-  await requireAdmin(locale, "products");
+  const { permissions } = await requireAdmin(locale, "products");
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const t = await getTranslations("Admin");
   const [product, categories, rate] = await Promise.all([
@@ -48,6 +53,13 @@ export default async function EditProductPage({
     getRate(),
   ]);
   if (!product) notFound();
+  const custom =
+    product.kind === "custom_amount"
+      ? await Promise.all([
+          getCustomAmountSettings(product.id),
+          listAdminCurrencies(),
+        ])
+      : null;
   const state = stateOf(product);
   const options = categories.map((c) => ({
     id: c.id,
@@ -148,65 +160,85 @@ export default async function EditProductPage({
         )}
       </Section>
 
-      <Section
-        title={t("catalog.variants")}
-        description={t("catalog.variantsHint")}
-        actions={
-          <Link
-            href={`/admin/catalog/products/${product.id}/variants/new`}
-            className={buttonVariants({ size: "sm" })}
-          >
-            {t("catalog.newVariant")}
-          </Link>
-        }
-      >
-        {product.variants.length === 0 ? (
-          <Empty>{t("catalog.noVariantsYet")}</Empty>
-        ) : (
-          <TableWrap>
-            <thead>
-              <tr>
-                <th>{t("catalog.variantName")}</th>
-                <th>{t("catalog.priceUsd")}</th>
-                <th>{t("catalog.priceSdgNow")}</th>
-                <th>{t("catalog.maxQuantity")}</th>
-                <th>{t("catalog.requiredFields")}</th>
-                <th>{t("catalog.state")}</th>
-              </tr>
-            </thead>
-            <tbody data-testid="admin-variants">
-              {product.variants.map((v) => (
-                <tr key={v.id}>
-                  <td>
-                    <Link
-                      href={`/admin/catalog/variants/${v.id}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      <L10n value={localized(v.name_ar, v.name_en, locale)} />
-                    </Link>
-                  </td>
-                  <td dir="auto">{formatUsd(v.price_usd, locale)}</td>
-                  <td dir="auto">
-                    {rate
-                      ? formatSdg(Math.ceil(v.price_usd * rate), locale)
-                      : "—"}
-                  </td>
-                  <td>{v.max_quantity}</td>
-                  <td>{v.required_fields.length}</td>
-                  <td>
-                    <Badge tone={STATE_TONE[stateOf(v)]}>
-                      {t(`catalog.states.${stateOf(v)}`)}
-                    </Badge>
-                  </td>
+      {custom ? (
+        <Section
+          title={t("customAmount.title")}
+          description={t("customAmount.intro")}
+          testId="custom-amount-section"
+        >
+          {custom[0] ? (
+            <CustomAmountSettingsSection
+              productId={product.id}
+              settings={custom[0]}
+              currencies={custom[1]}
+              canEdit={permissions.has("settings")}
+              locale={locale}
+            />
+          ) : (
+            <Empty>{t("customAmount.missing")}</Empty>
+          )}
+        </Section>
+      ) : (
+        <Section
+          title={t("catalog.variants")}
+          description={t("catalog.variantsHint")}
+          actions={
+            <Link
+              href={`/admin/catalog/products/${product.id}/variants/new`}
+              className={buttonVariants({ size: "sm" })}
+            >
+              {t("catalog.newVariant")}
+            </Link>
+          }
+        >
+          {product.variants.length === 0 ? (
+            <Empty>{t("catalog.noVariantsYet")}</Empty>
+          ) : (
+            <TableWrap>
+              <thead>
+                <tr>
+                  <th>{t("catalog.variantName")}</th>
+                  <th>{t("catalog.priceUsd")}</th>
+                  <th>{t("catalog.priceSdgNow")}</th>
+                  <th>{t("catalog.maxQuantity")}</th>
+                  <th>{t("catalog.requiredFields")}</th>
+                  <th>{t("catalog.state")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </TableWrap>
-        )}
-        <p className="text-xs text-muted-foreground">
-          {t("catalog.sdgPreviewNote")}
-        </p>
-      </Section>
+              </thead>
+              <tbody data-testid="admin-variants">
+                {product.variants.map((v) => (
+                  <tr key={v.id}>
+                    <td>
+                      <Link
+                        href={`/admin/catalog/variants/${v.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        <L10n value={localized(v.name_ar, v.name_en, locale)} />
+                      </Link>
+                    </td>
+                    <td dir="auto">{formatUsd(v.price_usd, locale)}</td>
+                    <td dir="auto">
+                      {rate
+                        ? formatSdg(Math.ceil(v.price_usd * rate), locale)
+                        : "—"}
+                    </td>
+                    <td>{v.max_quantity}</td>
+                    <td>{v.required_fields.length}</td>
+                    <td>
+                      <Badge tone={STATE_TONE[stateOf(v)]}>
+                        {t(`catalog.states.${stateOf(v)}`)}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableWrap>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {t("catalog.sdgPreviewNote")}
+          </p>
+        </Section>
+      )}
 
       <Section title={t("catalog.archiveTitle")}>
         <ArchiveForm

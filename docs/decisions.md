@@ -976,5 +976,94 @@ dashboard: the bar, chat button and their bottom space hide when the page
 holds `data-admin-shell`, so moving between shop and dashboard client-side is
 right in both directions. Planted (the tab read once) the test fails.
 
-**Not started:** the custom-amount product type with a currency calculator
-(waiting for the client's answers).
+**Not started in this round:** the custom-amount product type (built next,
+see the following entry).
+
+## 2026-11-21 — Custom-amount products with a currency calculator (item 6, Hassan)
+
+**What.** A product is now one of two kinds, chosen when it is created and
+never changed: *fixed packages* (as before) or *custom amount* (e.g. "Pay a
+bill with Visa"). On a custom-amount product the customer types an amount,
+picks a currency, sees a live calculator (rate, amount × rate, fee, total in
+SDG), fills the product's fulfillment fields and adds it to the cart, next to
+package lines. Migration `20261121200000_custom_amount_products.sql`.
+
+**Every open business question is a setting with a safe default** (the
+client has not answered yet; no code change is needed when he does):
+- *Currencies* (`currencies`, settings permission, audited): code, name ar/en,
+  symbol, a rate in SDG per 1 unit entered by hand, "last updated", active.
+  Disabled, never deleted. No currency exists in production until the owner
+  adds one (seeded in dev and staging only: USD, EUR, SAR, AED, GBP with
+  placeholder rates).
+- *Per product* (`custom_amount_products` + `custom_amount_currencies`,
+  settings permission, audited): allowed currencies with min and max per
+  currency, decimals allowed (0–3, default 2), service fee as a percentage
+  and/or a fixed SDG amount (default 0 and 0), and the fulfillment fields with
+  the existing field editor. The settings row is created by the database with
+  the product, with those defaults; with no currency allowed the product is
+  not for sale (404, not listed).
+- Product staff without the settings permission see the settings read-only:
+  rates, limits and fees decide what customers pay, like the store's USD rate,
+  which is also a settings-staff value.
+
+**The formula, and who computes it.** One function,
+`private.custom_amount_quote()`, re-reads the product, the currency (active
+and allowed), its rate, the limits and the fee, validates the amount (zero,
+negative, more decimals than allowed, below the minimum, above the maximum,
+malformed → refused) and computes:
+`fee = round(amount × rate × fee% / 100, 2) + fixed fee`,
+`total = ceil(amount × rate + fee)` — rounded up to whole pounds per line, as
+package lines (`ceil(usd × rate)`). It is used by the cart trigger (when a
+line is written), `my_cart()` (what the cart and checkout pages show),
+`checkout_cart()` (the live total compared with the one the page showed) and
+the order-line trigger (the snapshot). The browser calculator
+(`src/lib/custom-amount.ts`) mirrors the formula with integer arithmetic for
+display only; the form sends the product, the currency, the amount as typed
+and the details, never a price. Amounts are read with Arabic-Indic or
+Persian digits and "٫", "," or "." as the decimal separator ("٬" and spaces
+are ignored; two separators are refused as ambiguous).
+
+**Price changed.** The cart holds no price, so a rate or fee changed since a
+page showed it is caught by the existing whole-cart confirmation: checkout
+compares the total the checkout page showed with the live one and answers
+`price_changed` with the new total; nothing is created until the customer
+confirms it. Dashboard saves of rates and settings also expire the shared
+catalog cache, so product pages show the new rate at once.
+
+**Snapshot.** The order line stores kind, amount, currency (code, names,
+symbol), the rate used, fee %, fixed fee, the fee in SDG and the SDG total.
+CHECK constraints tie them together (the fee and the total must follow the
+formula from the stored amount and rate), so even with every trigger off a
+forged total cannot be stored (pgTAP `10_custom_amount`). Lines are
+immutable as before: later rate or fee changes never touch orders, and new
+invoices copy the breakdown into their own snapshot (issued invoices are
+untouched; package lines keep exactly their previous snapshot shape).
+Invoices show the line as "56.00 EUR × 3,050 + 200 fee = 171,000 SDG" (its
+own row under the line, as an LTR isolate so it reads the same in Arabic),
+and the USD subtotal only when every line is a package.
+
+**KYC.** Unchanged rule, total and rolling window. Each custom line carries a
+USD value, `ceil(SDG total × 100 / the order's USD rate) / 100` (rounded up:
+never under-counted), so the order's `total_usd` and the window sums include
+it.
+
+**USD.** The USD currency always uses the store's USD rate (Settings): a
+trigger overwrites whatever is sent for it and follows every change of the
+store rate (audited). Alternatives rejected: two independent USD rates (the
+same dollar would cost two prices, and "the current USD rate" for KYC would
+be ambiguous); deriving USD only at read time (every reader would need the
+special case).
+
+**Alternatives rejected.**
+- *A hidden variant holding the fields with a placeholder price*: every path
+  that reads `price_usd` (search, `create_order`, the variant page) would
+  need to exclude it, and a forgotten one sells at the placeholder price.
+- *Storing the shown price or rate in the cart and charging it*: the browser
+  would decide the price; a stale page would charge an old rate.
+- *Columns on `products`*: RLS is per row, so the settings permission could
+  not protect the fee and limits while product staff edit the product.
+- *A per-line confirmation on the product page*: the existing whole-cart
+  confirmation already covers every way a total can change.
+- *A floating-point calculator*: 1.1 × 3,000 is 3,300.0000000000005 in
+  floating point, which rounds up to 3,301: the page would disagree with the
+  database by a pound and trigger "price changed" for nothing.

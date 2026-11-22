@@ -50,7 +50,9 @@ export type AdminErrorKey =
   | "delete_failed"
   | "already_issued"
   | "cannot_reset_self"
-  | "page_incomplete";
+  | "page_incomplete"
+  | "currency_taken"
+  | "usd_rate_not_set";
 
 export const NOT_ALLOWED: ActionResult = { ok: false, error: "not_allowed" };
 export const INVALID: ActionResult = { ok: false, error: "invalid_input" };
