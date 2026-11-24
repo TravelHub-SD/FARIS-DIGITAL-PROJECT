@@ -8,8 +8,9 @@ import { L10n } from "./l10n";
 
 // Promo slides from the dashboard. CSS scroll-snap: no carousel library; the
 // next slide peeks in so it is clear there is more. With two or more slides,
-// BannerAutoplay (a small client control) moves on every 5 s and shows a
-// pause/play button. Slides without an image get a brand gradient.
+// BannerAutoplay (a small client control) moves on every 5 s; its pause/play
+// button is visually hidden until keyboard focus, then shown over the slider
+// (hence `relative`). Slides without an image get a brand gradient.
 const BACKGROUNDS = [
   "bg-gradient-to-br from-[#0038a8] via-[#005cff] to-[#3d85ff] text-white",
   "bg-gradient-to-br from-[#ffb066] to-[#ff7a00] text-[#1a0d00]",
@@ -31,7 +32,12 @@ export function BannerSlider({
   if (banners.length === 0) return null;
   const single = banners.length === 1;
   return (
-    <section aria-label={label} data-testid="promo-banners" data-slider>
+    <section
+      aria-label={label}
+      data-testid="promo-banners"
+      data-slider
+      className="relative"
+    >
       <ul
         data-slider-track
         tabIndex={0}

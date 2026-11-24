@@ -1067,3 +1067,28 @@ special case).
 - *A floating-point calculator*: 1.1 × 3,000 is 3,300.0000000000005 in
   floating point, which rounds up to 3,301: the page would disagree with the
   database by a pound and trigger "price changed" for nothing.
+
+## 2026-11-24 — Slider pause/play button visually hidden until keyboard focus (client request)
+
+**What.** The pause/play button under the promo slider is no longer visible.
+It stays in the page (announced by screen readers, in the tab order) with
+`sr-only` while it does not have focus; on keyboard focus it appears over the
+slider's top start corner (the slider section is `relative`), and the row it
+used to occupy under the slider is gone. Autoplay itself is unchanged:
+pause on touch, hover and focus, swipe, no autoplay with reduced motion.
+
+**Why this still meets WCAG 2.2.2 (pause, stop, hide).** Keyboard and
+screen-reader users reach the button; pointer and touch users stop the
+movement by hovering or touching the slider (held while touched or hovered,
+5 s after the last interaction), and reduced-motion users get no autoplay.
+
+**Rejected.** Removing the button (keyboard and screen-reader users would
+lose the only explicit stop); `display: none` until focus (an element that is
+not rendered cannot receive focus).
+
+**Proof.** `tests/e2e/banner-autoplay.spec.ts`: at 360 px, ar and en, the
+button is 1 px, clipped and cannot be tapped before focus, with nothing under
+the slider; Tab from the last slide reaches it, shown 36 × 36 over the slider
+and tappable; Enter pauses; Tab away hides it again. Planted (the hiding class
+removed) the test fails. The existing autoplay tests press it with the
+keyboard instead of a mouse click.

@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from "react";
 // It holds while the slider is touched, hovered or focused and goes on 5 s
 // after the last interaction; it waits while the tab is hidden or the slider
 // is off screen. No autoplay with prefers-reduced-motion. The button pauses
-// and plays (WCAG 2.2.2); a pause by the button lasts until Play.
+// and plays (WCAG 2.2.2); a pause by the button lasts until Play. It is
+// visually hidden until it has keyboard focus (client request 2026-11-24):
+// pointer and touch users pause by hovering or touching the slider.
 const STEP_MS = 5000;
 
 export function BannerAutoplay({
@@ -128,7 +130,9 @@ export function BannerAutoplay({
   }, []);
 
   return (
-    <div ref={ref} className="flex h-9 justify-end px-4">
+    // `contents`: the wrapper takes no space; the button is placed against
+    // the slider (BannerSlider's section is `relative`).
+    <div ref={ref} className="contents">
       {mounted && (
         <button
           type="button"
@@ -139,7 +143,9 @@ export function BannerAutoplay({
             playingRef.current = !playing;
             setPlaying(!playing);
           }}
-          className="grid size-9 place-items-center rounded-full border bg-card text-foreground shadow-xs hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          // Visually hidden (still announced and in the tab order) until it
+          // has focus; then shown over the slider's top start corner.
+          className="absolute start-7 top-3 z-10 grid size-9 place-items-center rounded-full border bg-card text-foreground shadow-md hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&:not(:focus)]:sr-only"
         >
           <svg
             viewBox="0 0 24 24"

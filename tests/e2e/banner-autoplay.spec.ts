@@ -2,7 +2,8 @@ import { devices, expect, type Page, test } from "@playwright/test";
 
 // Promo slider autoplay (client feedback round 1): every 5 s, held while
 // touched/hovered/focused, a pause/play button, none with reduced motion,
-// swipe still works. The seed has two slides. Time is the page's fake clock
+// swipe still works. The button is visually hidden until keyboard focus
+// (2026-11-24), so it is pressed with the keyboard here. The seed has two slides. Time is the page's fake clock
 // (paused, advanced with runFor), so "no change for 15 s" is exact.
 
 const PHONE = {
@@ -43,7 +44,7 @@ async function settle(page: Page) {
 async function open(page: Page, path: string) {
   await page.clock.install();
   await page.goto(path);
-  await expect(page.getByTestId("slider-toggle")).toBeVisible(); // hydrated
+  await expect(page.getByTestId("slider-toggle")).toBeAttached(); // hydrated
   await page.clock.pauseAt(Date.now() + 1000);
   expect(await current(page)).toBe(0);
 }
@@ -86,11 +87,11 @@ for (const locale of ["ar", "en"] as const) {
     await step(1);
 
     // The button pauses until Play.
-    await toggle.click();
+    await toggle.press("Enter");
     await expect(toggle).toHaveAttribute("aria-label", play);
     await page.clock.runFor(20_000);
     expect(await current(page), "paused by the button").toBe(1);
-    await toggle.click();
+    await toggle.press("Enter");
     await expect(toggle).toHaveAttribute("aria-label", pause);
     await page.clock.runFor(5500);
     await step(2 % n);
@@ -118,7 +119,7 @@ test("slider autoplay: none with prefers-reduced-motion; Play still offered", as
   await expect(toggle).toHaveAttribute("aria-label", "Play the slides");
   await page.clock.runFor(20_000);
   expect(await current(page), "no autoplay").toBe(0);
-  await toggle.click(); // an explicit choice
+  await toggle.press("Enter"); // an explicit choice
   await page.clock.runFor(5500);
   await expect.poll(() => current(page)).toBe(1);
   await settle(page);
@@ -127,3 +128,85 @@ test("slider autoplay: none with prefers-reduced-motion; Play still offered", as
     "[demo] slider: 5 s steps (ar, en), held on focus, paused by the button, none with reduced motion",
   );
 });
+
+/** Where the pause/play button is and whether a tap there would reach it. */
+const toggleBox = (page: Page) =>
+  page.evaluate(() => {
+    const button = document.querySelector<HTMLElement>(
+      "[data-testid=slider-toggle]",
+    )!;
+    const slider = document.querySelector("[data-slider]")!;
+    const track = document.querySelector("[data-slider-track]")!;
+    const b = button.getBoundingClientRect();
+    const s = slider.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      b.left + b.width / 2,
+      b.top + b.height / 2,
+    );
+    return {
+      width: Math.round(b.width),
+      height: Math.round(b.height),
+      overSlider:
+        b.left >= s.left &&
+        b.right <= s.right &&
+        b.top >= track.getBoundingClientRect().top &&
+        b.bottom <= s.bottom,
+      reachable: !!hit && (hit === button || button.contains(hit)),
+      focused: document.activeElement === button,
+      // Height the section adds under the slides (the old button row).
+      below: Math.round(s.bottom - track.getBoundingClientRect().bottom),
+    };
+  });
+
+for (const locale of ["ar", "en"] as const) {
+  test(`pause/play button (${locale}, 360 px): not visible until keyboard focus, then over the slider`, async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext(PHONE);
+    const page = await ctx.newPage();
+    await page.goto(`/${locale}`);
+    const toggle = page.getByTestId("slider-toggle");
+    await expect(toggle).toBeAttached();
+    const pause = locale === "ar" ? "إيقاف تقليب العروض" : "Pause the slides";
+    const play = locale === "ar" ? "تشغيل تقليب العروض" : "Play the slides";
+
+    // Not visible: 1 px, clipped, nothing to tap; no row under the slider.
+    const hidden = await toggleBox(page);
+    expect(hidden, "hidden before focus").toMatchObject({
+      reachable: false,
+      focused: false,
+      below: 0,
+    });
+    expect(hidden.width).toBeLessThanOrEqual(1);
+    expect(hidden.height).toBeLessThanOrEqual(1);
+    // Still there for screen readers.
+    await expect(page.getByRole("button", { name: pause })).toBeAttached();
+
+    // Keyboard: Tab from the last slide reaches it, shown over the slider.
+    await page.locator("[data-slider-track]").evaluate((track) => {
+      const items = track.querySelectorAll<HTMLElement>("a[href], button");
+      (items.length ? items[items.length - 1] : (track as HTMLElement)).focus();
+    });
+    await page.keyboard.press("Tab");
+    expect(await toggleBox(page), "shown on focus").toMatchObject({
+      width: 36,
+      height: 36,
+      overSlider: true,
+      reachable: true,
+      focused: true,
+      below: 0,
+    });
+    await page.screenshot({ path: `.e2e/slider-toggle-focus-${locale}.png` });
+    await page.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-label", play);
+
+    // Tab away: hidden again.
+    await page.keyboard.press("Tab");
+    expect(await toggleBox(page), "hidden after focus leaves").toMatchObject({
+      reachable: false,
+      focused: false,
+    });
+    await page.screenshot({ path: `.e2e/slider-toggle-hidden-${locale}.png` });
+    await ctx.close();
+  });
+}
